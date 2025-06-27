@@ -1,47 +1,57 @@
+import React from "react";
+import { useFonts } from "expo-font";
+import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { cssInterop } from "nativewind";
+import "react-native-reanimated";
+import "../global.css";
 
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { cssInterop } from 'nativewind';
-import 'react-native-reanimated';
-import "../global.css"
-import { useColorScheme } from '@/hooks/useColorScheme';
-import 'react-native-reanimated';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AntDesign from "@expo/vector-icons/AntDesign";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { View, ActivityIndicator } from "react-native";
 
-cssInterop(AntDesign, {
-    className: {
-        target: "style",
-    },
-});
-cssInterop(MaterialIcons, {
-    className: {
-        target: "style",
-    },
-});
+cssInterop(AntDesign, { className: { target: "style" } });
+cssInterop(MaterialIcons, { className: { target: "style" } });
 
 export default function RootLayout() {
-    const colorScheme = useColorScheme();
-    const [loaded] = useFonts({
-        SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    });
+  const [fontsLoaded, fontError] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  });
 
-    if (!loaded) {
-        // Async font loading only occurs in development.
-        return null;
-    }
-
+  // Show splash while fonts load
+  if (!fontsLoaded && !fontError) {
     return (
-        <GestureHandlerRootView style={{flex: 1}}>
-            <BottomSheetModalProvider>
-                <Stack screenOptions={{  contentStyle: { backgroundColor: '#121212' }, }}>
-                    <Stack.Screen name="onboarding/welcome" options={{headerShown: true, headerTitle: ""}} />
-                    <Stack.Screen name="onboarding/login" options={{headerShown: true, headerTitle: ""}}/>
-                    <Stack.Screen name="onboarding/register" />
-                </Stack>
-            </BottomSheetModalProvider>
-        </GestureHandlerRootView>
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" />
+      </View>
     );
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
+          {/* Home / dashboard */}
+          <Stack.Screen
+            name="index"
+            options={{ headerShown: false }}
+          />
+          {/* Login */}
+          <Stack.Screen
+            name="onboarding/Login/login"
+            options={{ headerShown: false, animation: "fade" }}
+          />
+          <Stack.Screen
+            name="onboarding/Login/OTP"
+            options={{ headerShown: false, animation: "fade" }}
+          />
+                 <Stack.Screen
+            name="onboarding/Login/Success"
+            options={{ headerShown: false, animation: "fade" }}
+          />
+        </Stack>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
+  );
 }
