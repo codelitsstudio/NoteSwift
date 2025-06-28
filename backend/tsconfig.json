@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es5",                               
+    "baseUrl": "./src",
+    "paths": {
+      "@shared/*": ["../../shared/*"]
+    },                       
+    "module": "commonjs",    
+    "outDir": "compiled",                            
+    "esModuleInterop": true,                            
+    "forceConsistentCasingInFileNames": true,           
+    "strict": true,                                      
+    "skipLibCheck": true                                 
+  }
+}
