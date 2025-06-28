@@ -51,6 +51,7 @@ export default function RootLayout() {
             options={{ headerShown: false, animation: "fade" }}
           />
         </Stack>
+        
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
