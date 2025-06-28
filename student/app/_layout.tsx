@@ -66,6 +66,10 @@ export default function RootLayout() {
             name="onboarding/Register/OTP"
             options={{ headerShown: false, animation: "fade" }}
           />
+                                                       <Stack.Screen
+            name="onboarding/Register/success"
+            options={{ headerShown: false, animation: "fade" }}
+          />
         </Stack>
         
         
