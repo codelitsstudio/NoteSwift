@@ -1,0 +1,1 @@
+export const STORAGE_NAME = process.env.STORAGE_NAME || "annonchat";
