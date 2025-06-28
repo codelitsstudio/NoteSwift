@@ -50,7 +50,24 @@ export default function RootLayout() {
             name="onboarding/Login/Success"
             options={{ headerShown: false, animation: "fade" }}
           />
+                           <Stack.Screen
+            name="onboarding/Register/register"
+            options={{ headerShown: false, animation: "fade" }}
+          />
+                                  <Stack.Screen
+            name="onboarding/Register/address"
+            options={{ headerShown: false, animation: "fade" }}
+          />
+                                         <Stack.Screen
+            name="onboarding/Register/registerNumber"
+            options={{ headerShown: false, animation: "fade" }}
+          />
+                                             <Stack.Screen
+            name="onboarding/Register/OTP"
+            options={{ headerShown: false, animation: "fade" }}
+          />
         </Stack>
+        
         
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

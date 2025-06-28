@@ -5,6 +5,7 @@ import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
 import ImageHeader from '../../../components/Headers/ImageHeader';
 import { useAuthStore } from '../../../stores/authStore';
 import { useRouter } from 'expo-router';
+import ButtonSecondary from '../../../components/Buttons/ButtonSecondary';
 
 export default function Login() {
   const phoneInput = useAuthStore(state => state.phoneInput);
@@ -17,7 +18,10 @@ export default function Login() {
   const router = useRouter();
 
   const isValidPhone = (value: string) => /^\d{10}$/.test(value.trim());
-
+  
+  const handleGoBack = () => {
+    router.push('/onboarding/Register/address');
+  };
   const handleLogin = async () => {
     if (!isValidPhone(phoneInput)) {
       Alert.alert(
@@ -43,17 +47,17 @@ export default function Login() {
 
   return (
     <View className="flex-1 bg-white rounded-t-3xl overflow-hidden">
-      <ImageHeader source={require("../../../assets/images/illl-1.png")} />
+      <ImageHeader source={require("../../../assets/images/illl-4.png")} />
 
       <View className="flex-1 bg-white px-6">
         <Text className="text-3xl font-bold text-gray-900 text-center mt-1">
-          Login
+          Register
         </Text>
         <Text className="text-gray-500 font-bold text-center mb-6 mt-5">
-          Please Sign In To Continue
+         Please Enter Your Credentials To Register
         </Text>
 
-        {/* Phone Input */}
+       
         <TextInputField
           label="Phone Number"
           placeholder="Enter your Phone Number…"
@@ -63,6 +67,7 @@ export default function Login() {
           onChangeText={setPhoneInput}
         />
 
+    
         <TextInputField
           label="Password"
           placeholder="Enter your Password…"
@@ -71,27 +76,10 @@ export default function Login() {
           onChangeText={setPasswordInput}
         />
 
-        {/* Primary Button */}
-        <ButtonPrimary title="Login" onPress={handleLogin} />
-
-        {/* Footer */}
-        <View className="items-center mt-4">
-          <TouchableOpacity className="w-16 h-16 bg-white shadow-lg rounded-full items-center justify-center mb-4">
-            <Image
-              source={require('../../../assets/images/logo.png')}
-              className="w-24 h-24"
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-
-          <View className="flex-row mt-4">
-            <Text className="text-gray-500 font-bold">Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/onboarding/Register/register')}>
-  <Text className="text-customBlue font-semibold">Create</Text>
-</TouchableOpacity>
-
-          </View>
-        </View>
+     
+        <ButtonPrimary title="Next" onPress={handleLogin} />
+ <ButtonSecondary title="Back" onPress={handleGoBack} />
+    
       </View>
     </View>
   );
