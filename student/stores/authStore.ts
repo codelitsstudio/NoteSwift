@@ -1,131 +1,117 @@
+import { createStudent, signInStudent } from '@/api/student/auth';
+import { LoginStudent, SignupStudent } from '@shared/api/student/auth';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { AuthWithApiState } from './common';
+import { TStudentWithNoSensitive } from "@shared/model/students/Student";
 
-type User = { phone: string; token: string };
+type User = TStudentWithNoSensitive;
 
-interface AuthState {
-  // Auth user state
-  user: User | null;
-  isLoggedIn: boolean;
-
-  // auth actions
-  login: (phone: string, password: string) => Promise<void>;
-  verifyOtp: (otpCode: string) => Promise<void>;
-  logout: () => void;
-
-  // login UI state
-  phoneInput: string;
-  passwordInput: string;
-  otpCode: string;
-
-  setPhoneInput: (val: string) => void;
-  setPasswordInput: (val: string) => void;
-  setOtpCode: (val: string) => void;
-
- 
-  fullName: string;
-  setFullName: (val: string) => void;
-
-  selectedGrade: string | null;
-  setSelectedGrade: (val: string) => void;
-
-  selectedProvince: string | null;
-  setSelectedProvince: (val: string) => void;
-
-  selectedDistrict: string | null;
-  setSelectedDistrict: (val: string) => void;
-
-  selectedInstitution: string | null;
-  setSelectedInstitution: (val: string) => void;
+interface SignupStudentData extends SignupStudent.Req {
+    otpCode?: string
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      // Auth user state
-      user: null,
-      isLoggedIn: false,
+interface AuthState extends AuthWithApiState{
+    // Auth user state
+    user: User | null;
+    isLoggedIn: boolean;
+    signup_data: SignupStudentData;
+    login_data: LoginStudent.Req;
+    // auth actions
+    login: (phone: string, password: string) => Promise<boolean>;
+    signUp: (data: SignupStudentData) => Promise<boolean>;
+    verifyOtp: (otpCode: string) => Promise<void>;
+    logout: () => void;
+    otpCode: string;
+    setOtpCode: (val: string) => void;
+    setLoginData: (data: LoginStudent.Req) => void;
+    setSignupData: (data: SignupStudentData) => void;
+    clearSignupData: ()=>void;
+    clearLoginData: ()=>void;
+}
 
-      
-      login: async (phone, password) => {
-        const res = await fetch('https://your.api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, password }),
-        });
-        if (!res.ok) throw new Error('Login failed');
-        const data = await res.json();
-        set({ user: { phone, token: data.token }, isLoggedIn: true });
-      },
+const defaultSignupData: SignupStudentData = {
+    phone_number: "",
+    address: {
+        province: undefined,
+        district: undefined,
+        institution: undefined,
+    },
+    full_name: "",
+    grade: 0,
+    password: "",
+    otpCode: ""
+}
 
-      verifyOtp: async (otpCode) => {
+const defaultLoginData: LoginStudent.Req = {
+    password: "",
+    phone_number: ""
+}
+
+
+export const useAuthStore = create<AuthState>((set) => ({
+    //api state
+    is_loading: false,
+    api_message: "",
+    // Auth user state
+    user: null,
+    isLoggedIn: false,
+    signup_data: defaultSignupData,
+    login_data: defaultLoginData,
+    
+    signUp: async(data)=>{
+        try {
+            set({is_loading: true, api_message: ""});
+            const res = await createStudent(data);
+            console.log(res)
+            set({is_loading: false, api_message: res.message, user: res.result})
+            return !res.error; //no success
+        } catch (error) {
+            console.log(error)
+            set({is_loading: false, api_message: "Something went wrong"})
+            return false
+        }
+    },
+    login: async (phone, password) => {
+        try {
+            set({is_loading: true, api_message: ""})
+            const res = await signInStudent({phone_number: phone, password})
+            set({is_loading: false, api_message: res.message, user: res.result})
+            return !res.error; //no success
+        } catch (error) {
+            console.log(error)
+            set({is_loading: false, api_message: "Something went wrong"})
+            return false
+        }
+    },
+    verifyOtp: async (otpCode) => {
         const res = await fetch('https://your.api/verify-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ otp: otpCode }),
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ otp: otpCode }),
         });
         if (!res.ok) throw new Error('OTP failed');
         const data = await res.json();
-        set({ user: { phone: data.phone, token: data.token }, isLoggedIn: true });
-      },
-
-      logout: () => {
-        set({
-          user: null,
-          isLoggedIn: false,
-
-          phoneInput: '',
-          passwordInput: '',
-          otpCode: '',
-
-          fullName: '',
-          selectedGrade: null,
-
-          selectedProvince: null,
-          selectedDistrict: null,
-          selectedInstitution: null,
-        });
-      },
-
-      // UI state
-      phoneInput: '',
-      passwordInput: '',
-      otpCode: '',
-
-      setPhoneInput: (val) => set({ phoneInput: val }),
-      setPasswordInput: (val) => set({ passwordInput: val }),
-      setOtpCode: (val) => set({ otpCode: val }),
-
-      // register
-      fullName: '',
-      setFullName: (val: string) => set({ fullName: val }),
-
-      selectedGrade: null,
-      setSelectedGrade: (val: string) => set({ selectedGrade: val }),
-
-      // address
-      selectedProvince: null,
-      setSelectedProvince: (val: string) => set({ selectedProvince: val }),
-
-      selectedDistrict: null,
-      setSelectedDistrict: (val: string) => set({ selectedDistrict: val }),
-
-      selectedInstitution: null,
-      setSelectedInstitution: (val: string) => set({ selectedInstitution: val }),
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        isLoggedIn: state.isLoggedIn,
-
         
-        fullName: state.fullName,
-        selectedGrade: state.selectedGrade,
-        selectedProvince: state.selectedProvince,
-        selectedDistrict: state.selectedDistrict,
-        selectedInstitution: state.selectedInstitution,
-      }),
+    },
+    logout: () => {
+        set({
+            user: null
+        });
+    },
+    setSignupData: (data: SignupStudentData) => {
+        set({ signup_data: data });
+    },
+    setLoginData: (data: LoginStudent.Req) => {
+        set({ login_data: data });
+    },
+    otpCode: '',
+    setOtpCode: (val) => set({ otpCode: val }),
+    clearSignupData: ()=> {
+        set({signup_data: defaultSignupData})
+    },
+    clearLoginData: ()=>{
+        set({login_data: defaultLoginData})
     }
-  )
-);
+}))
+

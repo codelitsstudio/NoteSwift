@@ -3,11 +3,11 @@ import { ApiResponse } from "../common";
 
 export namespace SignupStudent {
     export interface Req {
-        full_name?: string;
-        grade?: number;
-        phone_number?: string;
-        password?: string;
-        address?: {
+        full_name: string;
+        grade: number;
+        phone_number: string;
+        password: string;
+        address: {
             province?: string;
             district?: string;
             institution?: string
@@ -23,16 +23,7 @@ export namespace LoginStudent {
     password: string;
   }
 
-  export interface Res {
-    full_name: string;
-    grade: string;
-    phone_number: string;
-    address: {
-      province: string;
-      district: string;
-      institution: string;
-    };
-  }
+  interface Res extends TStudentWithNoSensitive{}
 
   export type ApiRes = ApiResponse<Res>;
 }

@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import BottomSheet, { BottomSheetFlatList, BottomSheetModal } from '@gorhom/bottom-sheet';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useMemo, useRef } from 'react';
 import { cn } from '@/lib/cn';
 
@@ -15,6 +15,7 @@ interface BottomSheetPickerProps {
   selectedValue?: string | null;
   onChange: (value: string) => void;
   placeholder?: string;
+  disabled?: boolean
 }
 
 export function BottomSheetPicker({
@@ -23,6 +24,7 @@ export function BottomSheetPicker({
   selectedValue,
   onChange,
   placeholder = 'Select',
+  disabled
 }: BottomSheetPickerProps) {
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['40%'], []);

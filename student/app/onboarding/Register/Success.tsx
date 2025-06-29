@@ -1,16 +1,24 @@
 // screens/OTP.tsx
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
 import ButtonSecondary from '@/components/Buttons/ButtonSecondary';
 import { useAuthStore } from '../../../stores/authStore';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import ImageHeader from '../../../components/Headers/ImageHeader';
 
-export default function OTP() {
+export default function Success() {
   const [otpCode, setOtpCode] = useState('');
-  const login = useAuthStore(s => s.login);
+  const clearSignupData = useAuthStore(s => s.clearSignupData);
   const router = useRouter();
+
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                clearSignupData();
+            };
+        }, [])
+    );
   
   const handleContinue = async () => {
     try {

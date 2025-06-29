@@ -8,7 +8,7 @@ interface ImageHeaderProps {
 
 export default function ImageHeader({ source, style }: ImageHeaderProps) {
   return (
-    <View className="w-full h-[420px] items-center justify-start pt-6">
+    <View className="w-full h-[400px] items-center justify-start pt-6">
       <Image
         source={source}
         resizeMode="contain"
