@@ -17,14 +17,14 @@ export default function OTP() {
       // await login(phone.trim(), password); {commented out for now}
       // Alert.alert('Success', 'Logged in successfully!');
       // navigate to otp page after login success
-      router.push('/');
+      router.push('/Home/HomePage');
     } catch (error: any) {
       Alert.alert('Onboarding Error', error.message);
     }
   };
 
   const handleGoBack = () => {
-   router.navigate('/onboarding/Login/OTP'); // you have to change it as you copy this file in different pages
+   router.navigate('/onboarding/Login/login'); // you have to change it as you copy this file in different pages
   };
 
   return (
@@ -43,7 +43,7 @@ export default function OTP() {
         <Text className="text-gray-500 font-medium text-center mt-4 mb-6">
 Your Phone Number has been verified. You{'\n'} have successfully logged in.        </Text>
 
-        <ButtonPrimary title="Continue" onPress={handleContinue}  />
+        <ButtonPrimary title="Continue" onPress={handleContinue} />
 
        
         <ButtonSecondary title="Back" onPress={handleGoBack} />

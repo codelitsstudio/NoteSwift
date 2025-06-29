@@ -41,8 +41,8 @@ export default function Login() {
 
         const res = await login(loginData.phone_number, loginData.password);
         if (!res) return Alert.alert(api_message);
-        Alert.alert(api_message)
-        router.push('./OTP');
+        // Alert.alert(api_message)
+        router.push('./Success');
     };
 
     return (

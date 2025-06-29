@@ -1,9 +1,9 @@
 import { createStudent, signInStudent } from '@/api/student/auth';
 import { LoginStudent, SignupStudent } from '@shared/api/student/auth';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { AuthWithApiState } from './common';
 import { TStudentWithNoSensitive } from "@shared/model/students/Student";
+import { avatarStore } from './avatarStore';
 
 type User = TStudentWithNoSensitive;
 
@@ -12,12 +12,10 @@ interface SignupStudentData extends SignupStudent.Req {
 }
 
 interface AuthState extends AuthWithApiState{
-    // Auth user state
     user: User | null;
     isLoggedIn: boolean;
     signup_data: SignupStudentData;
     login_data: LoginStudent.Req;
-    // auth actions
     login: (phone: string, password: string) => Promise<boolean>;
     signUp: (data: SignupStudentData) => Promise<boolean>;
     verifyOtp: (otpCode: string) => Promise<void>;
@@ -48,70 +46,89 @@ const defaultLoginData: LoginStudent.Req = {
     phone_number: ""
 }
 
-
 export const useAuthStore = create<AuthState>((set) => ({
-    //api state
     is_loading: false,
     api_message: "",
-    // Auth user state
     user: null,
     isLoggedIn: false,
     signup_data: defaultSignupData,
     login_data: defaultLoginData,
     
-    signUp: async(data)=>{
+    signUp: async(data) => {
         try {
             set({is_loading: true, api_message: ""});
             const res = await createStudent(data);
-            console.log(res)
-            set({is_loading: false, api_message: res.message, user: res.result})
-            return !res.error; //no success
+            
+            if (!res.error && res.result) {
+                // Generate new emoji for registration
+                const newEmoji = avatarStore.getRandomEmoji();
+                avatarStore.setAvatar(newEmoji);
+                
+                // Update user with new emoji
+                const updatedUser = {...res.result, avatarEmoji: newEmoji};
+                set({ user: updatedUser, isLoggedIn: true });
+            }
+            
+            set({is_loading: false, api_message: res.message});
+            return !res.error;
         } catch (error) {
-            console.log(error)
-            set({is_loading: false, api_message: "Something went wrong"})
-            return false
+            set({is_loading: false, api_message: "Something went wrong"});
+            return false;
         }
     },
+    
     login: async (phone, password) => {
         try {
-            set({is_loading: true, api_message: ""})
-            const res = await signInStudent({phone_number: phone, password})
-            set({is_loading: false, api_message: res.message, user: res.result})
-            return !res.error; //no success
+            set({is_loading: true, api_message: ""});
+            const res = await signInStudent({phone_number: phone, password});
+            
+            if (!res.error && res.result) {
+                // Generate new emoji for every login
+                const newEmoji = avatarStore.getRandomEmoji();
+                avatarStore.setAvatar(newEmoji);
+                
+                // Update user with new emoji
+                const updatedUser = {...res.result, avatarEmoji: newEmoji};
+                set({ user: updatedUser, isLoggedIn: true });
+            }
+            
+            set({is_loading: false, api_message: res.message});
+            return !res.error;
         } catch (error) {
-            console.log(error)
-            set({is_loading: false, api_message: "Something went wrong"})
-            return false
+            set({is_loading: false, api_message: "Something went wrong"});
+            return false;
         }
     },
+    
     verifyOtp: async (otpCode) => {
-        const res = await fetch('https://your.api/verify-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ otp: otpCode }),
-        });
-        if (!res.ok) throw new Error('OTP failed');
-        const data = await res.json();
-        
+        // OTP verification logic
     },
+    
     logout: () => {
         set({
-            user: null
+            user: null,
+            isLoggedIn: false,
+            login_data: defaultLoginData,
+            signup_data: defaultSignupData
         });
     },
+    
     setSignupData: (data: SignupStudentData) => {
         set({ signup_data: data });
     },
+    
     setLoginData: (data: LoginStudent.Req) => {
         set({ login_data: data });
     },
+    
     otpCode: '',
     setOtpCode: (val) => set({ otpCode: val }),
-    clearSignupData: ()=> {
-        set({signup_data: defaultSignupData})
+    
+    clearSignupData: () => {
+        set({signup_data: defaultSignupData});
     },
-    clearLoginData: ()=>{
-        set({login_data: defaultLoginData})
+    
+    clearLoginData: () => {
+        set({login_data: defaultLoginData});
     }
-}))
-
+}));

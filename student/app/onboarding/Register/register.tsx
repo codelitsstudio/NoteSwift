@@ -81,7 +81,7 @@ export default function Register() {
                 />
 
                 {/* Primary Button */}
-                <ButtonPrimary title="Next" onPress={handleRegister} />
+                <ButtonPrimary title="Next" onPress={handleRegister}/>
 
                 {/* Footer */}
                 <View className="items-center mt-4">

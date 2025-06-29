@@ -4,6 +4,7 @@ import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { cssInterop } from "nativewind";
+import Header from "../components/Headers/Header";
 import "react-native-reanimated";
 import "../global.css";
 
@@ -31,12 +32,20 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
-        <Stack screenOptions={{ contentStyle: { backgroundColor: "transparent" } }}>
+              <Stack
+          screenOptions={{
+            contentStyle: { backgroundColor: "transparent" },
+            header: () => <Header />,       // use our custom header
+            headerShown: true,              // show it everywhere
+            animation: "fade",
+          }}
+        >
           {/* Home / dashboard */}
           <Stack.Screen
             name="index"
             options={{ headerShown: false }}
           />
+          
           {/* Login */}
           <Stack.Screen
             name="onboarding/Login/login"
@@ -67,9 +76,18 @@ export default function RootLayout() {
             options={{ headerShown: false, animation: "fade" }}
           />
                                                        <Stack.Screen
-            name="onboarding/Register/success"
+            name="onboarding/Register/Success"
             options={{ headerShown: false, animation: "fade" }}
           />
+
+<Stack.Screen
+  name="Home/HomePage"
+  options={{
+    animation: 'fade',
+    header: () => <Header />,
+  }}
+/>
+
         </Stack>
         
         
