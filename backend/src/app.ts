@@ -5,7 +5,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import "dotenv/config";
 import { MainRoutes } from "routes/index.route";
-
+import userRoutes from './routes/userRoutes';
 
 const app = Express();
 
@@ -13,11 +13,18 @@ const app = Express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "";
 
-//CONNECTIONS
+
+// CONNECTIONS
 mongoose.connect(MONGO_URI)
-    .then(INIT)
-    .catch(err => console.log(err));
-;
+  .then(() => {
+    console.log("✔️ Connected to MongoDB");
+    INIT();
+  })
+  .catch(err => {
+    console.error("❌ Failed to connect to MongoDB:", err);
+    process.exit(1); // Exit if connection fails
+  });
+
 
 
 
@@ -31,11 +38,12 @@ app.use(cors({
 
 //api
 app.use("/api", MainRoutes)
-
+app.use('/api/users', userRoutes);
 
 async function INIT() {
     app.listen(PORT, () => {
         console.log("Listening on port " + PORT + "....")
     })
+    
 
 }
