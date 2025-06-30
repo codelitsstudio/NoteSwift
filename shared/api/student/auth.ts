@@ -13,7 +13,9 @@ export namespace SignupStudent {
             institution?: string
         }
     }
-    interface Res extends TStudentWithNoSensitive{}
+    interface Res extends TStudentWithNoSensitive{
+      avatarEmoji: boolean;
+}
     export type ApiRes = ApiResponse<Res>;
 }
 
@@ -23,7 +25,9 @@ export namespace LoginStudent {
     password: string;
   }
 
-  interface Res extends TStudentWithNoSensitive{}
+  interface Res extends TStudentWithNoSensitive{
+    avatarEmoji: any;
+}
 
   export type ApiRes = ApiResponse<Res>;
 }
