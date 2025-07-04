@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
-import clientPromise from "@/lib/mongodb";
+import dbConnect from "@/lib/mongoose";
+import CourseModel from "@/models/Course";
 import {
   Table,
   TableHeader,
@@ -19,7 +20,13 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { QuickUploads } from "@/components/quick-uploads";
 
 type Course = {
@@ -32,18 +39,18 @@ type Course = {
 
 async function getCourses(): Promise<Course[]> {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.DB_NAME);
-    const courses = await db
-      .collection(process.env.COLLECTION_NAME!)
-      .find({})
+    await dbConnect();
+    const courses = await CourseModel.find({})
       .sort({ createdAt: -1 })
       .limit(20)
-      .toArray();
-    
-    return JSON.parse(JSON.stringify(courses));
+      .lean(); // Better performance
+    return courses.map((course: any) => ({
+      ...course,
+      _id: course._id.toString(),
+      createdAt: course.createdAt?.toISOString() || "",
+    }));
   } catch (e) {
-    console.error(e);
+    console.error("Failed to fetch courses:", e);
     return [];
   }
 }
@@ -87,8 +94,8 @@ export default async function ContentPage() {
                 <TableBody>
                   {courses.length === 0 && (
                     <TableRow>
-                      <TableCell 
-                        colSpan={5} 
+                      <TableCell
+                        colSpan={5}
                         className="text-center h-24 text-muted-foreground"
                       >
                         No courses found. Create one to get started.
@@ -98,14 +105,20 @@ export default async function ContentPage() {
                   {courses.map((course) => (
                     <TableRow key={course._id}>
                       <TableCell className="font-medium">{course.title}</TableCell>
-                      <TableCell>{course.subject || 'N/A'}</TableCell>
+                      <TableCell>{course.subject || "N/A"}</TableCell>
                       <TableCell>
-                        <Badge variant={course.status === "Published" ? "default" : "secondary"}>
+                        <Badge
+                          variant={
+                            course.status === "Published" ? "default" : "secondary"
+                          }
+                        >
                           {course.status || "Draft"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {course.createdAt ? format(new Date(course.createdAt), "PP") : 'N/A'}
+                        {course.createdAt
+                          ? format(new Date(course.createdAt), "PP")
+                          : "N/A"}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>

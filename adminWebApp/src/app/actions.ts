@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { suggestTags } from "@/ai/flows/content-tagging";
 import type { ContentTaggingInput } from "@/ai/flows/content-tagging";
-import clientPromise from "@/lib/mongodb";
 import { Resend } from "resend";
 import { OtpEmail } from "@/emails/otp-email";
 import { getDashboardInsights } from "@/ai/flows/dashboard-insights";
@@ -12,35 +11,38 @@ import type { DashboardInsightsInput } from "@/ai/flows/dashboard-insights";
 import { getTaskSuggestions } from "@/ai/flows/task-suggestions";
 import type { TaskSuggestionsInput } from "@/ai/flows/task-suggestions";
 
+import dbConnect from "@/lib/mongoose";
+import Otp from "@/models/Otp";
+import Course from "@/models/Course";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// ---------------------------- OTP HANDLER ----------------------------
 export async function handleSendOtp() {
   try {
+    await dbConnect();
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const email = process.env.OTP_EMAIL_TO!;
     if (!email) {
       throw new Error("OTP_EMAIL_TO environment variable is not set.");
     }
 
-    const client = await clientPromise;
-    const db = client.db(process.env.DB_NAME);
-    const otpCollection = db.collection("otps");
-    
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
-    // Remove any previous OTPs for this email to invalidate them
-    await otpCollection.deleteMany({ email });
+    // Remove old OTPs
+    await Otp.deleteMany({ email });
 
-    // Store the new OTP in the database
-    await otpCollection.insertOne({ email, otp, expires });
+    // Save new OTP
+    await Otp.create({ email, otp, expires });
 
     await resend.emails.send({
-      from: "NoteSwift Admin <onboarding@resend.dev>",
+      from: "NoteSwift Admin <noteswift@codelitsstudio.com>",
       to: email,
       subject: "Your NoteSwift Admin Login Code",
       react: OtpEmail({ otp }),
     });
+
     return { success: true };
   } catch (error) {
     console.error("Error sending OTP:", error);
@@ -59,38 +61,34 @@ export async function handleVerifyOtp(data: { otp: string }) {
   }
 
   try {
+    await dbConnect();
+
     const email = process.env.OTP_EMAIL_TO!;
-     if (!email) {
+    if (!email) {
       throw new Error("OTP_EMAIL_TO environment variable is not set.");
     }
-    const client = await clientPromise;
-    const db = client.db(process.env.DB_NAME);
-    const otpCollection = db.collection("otps");
 
-    const record = await otpCollection.findOne({
-      email,
-      otp: validation.data.otp,
-    });
+    const record = await Otp.findOne({ email, otp: validation.data.otp });
 
     if (!record) {
       return { success: false, error: "The one-time code is incorrect." };
     }
-    
-    // Clean up the used OTP to prevent reuse
-    await otpCollection.deleteOne({ _id: record._id });
 
     if (new Date() > record.expires) {
+      await Otp.deleteOne({ _id: record._id });
       return { success: false, error: "The one-time code has expired. Please request a new one." };
     }
 
+    await Otp.deleteOne({ _id: record._id });
+
     return { success: true };
-  } catch(error) {
+  } catch (error) {
     console.error("Error verifying OTP:", error);
     return { success: false, error: "An unexpected error occurred while verifying the code." };
   }
 }
 
-
+// ---------------------------- SUGGEST TAGS ----------------------------
 export async function handleSuggestTags(data: ContentTaggingInput) {
   try {
     const result = await suggestTags(data);
@@ -101,6 +99,7 @@ export async function handleSuggestTags(data: ContentTaggingInput) {
   }
 }
 
+// ---------------------------- CREATE COURSE ----------------------------
 const courseSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters long."),
   description: z.string().min(10, "Description must be at least 10 characters long."),
@@ -115,18 +114,14 @@ export async function handleCreateCourse(data: z.infer<typeof courseSchema>) {
       return { success: false, error: "Invalid data." };
     }
 
-    const client = await clientPromise;
-    const db = client.db(process.env.DB_NAME);
-    const collection = db.collection(process.env.COLLECTION_NAME!);
+    await dbConnect();
 
-    const newCourse = {
+    await Course.create({
       ...validation.data,
       status: "Draft",
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-
-    await collection.insertOne(newCourse);
+    });
 
     revalidatePath("/dashboard/content");
     return { success: true, message: "Course created successfully." };
@@ -136,14 +131,13 @@ export async function handleCreateCourse(data: z.infer<typeof courseSchema>) {
   }
 }
 
+// ---------------------------- MOCKED DASHBOARD INSIGHTS ----------------------------
 export async function handleGetDashboardInsights() {
   try {
-    // In a real app, you would fetch this data from your database.
-    // For now, we'll use mock data based on the dashboard page.
     const mockInput: DashboardInsightsInput = {
       totalUsers: 1250,
       activeUsersToday: 350,
-      newSignupsLastWeek: 260, // sum of userActivityData
+      newSignupsLastWeek: 260,
       coursesPublished: 48,
       topCourses: [
         { name: "Algebra II", engagement: 400 },
@@ -160,11 +154,9 @@ export async function handleGetDashboardInsights() {
   }
 }
 
-
+// ---------------------------- MOCKED TASK SUGGESTIONS ----------------------------
 export async function handleGetTaskSuggestions() {
   try {
-    // In a real app, you would fetch this data from your database.
-    // For now, we'll use mock data.
     const mockInput: TaskSuggestionsInput = {
       inactiveUserCount: 15,
       unreviewedContentCount: 8,
@@ -179,6 +171,7 @@ export async function handleGetTaskSuggestions() {
   }
 }
 
+// ---------------------------- ADMIN LOGIN ----------------------------
 export async function handleAdminLogin(username: string, password: string) {
   const adminUsername = process.env.ADMIN_USERNAME;
   const adminPassword = process.env.ADMIN_PASSWORD;
