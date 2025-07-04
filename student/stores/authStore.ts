@@ -1,7 +1,7 @@
 import { createStudent, signInStudent } from '@/api/student/auth';
 import { LoginStudent, SignupStudent } from '@shared/api/student/auth';
 import { create } from 'zustand';
-import { AuthWithApiState } from './common';
+import { ApiState } from './common';
 import { TStudentWithNoSensitive } from "@shared/model/students/Student";
 import { avatarStore } from './avatarStore';
 
@@ -11,7 +11,7 @@ interface SignupStudentData extends SignupStudent.Req {
     otpCode?: string
 }
 
-interface AuthState extends AuthWithApiState{
+interface AuthState extends ApiState{
     user: User | null;
     isLoggedIn: boolean;
     signup_data: SignupStudentData;
