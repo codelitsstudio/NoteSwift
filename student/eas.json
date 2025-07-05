@@ -10,9 +10,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "buildCommand": "npm install", 
       "android": {
-        "buildType": "apk",
-        "buildCommand": "npm install"
+        "buildType": "apk"
       }
     },
     "production": {
