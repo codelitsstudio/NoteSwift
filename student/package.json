@@ -20,7 +20,7 @@
     "@react-navigation/native": "^7.1.6",
     "axios": "^1.10.0",
     "clsx": "^2.1.1",
-    "expo": "53.0.13",
+    "expo": "^53.0.13",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.6",
     "expo-font": "~13.3.1",
@@ -35,9 +35,9 @@
     "expo-system-ui": "~5.0.9",
     "expo-web-browser": "~14.2.0",
     "nativewind": "^4.1.23",
-    "react": "19.0.0",
+    "react": "^19.0.0",
     "react-dom": "19.0.0",
-    "react-native": "0.79.4",
+    "react-native": "^0.79.4",
     "react-native-circular-progress-indicator": "^4.4.2",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-picker-select": "^9.3.1",
@@ -64,5 +64,13 @@
     "eslint-config-expo": "~9.2.0",
     "typescript": "~5.8.3"
   },
-  "private": true
+  "private": true,
+  "description": "This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).",
+  "directories": {
+    "lib": "lib"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }
