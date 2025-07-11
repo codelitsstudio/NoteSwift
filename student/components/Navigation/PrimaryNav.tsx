@@ -3,7 +3,8 @@ import { View, Pressable, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-
+import { useNavStore, navOrder } from "../../stores/navigationStore";
+import * as Haptics from "expo-haptics"; 
 interface NavItem {
   key: string;
   label: string;
@@ -16,44 +17,22 @@ interface Props {
 }
 
 const navItems: NavItem[] = [
-  {
-    key: "Home",
-    label: "Home",
-    icon: "home-filled",
-    route: "/Home/HomePage",
-  },
-  {
-    key: "Learn",
-    label: "Learn",
-    icon: "menu-book",
-    route: "/Learn/LearnPage",
-  },
-  {
-    key: "Test",
-    label: "Test",
-    icon: "quiz",
-    route: "/Test/TestPage",
-  },
-  {
-    key: "Ask",
-    label: "Ask",
-    icon: "question-answer",
-    route: "/Ask/AskPage",
-  },
-  {
-    key: "More",
-    label: "More",
-    icon: "more-horiz",
-    route: "/More/MorePage",
-  },
+  { key: "Home", label: "Home", icon: "home-filled", route: "/Home/HomePage" },
+  { key: "Learn", label: "Learn", icon: "menu-book", route: "/Learn/LearnPage" },
+  { key: "Test", label: "Test", icon: "quiz", route: "/Test/TestPage" },
+  { key: "Ask", label: "Ask", icon: "question-answer", route: "/Ask/AskPage" },
+  { key: "More", label: "More", icon: "more-horiz", route: "/More/MorePage" },
 ];
 
 const PrimaryNav: React.FC<Props> = ({ current }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const setTab = useNavStore((state) => state.setTab);
 
   const handlePress = (item: NavItem) => {
     if (current !== item.key) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Haptic feedback
+      setTab(item.key);
       router.push(item.route as any);
     }
   };

@@ -1,5 +1,5 @@
 // pages/Home/HomePage.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,42 @@ import LiveClasses from './Components/LiveClasses';
 import QuickAccess from '../../components/Container/QuickAccess';
 import UpcomingCourses from './Components/UpcomingCourses';
 import PrimaryNav from '../../components/Navigation/PrimaryNav';
+import Toast from 'react-native-toast-message';
+
+import { useRouter } from 'expo-router';
+import { useSearchParams } from 'expo-router/build/hooks';
 
 export default function HomePage() {
+    const router = useRouter();          
+  const params = useSearchParams();
+
+
+   useEffect(() => {
+    if (params.get('loggedIn') === "true") {
+      Toast.show({
+        type: "success",
+        position: "top",
+        text1: "Success",
+        text2: "Logged in successfully!",
+        visibilityTime: 3000,
+        autoHide: true,
+        topOffset: 50,
+      });
+
+      setTimeout(() => {
+        router.replace({
+          pathname: "/Home/HomePage",
+          params: {}, // clears params
+        });
+      }, 700);
+    }
+  }, [params, router]);
+
+
+
+  
   return (
+    
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}

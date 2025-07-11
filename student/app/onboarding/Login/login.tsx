@@ -1,108 +1,242 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  Alert,
+  Platform,
+  KeyboardAvoidingView,
+  SafeAreaView,
+  Dimensions,
+  StyleSheet,
+  Keyboard,
+  TouchableWithoutFeedback,
+  ScrollView,
+} from 'react-native';
 import TextInputField from '../../../components/InputFields/TextInputField';
 import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
 import ImageHeader from '../../../components/Headers/ImageHeader';
 import { useAuthStore } from '../../../stores/authStore';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { KeyboardAvoidingScrollView } from '@/components/Container/KeyboardAvoidingScrollView';
+import { useNavStore } from '@/stores/navigationStore';
+
+import { useSearchParams } from 'expo-router/build/hooks';
+import Toast from 'react-native-toast-message';
+
+const { width } = Dimensions.get('window');
 
 export default function Login() {
-    const loginData = useAuthStore(state => state.login_data);
-    const setLoginData = useAuthStore(state => state.setLoginData)
-    const isLoading = useAuthStore(state => state.is_loading);
-    const clearLoginData = useAuthStore(state=>state.clearLoginData);
-    const api_message = useAuthStore(state => state.api_message);
-    const login = useAuthStore(state => state.login);
-    const router = useRouter();
-    useFocusEffect(
-        useCallback(() => {
-            return () => {
-                clearLoginData();
-            };
-        }, [])
-    );
-    const isValidPhone = (value: string) => /^\d{10}$/.test(value.trim());
+  const loginData = useAuthStore(state => state.login_data);
+  const setLoginData = useAuthStore(state => state.setLoginData);
+  const clearLoginData = useAuthStore(state => state.clearLoginData);
+  const api_message = useAuthStore(state => state.api_message);
+  const login = useAuthStore(state => state.login);
+  const router = useRouter();
+const params = useSearchParams();
 
-    const handleLogin = async () => {
-        if (!isValidPhone(loginData.phone_number)) {
-            Alert.alert(
-                'Invalid phone number',
-                'Phone number must be exactly 10 digits and contain digits only.'
-            );
-            return;
-        }
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        clearLoginData();
+      };
+    }, [])
+  );
+  
+ useEffect(() => {
+  useNavStore.getState().setTab("RegisterAddress"); 
+}, []);
 
-        if (!loginData.password || loginData.password.length < 4) {
-            Alert.alert('Invalid Password', 'Password must be at least 4 characters long.');
-            return;
-        }
+  useEffect(() => {
+    if (params.get('registered') === 'true') {
+      Toast.show({
+        type: 'info',
+        text1: 'Registration successful!',
+        text2: 'You have registered successfully.',
+        position: 'top',
+        visibilityTime: 3000,
+        autoHide: true,
+        topOffset: 50,
+      });
+
+      // Clear the query param immediately after showing toast
+      router.replace('/onboarding/Login/login');
+    }
+  }, [params, router]);
 
 
-        const res = await login(loginData.phone_number, loginData.password);
-        if (!res) return Alert.alert(api_message);
-        // Alert.alert(api_message)
-        router.push('./Success');
-    };
+  const isValidPhone = (value: string) => /^\d{10}$/.test(value.trim());
 
-    return (
+const handleLogin = async () => {
+  if (!isValidPhone(loginData.phone_number)) {
+    Alert.alert('Invalid phone number', 'Phone number must be exactly 10 digits.');
+    return;
+  }
 
-            <KeyboardAvoidingView  keyboardVerticalOffset={80} behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 bg-white rounded-t-3xl">
-                <ScrollView
-                    contentContainerStyle={{ flexGrow: 1 }}
-                    keyboardShouldPersistTaps="handled"
-                >
-                <ImageHeader source={require("../../../assets/images/illl-1.png")} />
-                <View className="flex-1 bg-white px-6">
-                    <Text className="text-3xl font-bold text-gray-900 text-center mt-1">
-                        Login
-                    </Text>
-                    <Text className="text-gray-500 font-bold text-center mb-6 mt-5">
-                        Please Sign In To Continue
-                    </Text>
+  if (!loginData.password || loginData.password.length < 4) {
+    Alert.alert('Invalid Password', 'Password must be at least 4 characters long.');
+    return;
+  }
 
-                    {/* Phone Input */}
-                    <TextInputField
-                        label="Phone Number"
-                        placeholder="Enter your Phone Number…"
-                        keyboardType="number-pad"
-                        maxLength={10}
-                        value={loginData.phone_number}
-                        onChangeText={(text) => setLoginData({ ...loginData, phone_number: text })}
-                    />
+  const res = await login(loginData.phone_number, loginData.password);
+  if (!res) {
+    return Alert.alert(api_message);
+  }
 
-                    <TextInputField
-                        label="Password"
-                        placeholder="Enter your Password…"
-                        secure
-                        value={loginData.password}
-                        onChangeText={(text) => setLoginData({ ...loginData, password: text })}
-                    />
+  // 1️⃣ Show the success toast
+  Toast.show({
+    type: 'success',
+    position: 'top',
+    text1: 'Success',
+    text2: 'Logged in successfully!',
+    visibilityTime: 3000,
+    autoHide: true,
+    topOffset: 50,
+  });
 
-                    {/* Primary Button */}
-                    <ButtonPrimary title="Login" onPress={handleLogin} />
+  // 2️⃣ Then navigate to HomePage
+  router.push('/Home/HomePage');
+};
 
-                    {/* Footer */}
-                    <View className="items-center mt-4">
-                        <TouchableOpacity className="w-16 h-16 bg-white shadow-lg rounded-full items-center justify-center mb-4">
-                            <Image
-                                source={require('../../../assets/images/logo.png')}
-                                className="w-24 h-24"
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
 
-                        <View className="flex-row mt-4">
-                            <Text className="text-gray-500 font-bold">Don't have an account? </Text>
-                            <TouchableOpacity onPress={() => router.push('/onboarding/Register/register')}>
-                                <Text className="text-customBlue font-semibold">Create</Text>
-                            </TouchableOpacity>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+<KeyboardAvoidingView
+  style={[styles.container, { backgroundColor: 'white' }]}
+  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 0}
+>
+  <ScrollView
+    contentContainerStyle={[styles.inner, { backgroundColor: 'white', paddingBottom: 40 }]}
+    keyboardShouldPersistTaps="handled"
+    showsVerticalScrollIndicator={false}
+  >
+            <ImageHeader source={require('../../../assets/images/illl-1.png')} />
 
-                        </View>
-                    </View>
+            <View style={styles.form}>
+              <Text style={styles.title}>Login</Text>
+              <Text style={styles.subtitle}>Please Sign In To Continue</Text>
+
+              <View style={styles.inputGroup}>
+                <TextInputField
+                  label="Phone Number"
+                  placeholder="Enter your Phone Number…"
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  value={loginData.phone_number}
+                  onChangeText={text => setLoginData({ ...loginData, phone_number: text })}
+                />
+
+                <TextInputField
+                  label="Password"
+                  placeholder="Enter your Password…"
+                  secure
+                  value={loginData.password}
+                  onChangeText={text => setLoginData({ ...loginData, password: text })}
+                />
+              </View>
+
+              <ButtonPrimary title="Login" onPress={handleLogin} />
+
+              <View style={styles.footer}>
+                <TouchableOpacity style={styles.logoWrapper}>
+                  <Image
+                    source={require('../../../assets/images/logo.png')}
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+
+                <View style={styles.registerRow}>
+                  <Text style={styles.registerText}>Don't have an account? </Text>
+          <TouchableOpacity
+  onPress={() => {
+    useNavStore.getState().setTab("Register");
+    router.push('/onboarding/Register/register');
+  }}
+>
+  <Text style={styles.registerLink}>Create</Text>
+</TouchableOpacity>
+
                 </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
-
-    );
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
+  );
 }
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  inner: {
+    flexGrow: 1,
+    justifyContent: 'center', // Helps center on larger screens
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  form: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: width < 360 ? 24 : 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#1F2937',
+    marginTop: 2,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginTop: 4,
+    marginBottom: 32,
+  },
+  inputGroup: {
+    gap: 16,
+    marginBottom: 4,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  logoWrapper: {
+    width: 64,
+    height: 64,
+    backgroundColor: 'white',
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    marginBottom: 12,
+  },
+  logo: {
+    width: 82,
+    height: 82,
+  },
+  registerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  registerText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  registerLink: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+});
