@@ -7,8 +7,8 @@ const text2Style = { fontSize: 12 };
 const InfoToast = (props: any) => (
   <BaseToast
     {...props}
-    animationInTiming={0}     
-    animationOutTiming={0}      
+    animationInTiming={0}
+    animationOutTiming={0}
     style={{ borderLeftColor: '#3592F2' }}
     text1Style={text1Style}
     text2Style={text2Style}
@@ -42,3 +42,8 @@ export const toastConfig = {
   success: SuccessToast,
   error: ErrorToast,
 };
+
+
+export default function DummyToastComponent() {
+  return null;
+}

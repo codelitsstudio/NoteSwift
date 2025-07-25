@@ -42,10 +42,8 @@ const params = useSearchParams();
       };
     }, [])
   );
-  
- useEffect(() => {
-  useNavStore.getState().setTab("RegisterAddress"); 
-}, []);
+
+
 
   useEffect(() => {
     if (params.get('registered') === 'true') {
@@ -62,6 +60,8 @@ const params = useSearchParams();
       // Clear the query param immediately after showing toast
       router.replace('/onboarding/Login/login');
     }
+      useNavStore.getState().setTab("RegisterAddress");
+
   }, [params, router]);
 
 
