@@ -5,6 +5,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAvatarStore } from '../../stores/avatarStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 export default function Header() {
   const avatarEmoji = useAvatarStore(state => state.avatarEmoji);
@@ -12,11 +13,22 @@ export default function Header() {
   const router = useRouter();
   const [menuVisible, setMenuVisible] = React.useState(false);
 
-  const handleLogout = () => {
-    logout();
-    setMenuVisible(false);
-    router.replace('/');
-  };
+const handleLogout = () => {
+  logout();
+  setMenuVisible(false);
+ Toast.show({
+  type: 'error',     
+  position: 'top',
+  text1: 'Signed out',
+  text2: 'You have signed out successfully.',
+  visibilityTime: 3000,
+  autoHide: true,
+  topOffset: 50,
+});
+
+  router.replace('/');
+};
+
 
   return (
     <SafeAreaView className="bg-white px-6">

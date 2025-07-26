@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useLoading } from "@/context/loading-context";
 
 const uploadActions = [
   {
@@ -87,9 +88,12 @@ export function QuickUploads({ courses }: { courses: Course[] }) {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [openDialogs, setOpenDialogs] = useState<{ [key: string]: boolean }>({});
+  const { startLoading, stopLoading } = useLoading();
 
   const handleUpload = async (title: string) => {
     setIsUploading(true);
+        startLoading();
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     
@@ -99,6 +103,8 @@ export function QuickUploads({ courses }: { courses: Course[] }) {
     });
 
     setIsUploading(false);
+        stopLoading();
+
     setOpenDialogs(prev => ({ ...prev, [title]: false }));
   };
 

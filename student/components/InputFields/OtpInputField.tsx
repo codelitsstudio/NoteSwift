@@ -7,12 +7,16 @@ import {
   TouchableOpacity,
   Platform,
   Animated,
+  Dimensions,
+  StyleSheet,
 } from "react-native";
 
 interface OtpInputProps {
   length?: number;
   onComplete: (code: string) => void;
 }
+
+const { width } = Dimensions.get("window");
 
 export default function OtpInput({ length = 6, onComplete }: OtpInputProps) {
   const [code, setCode] = useState("");
@@ -34,15 +38,9 @@ export default function OtpInput({ length = 6, onComplete }: OtpInputProps) {
       const isActive = i === currentIndex;
 
       return (
-        <View
-          key={i}
-          className="w-14 h-14 rounded-full border border-[#1E1E1E] items-center justify-center bg-transparent"
-          style={{ marginBottom: 0 ,
-             borderWidth: 2
-          }}
-        >
+        <View key={i} style={styles.otpCircle}>
           {digits[i] ? (
-            <Text className="text-[#1E1E1E] text-2xl text-center font-bold">{digits[i]}</Text>
+            <Text style={styles.otpText}>{digits[i]}</Text>
           ) : isActive ? (
             <BlinkingCursor />
           ) : null}
@@ -52,15 +50,13 @@ export default function OtpInput({ length = 6, onComplete }: OtpInputProps) {
   };
 
   return (
-    <View className="items-center">
+    <View style={styles.container}>
       <TouchableOpacity
         activeOpacity={1}
         onPress={() => hiddenInputRef.current?.focus()}
-        className="flex-row justify-center gap-4"
-        style={{ width: "auto" }}
+        style={styles.touchable}
       >
         {renderCircles()}
-
         <TextInput
           ref={hiddenInputRef}
           value={code}
@@ -71,8 +67,8 @@ export default function OtpInput({ length = 6, onComplete }: OtpInputProps) {
           keyboardType="number-pad"
           maxLength={length}
           autoFocus
-          caretHidden={false}
-          className="absolute w-0 h-0 opacity-0"
+          caretHidden
+          style={styles.hiddenInput}
           textContentType={Platform.OS === "ios" ? "oneTimeCode" : "none"}
           importantForAutofill="yes"
           autoComplete="sms-otp"
@@ -82,7 +78,40 @@ export default function OtpInput({ length = 6, onComplete }: OtpInputProps) {
   );
 }
 
-// Blinking cursor component
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+  },
+  touchable: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+    width: "auto",
+  },
+  otpCircle: {
+    width: width < 360 ? 44 : 56,
+    height: width < 360 ? 44 : 56,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: "#1E1E1E",
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  otpText: {
+    fontSize: width < 360 ? 18 : 24,
+    fontWeight: "bold",
+    color: "#1E1E1E",
+    textAlign: "center",
+  },
+  hiddenInput: {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    opacity: 0,
+  },
+});
+
 const BlinkingCursor = () => {
   const blinkAnim = useRef(new Animated.Value(1)).current;
 
