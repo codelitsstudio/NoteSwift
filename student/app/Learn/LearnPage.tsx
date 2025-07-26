@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,14 @@ import PrimaryNav from '../../components/Navigation/PrimaryNav';
 import SearchBar from '../../components/InputFields/SearchBar';
 import ActiveCourses from './Components/ActiveCourses';
 import ModelQuestions from './Components/ModelQuestions';
+import { useLearnStore } from '@/stores/learnStore';
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
-
+  const fetchFeed = useLearnStore(state=>state.fetchFeed);
+  useEffect(()=>{
+    fetchFeed()
+  }, [])
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}

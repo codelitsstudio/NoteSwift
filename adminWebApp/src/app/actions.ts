@@ -34,8 +34,9 @@ export async function handleSendOtp() {
     await Otp.deleteMany({ email });
 
     // Save new OTP
-    await Otp.create({ email, otp, expires });
-
+    const OTP = new Otp({ email, otp, expires })
+    await OTP.save();
+    console.log(email)
     await resend.emails.send({
       from: "NoteSwift Admin <noteswift@codelitsstudio.com>",
       to: email,

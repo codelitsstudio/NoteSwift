@@ -13,21 +13,27 @@ export namespace SignupStudent {
             institution?: string
         }
     }
-    interface Res extends TStudentWithNoSensitive{
-      avatarEmoji: boolean;
-}
+    export interface Res {
+        user: TStudentWithNoSensitive & {
+            avatarEmoji:boolean
+        }
+        token: string
+    }
     export type ApiRes = ApiResponse<Res>;
 }
 
 export namespace LoginStudent {
-  export interface Req {
-    phone_number: string;
-    password: string;
-  }
+    export interface Req {
+        phone_number: string;
+        password: string;
+    }
 
-  interface Res extends TStudentWithNoSensitive{
-    avatarEmoji: any;
-}
+    export interface Res {
+        user: TStudentWithNoSensitive & {
+            avatarEmoji:boolean
+        }
+        token: string
+    }
 
-  export type ApiRes = ApiResponse<Res>;
+    export type ApiRes = ApiResponse<Res>;
 }

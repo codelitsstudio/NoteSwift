@@ -4,6 +4,8 @@ import { LoginStudent, SignupStudent } from "@shared/api/student/auth"
 import { Student } from "models/students/Student.model";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { SessionPayload } from "middlewares/student.middleware";
+import { TStudentWithNoSensitive } from "@shared/model/students/Student";
 
 const expiresIn = 60 * 60 * 24 * 14 * 1000;
 const options = { maxAge: expiresIn, httpOnly: false };
@@ -57,14 +59,21 @@ export const signUpStudent: Controller = async (req, res) => {
         });
 
         await student.save();
-
-        const token = jwt.sign({ user_id: student._id.toString() }, secret, {
+        const session: SessionPayload = {
+            user_id: student._id.toString(),
+            role: "student"
+        }
+        const token = jwt.sign(session, secret, {
             expiresIn: "10d"
         });
-
+        
         res.cookie("session", token, options);
-        const studentObj = student.toJSON();
-        jsonResponse.success(studentObj);
+        const studentObj = student.toJSON() as any; 
+        const response: SignupStudent.Res = {
+            user: studentObj,
+            token
+        }
+        jsonResponse.success(response);
     } catch (error) {
         console.error(error);
         jsonResponse.serverError();
@@ -113,4 +122,16 @@ export const loginStudent: Controller = async (req, res) => {
         jsonResponse.serverError();
     }
 };
+
+export const getCurrentStudent: Controller = (req, res) => {
+    const jsonResponse = new JsonResponse(res);
+    try {
+        const student = res.locals.student;
+        if(!student) return jsonResponse.notAuthorized("No data found");
+        return jsonResponse.success(student);
+    } catch (error) {
+        console.log(error);
+        jsonResponse.serverError();
+    }
+}
 

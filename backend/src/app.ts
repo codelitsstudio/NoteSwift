@@ -16,14 +16,14 @@ const MONGO_URI = process.env.MONGO_URI || "";
 
 // CONNECTIONS
 mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log("✔️ Connected to MongoDB");
-    INIT();
-  })
-  .catch(err => {
-    console.error("❌ Failed to connect to MongoDB:", err);
-    process.exit(1); // Exit if connection fails
-  });
+    .then(() => {
+        console.log("✔️ Connected to MongoDB");
+        INIT();
+    })
+    .catch(err => {
+        console.error("❌ Failed to connect to MongoDB:", err);
+        process.exit(1); // Exit if connection fails
+    });
 
 
 
@@ -44,6 +44,6 @@ async function INIT() {
     app.listen(PORT, () => {
         console.log("Listening on port " + PORT + "....")
     })
-    
+
 
 }

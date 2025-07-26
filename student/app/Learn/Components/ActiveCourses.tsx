@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import CourseCard from '../../../components/Container/CoursesCard';
 import { useRouter } from 'expo-router';
+import { useLearnStore } from '@/stores/learnStore';
 
 type Course = {
   id: number;
@@ -40,27 +41,28 @@ const allCourses: Course[] = [
 
 export default function ActiveCourses({ searchQuery }: Props) {
   const router = useRouter();
-
-  const filteredCourses = allCourses.filter((course) =>
+  const courses = useLearnStore((state)=>state.course_feed);
+  console.log(courses);
+  const filteredCourses = courses?.filter((course) =>
     course.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <View className="pb-6 mt-2">
-      {filteredCourses.length === 0 ? (
+      {courses?.length === 0 ? (
         <Text className="text-gray-500 text-center">No classes found.</Text>
       ) : (
         <View className="flex-row justify-between flex-wrap gap-3">
-          {filteredCourses.map((course) => (
+          {courses?.map((course) => (
             <CourseCard
-              key={course.id}
+              key={course._id}
               title={course.title}
-              grade={course.grade}
-              batch={course.batch}
-              image={course.image}
-              buttonLabel={course.buttonLabel}
+              grade={course.subject}
+              batch={course.tags[0]}
+              image={require('../../../assets/images/maths.avif')}
+              buttonLabel={"View"}
               onPress={() => {
-                router.push(course.routeName as any);
+                router.push("/");
               }}
             />
           ))}
