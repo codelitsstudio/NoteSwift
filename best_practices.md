@@ -78,7 +78,7 @@ To use shared forlder in files. Import from ``` "@shared/<model, api, general et
 
 ---
 
-## Usage Examples 
+## Best Practices
 
 ### For Models
 
