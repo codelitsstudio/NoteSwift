@@ -1,6 +1,6 @@
 import instance from "axios"
 
-export const URI = "http://10.0.2.2:5000/api" 
+export const URI = "http://10.0.2.2:5000/api"
 
 const api = instance.create({
     baseURL: URI,
