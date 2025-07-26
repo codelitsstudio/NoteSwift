@@ -3,6 +3,7 @@ import { Router } from "express";
 
 const router = Router();
 
+
 router.post("/signup", signUpStudent);
 router.post("/login", loginStudent);
 

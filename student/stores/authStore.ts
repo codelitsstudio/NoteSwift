@@ -65,7 +65,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                 avatarStore.setAvatar(newEmoji);
                 
                 // Update user with new emoji
-                const updatedUser = {...res.result, avatarEmoji: newEmoji};
+                const updatedUser = {...res.result.user, avatarEmoji: newEmoji};
                 set({ user: updatedUser, isLoggedIn: true });
             }
             
@@ -88,7 +88,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                 avatarStore.setAvatar(newEmoji);
                 
                 // Update user with new emoji
-                const updatedUser = {...res.result, avatarEmoji: newEmoji};
+                const updatedUser = {...res.result.user, avatarEmoji: newEmoji};
                 set({ user: updatedUser, isLoggedIn: true });
             }
             

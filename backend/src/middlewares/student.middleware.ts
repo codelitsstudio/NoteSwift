@@ -2,15 +2,17 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import JsonResponse from "lib/Response";
 import { Admin } from "models/admins/Admin.model";
+import { Student } from "models/students/Student.model";
 
-interface AuthPayload {
+export interface SessionPayload {
     user_id: string;
-    role: "admin";
-    iat: number;
-    exp: number;
+    role: "admin"|"student"|"teacher";
+    iat?: number;
+    exp?: number;
 }
 
-export const authenticateAdmin = async (req: Request, res: Response, next: NextFunction) => {
+
+export const authenticateStudent = async (req: Request, res: Response, next: NextFunction) => {
     const jsonResponse = new JsonResponse(res);
 
     try {
@@ -20,16 +22,16 @@ export const authenticateAdmin = async (req: Request, res: Response, next: NextF
         const secret = process.env.SESSION_SECRET;
         if (!secret) throw new Error("SESSION_SECRET not defined");
 
-        const decoded = jwt.verify(token, secret) as AuthPayload;
+        const decoded = jwt.verify(token, secret) as SessionPayload;
 
-        if (decoded.role !== "admin") {
+        if (decoded.role !== "student") {
             return jsonResponse.notAuthorized("Access denied");
         }
 
-        const admin = await Admin.findById(decoded.user_id).select("-password");
-        if (!admin) return jsonResponse.notAuthorized("Admin not found");
+        const student = await Student.findById(decoded.user_id).select("-password");
+        if (!student) return jsonResponse.notAuthorized("Admin not found");
 
-        res.locals.admin = admin; // ✅ attach admin to res.locals
+        res.locals.student = student; 
         next();
     } catch (err) {
         console.error(err);

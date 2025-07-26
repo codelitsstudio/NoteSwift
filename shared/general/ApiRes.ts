@@ -1,6 +1,3 @@
-export interface ApiResponseBase {
-
-}
 
 export interface ApiResponse<T = {}> {
   result: T;

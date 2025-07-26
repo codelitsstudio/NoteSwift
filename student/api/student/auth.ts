@@ -10,3 +10,4 @@ export const signInStudent = async(data: LoginStudent.Req) => {
     const res = await api.post("/student/auth/login", data);
     return res.data as LoginStudent.ApiRes
 }
+
