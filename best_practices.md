@@ -1,3 +1,50 @@
+# 🧠 GitHub Best Practices
+
+This guide outlines best practices for using GitHub effectively across branches, commits, and collaboration.
+
+---
+
+## 📁 Branch Naming Convention
+
+Always create a new branch from the latest `main`.
+
+### ✅ Prefix Types:
+
+| Prefix         | Usage Example                |
+|----------------|------------------------------|
+| `feature/`     | `feature/user-auth`          |
+| `bugfix/`      | `bugfix/pfp-upload-error`    |
+| `hotfix/`      | `hotfix/login-crash`         |
+| `refactor/`    | `refactor/image-service`     |
+| `chore/`       | `chore/update-readme`        |
+| `test/`        | `test/user-service-tests`    |
+
+> ✨ Keep branch names lowercase, hyphen-separated, and clear.
+
+---
+
+## ✅ Commit Message Guidelines
+
+Use meaningful commit messages to describe what you did **and why**.
+
+
+### ✅ Types:
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `refactor`: Code change that doesn't add or fix features
+- `chore`: Minor changes (e.g. dependencies, formatting)
+- `docs`: Documentation changes
+- `test`: Adding or updating tests
+- `perf`: Performance improvement
+
+### 🧠 Example:
+
+```bash
+git commit -m "fix: handle invalid image error in pfp upload"
+```
+
+
 # API & Code Best Practices Documentation
 
 ## 📁 Project Structure
