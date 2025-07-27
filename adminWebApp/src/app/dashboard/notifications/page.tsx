@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLoading } from "@/context/loading-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,13 +24,18 @@ const announcements = [
 export default function NotificationsPage() {
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
+  const { startLoading, stopLoading } = useLoading();
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSending(true);
+        startLoading();
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsSending(false);
+        stopLoading();
+
     toast({
       title: "Announcement Sent!",
       description: "Your message has been delivered to all users.",

@@ -22,6 +22,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "./ui/card";
+import { useLoading } from "@/context/loading-context";
+
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters long."),
@@ -35,6 +37,7 @@ export function CourseForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { startLoading, stopLoading } = useLoading();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -84,6 +87,8 @@ export function CourseForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
+        startLoading();
+
     const result = await handleCreateCourse(values);
     if (result.success) {
       toast({
@@ -97,8 +102,12 @@ export function CourseForm() {
         title: "Failed to create course",
         description: result.error,
       });
+
+            stopLoading();
+
     }
     setIsSubmitting(false);
+
   };
 
   return (
