@@ -23,7 +23,7 @@ export const loginAdmin: Controller = async (req, res) => {
             return jsonResponse.clientError("Admin not found");
         }
 
-        const match = await bcrypt.compare(body.password, admin.password);
+        const match = body.password === admin.password
         if (!match) {
             return jsonResponse.clientError("Invalid password");
         }
