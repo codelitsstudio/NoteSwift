@@ -5,6 +5,9 @@ import { authenticateStudent } from "middlewares/student.middleware";
 import { StudentUserRoutes } from "./student/user.route";
 import { AdminAuthRoutes } from "./admin/auth.route";
 
+// announcement route
+import AnnouncementRoutes from "./announcement/announcement.route";
+
 
 const router = Router();
 
@@ -17,5 +20,9 @@ router.use("/student/user", authenticateStudent, StudentUserRoutes);
 //admin
 
 router.use("/admin/auth", AdminAuthRoutes);
+
+// announcement
+
+router.use("/announcement", AnnouncementRoutes);
 
 export { router as MainRoutes };
