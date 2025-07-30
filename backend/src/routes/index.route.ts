@@ -7,7 +7,8 @@ import { AdminAuthRoutes } from "./admin/auth.route";
 
 // announcement route
 import AnnouncementRoutes from "./announcement/announcement.route";
-
+// course
+import CourseRoutes from "./courses/course.route";
 
 const router = Router();
 
@@ -25,4 +26,6 @@ router.use("/admin/auth", AdminAuthRoutes);
 
 router.use("/announcement", AnnouncementRoutes);
 
+// course
+router.use("/course", CourseRoutes);
 export { router as MainRoutes };

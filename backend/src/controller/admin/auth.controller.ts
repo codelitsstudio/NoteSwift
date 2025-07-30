@@ -47,3 +47,34 @@ export const loginAdmin: Controller = async (req, res) => {
         jsonResponse.serverError();
     }
 };
+
+export const signupAdmin: Controller = async(req, res) => {
+    const jsonREsponse = new JsonResponse(res);
+
+    try {
+        const { full_name, email, password } = req.body;
+
+        if(!email || !password) {
+            return jsonREsponse.clientError("Email and password required");
+        }
+
+        const exist = await Admin.findOne({email: email});
+
+        if(exist) {
+            return jsonREsponse.clientError("Email already exist.");
+        }
+
+        const hPassword = await bcrypt.hash(password, 10);
+        const adminCreate = await Admin.create({
+            email,
+            full_name,
+            password:hPassword
+        });
+
+        const createdAdmin = await Admin.findById(adminCreate._id).select("-password");
+        return jsonREsponse.success(createdAdmin, "Admin created successfully.");
+    } catch (error) {
+        console.log(error);
+        jsonREsponse.serverError("Error");
+    }
+}
