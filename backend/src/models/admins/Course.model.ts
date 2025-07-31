@@ -1,5 +1,5 @@
 import mongoose, { Schema, models } from "mongoose";
-import { TCourse } from "@shared/model/common/Course";
+import { TCourse } from "@shared/model/admin/Course";
 
 const courseSchema = new Schema<TCourse>(
   {

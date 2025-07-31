@@ -1,4 +1,4 @@
-import { TSubject } from "../admin/subject";
+import { TSubject } from "./subject";
 
 export interface TCourse {
     _id: string

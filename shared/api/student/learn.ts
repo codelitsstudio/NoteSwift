@@ -1,4 +1,4 @@
-import { TCourse } from "../../model/common/Course";
+import { TCourse } from "../../model/admin/Course";
 import { ApiResponse } from "../common";
 
 export namespace GetStudentLearnFeed {
