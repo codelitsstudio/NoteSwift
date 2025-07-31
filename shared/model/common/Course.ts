@@ -1,10 +1,14 @@
+import { TSubject } from "../admin/subject";
+
 export interface TCourse {
     _id: string
-    title: string;
+    name: string;
     description: string;
-    subject: string;
-    tags: string[];
-    status: string;
+    content: string;
+    // assigned_teacher_id: strign | TTeacher;
+    subject: string | TSubject;
+    grade: number;
+    has_published: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

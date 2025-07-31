@@ -8,11 +8,13 @@ import { StudentUserRoutes } from "./student/user.route";
 import { AdminAuthRoutes } from "./admin/auth.route";
 // subject route
 import SubjectRoute from "./admin/subject.route";
+// course route
+import CourseRoute from "./admin/course.route"
 
 // announcement route
 import AnnouncementRoutes from "./announcement/announcement.route";
 // course
-import CourseRoutes from "./courses/course.route";
+import CourseRoutes from "./admin/course.route";
 
 const router = Router();
 
@@ -26,6 +28,7 @@ router.use("/student/user", authenticateStudent, StudentUserRoutes);
 
 router.use("/admin/auth", AdminAuthRoutes);
 router.use("/admin/subject", authenticateAdmin, SubjectRoute);
+router.use("/admin/course", authenticateAdmin, CourseRoute);
 // announcement
 
 router.use("/announcement", AnnouncementRoutes);
