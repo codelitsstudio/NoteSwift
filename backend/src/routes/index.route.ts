@@ -16,6 +16,8 @@ import AnnouncementRoutes from "./announcement/announcement.route";
 // teacher Route
 import TeacherRoutes from "./teacher/teacher.route";
 // assignedcourse 
+// for admin to controll student
+import StudentAdminRoutes from "./admin/student.route";
 
 import AssigneCourseRoutes from "./admin/courseAssigned.route";
 
@@ -33,6 +35,7 @@ router.use("/admin/auth", AdminAuthRoutes);
 router.use("/admin/subject", authenticateAdmin, SubjectRoute);
 router.use("/admin/course", authenticateAdmin, CourseRoute);
 router.use("/admin/course", authenticateAdmin, AssigneCourseRoutes);
+router.use("/admin/student", authenticateAdmin, StudentAdminRoutes);
 // announcement
 
 router.use("/announcement", AnnouncementRoutes);
