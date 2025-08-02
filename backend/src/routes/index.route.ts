@@ -13,8 +13,11 @@ import CourseRoute from "./admin/course.route"
 
 // announcement route
 import AnnouncementRoutes from "./announcement/announcement.route";
-// course
-import CourseRoutes from "./admin/course.route";
+// teacher Route
+import TeacherRoutes from "./teacher/teacher.route";
+// assignedcourse 
+
+import AssigneCourseRoutes from "./admin/courseAssigned.route";
 
 const router = Router();
 
@@ -29,10 +32,14 @@ router.use("/student/user", authenticateStudent, StudentUserRoutes);
 router.use("/admin/auth", AdminAuthRoutes);
 router.use("/admin/subject", authenticateAdmin, SubjectRoute);
 router.use("/admin/course", authenticateAdmin, CourseRoute);
+router.use("/admin/course", authenticateAdmin, AssigneCourseRoutes);
 // announcement
 
 router.use("/announcement", AnnouncementRoutes);
 
-// course
-router.use("/course", CourseRoutes);
+// teacher
+
+router.use("/teacher", TeacherRoutes);
+
+
 export { router as MainRoutes };
