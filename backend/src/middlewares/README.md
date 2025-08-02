@@ -6,7 +6,7 @@
     //example
     router.post("/course", authenticateAdmin, createCourse)
 ```
-- To get admin data after authorization/authentication use `res.locals.admin`
+- To get current admin data after authorization/authentication use `res.locals.admin`
 
 ```ts
     //example

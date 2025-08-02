@@ -6,4 +6,5 @@ import { Admin } from "models/admins/Admin.model";
 const router = Router();
 
 router.post("/login", loginAdmin);
+
 export { router as AdminAuthRoutes }
