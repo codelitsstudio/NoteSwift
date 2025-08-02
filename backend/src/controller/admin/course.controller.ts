@@ -10,17 +10,6 @@ export const createCourse: Controller = async (req, res) => {
 
     try {
 
-        const admin = res.locals.admin;
-
-        if (!admin || !admin._id) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
-
-        const eAdmin = await Admin.findById({ _id: admin._id })
-
-        if (!eAdmin) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
 
         const {
             name,
@@ -69,17 +58,6 @@ export const createManyCourses: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
 
     try {
-        const admin = res.locals.admin;
-
-        if (!admin || !admin._id) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
-
-        const eAdmin = await Admin.findById({ _id: admin._id })
-
-        if (!eAdmin) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
         const courses: Course.Req[] = req.body;
 
         if (!Array.isArray(courses) || courses.length === 0) {
@@ -132,17 +110,7 @@ export const deleteCourse: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
 
     try {
-        const admin = res.locals.admin;
-
-        if (!admin || !admin._id) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
-
-        const eAdmin = await Admin.findById({ _id: admin._id })
-
-        if (!eAdmin) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
+       
         const id = req.params.id as string;
 
         if (!id) {
@@ -170,17 +138,7 @@ export const updateCourse: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
 
     try {
-        const admin = res.locals.admin;
-
-        if (!admin || !admin._id) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
-
-        const eAdmin = await Admin.findById({ _id: admin._id })
-
-        if (!eAdmin) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
+        
         const id: string = req.params.id;
 
         const { name, description }: Partial<Course.Req> =
@@ -225,18 +183,6 @@ export const getAllCourses: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
 
     try {
-
-        const admin = res.locals.admin;
-
-        if (!admin || !admin._id) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
-
-        const eAdmin = await Admin.findById({ _id: admin._id })
-
-        if (!eAdmin) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
 
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
@@ -284,18 +230,6 @@ export const getAllCourses: Controller = async (req, res) => {
 export const publishCourse: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
     try {
-
-        const admin = res.locals.admin;
-
-        if (!admin || !admin._id) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
-
-        const eAdmin = await Admin.findById({ _id: admin._id })
-
-        if (!eAdmin) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
         // const { has_published }: Partial<Course.Req> = req.body;
         const id = req.params.id as string;
 
@@ -367,18 +301,6 @@ export const unPublishCourse: Controller = async (req, res) => {
 export const getCourseById: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
     try {
-
-        const admin = res.locals.admin;
-
-        if (!admin || !admin._id) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
-
-        const eAdmin = await Admin.findById({ _id: admin._id })
-
-        if (!eAdmin) {
-            return jsonResponse.notAuthorized("Unauthorized access.");
-        }
 
         const id = req.params.id as string;
 

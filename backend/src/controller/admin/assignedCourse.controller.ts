@@ -1,6 +1,6 @@
 import JsonResponse from "lib/Response";
 import { Controller } from "types/controller";
-import { AssignedCourse as ACModle } from "models/admins/AssignedCourse";
+import { AssignedCourse as ACModel } from "models/admins/AssignedCourse";
 import { Admin } from "models/admins/Admin.model";
 import { Teacher } from "models/teacher/teacher.model";
 import Course from "models/admins/Course.model";
@@ -11,17 +11,7 @@ export const assignCourse: Controller = async (req, res) => {
   const jsonResponse = new JsonResponse(res);
 
   try {
-    const admin = res.locals.admin;
-
-    if (!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({ _id: admin._id });
-
-    if (!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
+   
 
     const { teacher_id, courses, assigned_date }: AssignedCourse.Res = req.body;
 
@@ -53,7 +43,7 @@ export const assignCourse: Controller = async (req, res) => {
       return jsonResponse.notFound("Some courses is not exist.");
     }
 
-    const courseAssigned = await ACModle.create({
+    const courseAssigned = await ACModel.create({
       teacher_id,
       courses: courses,
       assigned_date,
@@ -73,17 +63,7 @@ export const deleteAssignCourse: Controller = async (req, res) => {
   const jsonResponse = new JsonResponse(res);
 
   try {
-    const admin = res.locals.admin;
-
-    if (!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({ _id: admin._id });
-
-    if (!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
+    
 
     const id = req.params.id as string;
 
@@ -93,13 +73,13 @@ export const deleteAssignCourse: Controller = async (req, res) => {
       );
     }
 
-    const caExist = await ACModle.findById(id);
+    const caExist = await ACModel.findById(id);
 
     if (!caExist) {
       return jsonResponse.notFound("Course is not found by the given id.");
     }
 
-    await ACModle.findByIdAndDelete(id);
+    await ACModel.findByIdAndDelete(id);
     return jsonResponse.success("Course deleted successfully.");
   } catch (error) {
     console.error(error);
