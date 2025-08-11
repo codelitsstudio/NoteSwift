@@ -20,6 +20,7 @@ import TeacherRoutes from "./teacher/teacher.route";
 import StudentAdminRoutes from "./admin/student.route";
 
 import AssigneCourseRoutes from "./admin/courseAssigned.route";
+import AuditLogRoutes from "./admin/logs.routes";
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.use("/admin/subject", authenticateAdmin, SubjectRoute);
 router.use("/admin/course", authenticateAdmin, CourseRoute);
 router.use("/admin/course", authenticateAdmin, AssigneCourseRoutes);
 router.use("/admin/student", authenticateAdmin, StudentAdminRoutes);
+router.use("/admin/logs", authenticateAdmin, AuditLogRoutes);
 // announcement
 
 router.use("/announcement", AnnouncementRoutes);

@@ -4,6 +4,7 @@ import CourseModel from "models/admins/Course.model";
 import { Course } from "@shared/api/admin/course";
 import { Subject } from "models/admins/Subject.model";
 import { Admin } from "models/admins/Admin.model";
+import { AuditService } from "services/audit.service";
 
 export const createCourse: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
@@ -57,6 +58,15 @@ export const createCourse: Controller = async (req, res) => {
         });
 
         await course.save();
+
+        // Log the course creation
+        await AuditService.logCourseAction(
+            admin._id,
+            'CREATE',
+            course._id.toString(),
+            course.name,
+            req
+        );
 
         return jsonResponse.success(course);
     } catch (error) {
@@ -157,6 +167,15 @@ export const deleteCourse: Controller = async (req, res) => {
             return jsonResponse.clientError("Course is not exist to delete.");
         }
 
+        // Log before deletion
+        await AuditService.logCourseAction(
+            admin._id,
+            'DELETE',
+            courseExist._id.toString(),
+            courseExist.name,
+            req
+        );
+
         await CourseModel.findByIdAndDelete(id);
 
         return jsonResponse.success();
@@ -212,6 +231,15 @@ export const updateCourse: Controller = async (req, res) => {
             id,
             { $set: updateCourse },
             { new: true, runValidators: true }
+        );
+
+        // Log the course update
+        await AuditService.logCourseAction(
+            admin._id,
+            'UPDATE',
+            courseExist._id.toString(),
+            courseExist.name,
+            req
         );
 
         return jsonResponse.success(updatedCourse);
@@ -322,6 +350,15 @@ export const publishCourse: Controller = async (req, res) => {
             { new: true, runValidators: true }
         );
 
+        // Log the course publish action
+        await AuditService.logCourseAction(
+            admin._id,
+            'PUBLISH',
+            courseExist._id.toString(),
+            courseExist.name,
+            req
+        );
+
         return jsonResponse.success(updatedCourse, "Subject published successfully.");
     } catch (error) {
         console.log(error);
@@ -332,6 +369,18 @@ export const publishCourse: Controller = async (req, res) => {
 export const unPublishCourse: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
     try {
+        const admin = res.locals.admin;
+
+        if (!admin || !admin._id) {
+            return jsonResponse.notAuthorized("Unauthorized access.");
+        }
+
+        const eAdmin = await Admin.findById({ _id: admin._id })
+
+        if (!eAdmin) {
+            return jsonResponse.notAuthorized("Unauthorized access.");
+        }
+        
         // const { has_published }: Partial<Course.Req> = req.body;
         const id = req.params.id as string;
 
@@ -355,6 +404,15 @@ export const unPublishCourse: Controller = async (req, res) => {
                 },
             },
             { new: true, runValidators: true }
+        );
+
+        // Log the course unpublish action
+        await AuditService.logCourseAction(
+            admin._id,
+            'UNPUBLISH',
+            courseExist._id.toString(),
+            courseExist.name,
+            req
         );
 
         return jsonResponse.success(updatedCourse, "Subject unpublished successfully.");

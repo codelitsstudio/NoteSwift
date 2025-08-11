@@ -28,7 +28,7 @@ export async function handleSendOtp() {
       throw new Error("OTP_EMAIL_TO environment variable is not set.");
     }
 
-    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
 
     // Remove old OTPs
     await Otp.deleteMany({ email });
