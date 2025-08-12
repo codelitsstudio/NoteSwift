@@ -9,20 +9,6 @@ export const createSubject: Controller = async (req, res) => {
   const jsonResponse = new JsonResponse(res);
 
   try {
-    // auth admin
-    const admin = res.locals.admin;
-
-    if(!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({_id: admin._id})
-
-    if(!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-   // console.log(eAdmin);
 
 
 
@@ -47,17 +33,6 @@ export const updateSubject: Controller = async (req, res) => {
   const jsonResponse = new JsonResponse(res);
 
   try {
-     const admin = res.locals.admin;
-
-    if(!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({_id: admin._id})
-
-    if(!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
 
     const id = req.params.id as string;
     const { subject_name }: Subject.Req = req.body;
@@ -92,17 +67,6 @@ export const all: Controller = async (req, res) => {
   const jsonResponse = new JsonResponse(res);
 
   try {
-     const admin = res.locals.admin;
-
-    if(!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({_id: admin._id})
-
-    if(!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
 
     const subjects = await SubjectModel.find();
 
@@ -117,17 +81,7 @@ export const getById: Controller = async (req, res) => {
   const jsonResponse = new JsonResponse(res);
 
   try {
-     const admin = res.locals.admin;
-
-    if(!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({_id: admin._id})
-
-    if(!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
+   
 
 
     const id = req.params.id as string;
@@ -154,18 +108,6 @@ export const deleteSubject: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
 
     try {
-
-       const admin = res.locals.admin;
-
-    if(!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({_id: admin._id})
-
-    if(!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
 
 
         const id = req.query.id as string;

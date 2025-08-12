@@ -8,17 +8,6 @@ export const getAllStudnet: Controller = async (req, res) => {
   const jsonResponse = new JsonResponse(res);
 
   try {
-    const admin = res.locals.admin;
-
-    if (!admin || !admin._id) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
-
-    const eAdmin = await Admin.findById({ _id: admin._id });
-
-    if (!eAdmin) {
-      return jsonResponse.notAuthorized("Unauthorized access.");
-    }
 
     const students = await Student.find();
 return jsonResponse.success(students, "Data retrieve successfully.");

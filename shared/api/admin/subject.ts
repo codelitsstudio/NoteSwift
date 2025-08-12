@@ -11,5 +11,7 @@ export namespace Subject {
         updatedAt: Date;
     }
 
+
     export type SubjectRes = ApiResponse<Res>;
+    export type SubjectsRes = ApiResponse<Res[]>;
 }
