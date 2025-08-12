@@ -11,10 +11,10 @@ export namespace AssignedCourse {
         _id: string;
         teacher_id: string;
         courses: string[];
-        assigned_date: Date;
-        createdAt: Date;
-        updatedAt: Date;
+        assigned_date: string;
+        createdAt: string;
+        updatedAt: string;
     }
 
-    export type AssignedCourseType = ApiResponse<Res>;
+    export type AssignedCourseRes = ApiResponse<Res>;
 }
