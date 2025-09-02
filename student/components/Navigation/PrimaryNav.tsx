@@ -1,10 +1,12 @@
 import React from "react";
-import { View, Pressable, Text } from "react-native";
+import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useNavStore, navOrder } from "../../stores/navigationStore";
-import * as Haptics from "expo-haptics"; 
+import { useNavStore } from "../../stores/navigationStore";
+import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
+
 interface NavItem {
   key: string;
   label: string;
@@ -24,6 +26,7 @@ const navItems: NavItem[] = [
   { key: "More", label: "More", icon: "more-horiz", route: "/More/MorePage" },
 ];
 
+
 const PrimaryNav: React.FC<Props> = ({ current }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -31,7 +34,7 @@ const PrimaryNav: React.FC<Props> = ({ current }) => {
 
   const handlePress = (item: NavItem) => {
     if (current !== item.key) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Haptic feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setTab(item.key);
       router.push(item.route as any);
     }
@@ -39,34 +42,82 @@ const PrimaryNav: React.FC<Props> = ({ current }) => {
 
   return (
     <View
-      style={{ paddingBottom: insets.bottom + 8 }}
-      className="absolute bottom-0 left-0 right-0 flex-row justify-between bg-white rounded-t-[40px] px-6 pt-4 shadow-lg"
+      style={{
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+      }}
     >
-      {navItems.map((item) => {
-        const isActive = current === item.key;
-        return (
-          <Pressable
-            key={item.key}
-            onPress={() => handlePress(item)}
-            className="flex-1 items-center"
-          >
-            <MaterialIcons
-              name={item.icon}
-              size={26}
-              className={`${isActive ? "text-customBlue" : "text-[#434242]"}`}
-            />
-            <Text
-              className={`mt-1 text-[12px] font-medium ${
-                isActive ? "text-customBlue" : "text-[#434242]"
-              }`}
-            >
-              {item.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+      <View
+        style={{
+          borderTopLeftRadius: 40,
+          borderTopRightRadius: 40,
+          overflow: "hidden",
+          flex: 1,
+        }}
+      >
+    <BlurView
+  intensity={Platform.OS === "ios" ? 100 : 0} // blur only on iOS
+  tint="light"
+  className="flex-row justify-between px-6 pt-4"
+  style={{
+    paddingBottom: insets.bottom,
+    backgroundColor:
+      Platform.OS === "android" ? "white" : "rgba(255,255,255,0.3)", // white on Android, translucent for iOS
+  }}
+>
+          {navItems.map((item) => {
+            const isActive = current === item.key;
+            return (
+              <Pressable
+                key={item.key}
+                onPress={() => handlePress(item)}
+                style={styles.navItem}
+              >
+                <MaterialIcons
+                  name={item.icon}
+                  size={26}
+                  color={isActive ? "#2563eb" : "#434242"}
+                />
+                <Text
+                  style={{
+                    marginTop: 4,
+                    fontSize: 12,
+                    fontWeight: "500",
+                    color: isActive ? "#2563eb" : "#434242",
+                  }}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </BlurView>
+      </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  blurContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.4)", // semi-transparent for glass effect
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10, // for Android shadow
+  },
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+});
 
 export default PrimaryNav;

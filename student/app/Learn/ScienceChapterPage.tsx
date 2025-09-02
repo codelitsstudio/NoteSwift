@@ -12,10 +12,12 @@ import SearchBar from '../../components/InputFields/SearchBar';
 import SubjectCard from '../../components/Container/SubjectCard';
 import RadialBox from '../../components/RadialBox/RadialBox';
 import SubjectProgressCard from '../../components/RadialBox/RadialBox';
+import { useRouter } from 'expo-router';
+
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
-
+  const router = useRouter();
   const chapters = [
     { subject: 'Chapter-1', syllabus: 'Measurement and Units – Quantifying the World' },
     { subject: 'Chapter-2', syllabus: 'Force and Motion – Laws of Nature' },
@@ -29,7 +31,7 @@ export default function HomePage() {
     { subject: 'Chapter-10', syllabus: 'Environment and Pollution – A Fragile Earth' },
   ];
 
-  const filteredChapters = chapters.filter(item =>
+   const filteredChapters = chapters.filter(item =>
     item.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.syllabus.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -41,16 +43,16 @@ export default function HomePage() {
       className="flex-1 bg-white"
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
-     <SubjectProgressCard
-        subject="Science"
-        year={2082}
-        completion={45}
-        onPress={() => console.log("Card tapped")}
-      />
+          <SubjectProgressCard
+            subject="Science"
+            year={2082}
+            completion={45}
+            onPress={() => console.log("Card tapped")}
+          />
           <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
           <View className="flex-row justify-between items-center mt-6 mb-4">
@@ -58,17 +60,18 @@ export default function HomePage() {
           </View>
 
           <View className="space-y-4">
-            {filteredChapters.map((item, index) => (
-              <SubjectCard
-                key={index}
-                subject={item.subject}
-                syllabus={item.syllabus}
-                onPress={() => {
-                  console.log('Pressed:', item.subject);
-                }}
-              />
-            ))}
-          </View>
+  {filteredChapters.map((item, index) => (
+    <SubjectCard
+      key={index}
+      subject={item.subject}
+      syllabus={item.syllabus}
+      onPress={() => {
+        router.push("/Learn/chapter-1" as any);
+      }}
+    />
+  ))}
+</View>
+
         </View>
       </ScrollView>
 

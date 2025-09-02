@@ -1,29 +1,24 @@
-// pages/Home/HomePage.tsx
-import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableOpacity,
-} from 'react-native';
-import LiveClasses from './Components/LiveClasses';
-import QuickAccess from '../../components/Container/QuickAccess';
-import UpcomingCourses from './Components/UpcomingCourses';
-import PrimaryNav from '../../components/Navigation/PrimaryNav';
-import Toast from 'react-native-toast-message';
+import React, { useEffect } from "react";
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from "react-native";
+import LiveClasses from "./Components/LiveClasses";
+import QuickAccess from "../../components/Container/QuickAccess";
+import UpcomingCourses from "./Components/UpcomingCourses";
+import TopicsSection from "../../components/Container/TopicSection";
+import NoteswiftProCard from "../../components/Container/NoteswiftProCard";
+import RecommendationClasses from "./Components/RecommendedClasses";
+import FreeCourses from "./Components/FreeCourses";
 
-import { useRouter } from 'expo-router';
-import { useSearchParams } from 'expo-router/build/hooks';
+import PrimaryNav from "../../components/Navigation/PrimaryNav";
+import Toast from "react-native-toast-message";
+import { useRouter } from "expo-router";
+import { useSearchParams } from "expo-router/build/hooks";
 
 export default function HomePage() {
-    const router = useRouter();          
+  const router = useRouter();
   const params = useSearchParams();
 
-
-   useEffect(() => {
-    if (params.get('loggedIn') === "true") {
+  useEffect(() => {
+    if (params.get("loggedIn") === "true") {
       Toast.show({
         type: "success",
         position: "top",
@@ -35,50 +30,45 @@ export default function HomePage() {
       });
 
       setTimeout(() => {
-        router.replace({
-          pathname: "/Home/HomePage",
-          params: {}, // clears params
-        });
+        router.replace({ pathname: "/Home/HomePage", params: {} });
       }, 700);
     }
   }, [params, router]);
 
-
-
-  
   return (
-    
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={80}
       className="flex-1 bg-white"
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100}} keyboardShouldPersistTaps="handled">
         <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
-          <LiveClasses />
 
+   
+
+          {/* Topics */}
+          <TopicsSection />
+
+          {/* Noteswift Pro */}
+          <NoteswiftProCard />
+       {/* Live Classes */}
+          <LiveClasses />
+          {/* Quick Access */}
           <Text className="text-2xl font-bold mb-3 text-gray-900">Quick Access</Text>
           <QuickAccess />
 
-          <View className="flex-row justify-between items-center mt-4 mb-4">
-            <Text className="text-2xl font-bold text-gray-900">Upcoming Classes</Text>
-            <TouchableOpacity onPress={() => {}}>
-              <Text className="text-base text-blue-500 font-medium">View More</Text>
-            </TouchableOpacity>
-          </View>
-            <UpcomingCourses />
-     
        
-        </View>
 
-      
-      
+          {/* Recommendations */}
+          <RecommendationClasses />
+
+          {/* Categories */}
+          {/* <CategoryGrid /> */}
+          <FreeCourses />
+             <UpcomingCourses />
+        </View>
       </ScrollView>
-        <PrimaryNav current="Home" />
+      <PrimaryNav current="Home" />
     </KeyboardAvoidingView>
-    
   );
 }

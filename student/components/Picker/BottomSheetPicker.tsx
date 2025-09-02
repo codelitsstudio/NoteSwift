@@ -5,9 +5,11 @@ import {
   TouchableOpacity,
   Animated,
   StyleSheet,
+  Keyboard,
 } from 'react-native';
 import BottomSheet, { BottomSheetFlatList, BottomSheetModal } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { setActivePicker, clearActivePicker } from './PickerManager';
 
 interface PickerItem {
   label: string;
@@ -38,6 +40,8 @@ export function BottomSheetPicker({
   const [isFocused, setIsFocused] = useState(false);
   const borderAnim = useRef(new Animated.Value(0)).current;
 
+
+
   useEffect(() => {
     Animated.timing(borderAnim, {
       toValue: selectedValue || isFocused ? 1 : 0,
@@ -56,16 +60,26 @@ export function BottomSheetPicker({
     outputRange: ['#E5E7EB', '#F9FAFB'], // grey to lighter grey (or white)
   });
 
-  const openSheet = () => {
-    if (!disabled) {
-      setIsFocused(true);
-      bottomSheetRef.current?.present();
-    }
-  };
-  const closeSheet = () => {
-    setIsFocused(false);
-    bottomSheetRef.current?.dismiss();
-  };
+
+const openSheet = () => {
+  if (!disabled) {
+    // Dismiss keyboard first
+    Keyboard.dismiss();
+
+    // Close other pickers
+    setActivePicker({ close: closeSheet });
+
+    setIsFocused(true);
+    bottomSheetRef.current?.present();
+  }
+};
+
+const closeSheet = () => {
+  setIsFocused(false);
+  bottomSheetRef.current?.dismiss();
+  clearActivePicker({ close: closeSheet });
+};
+
 
   const selectedLabel = data.find(d => d.value === selectedValue)?.label;
 

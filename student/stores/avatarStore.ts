@@ -1,33 +1,29 @@
 import { create } from 'zustand';
 
-const PEOPLE_EMOJIS = [
-  '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '🥲', '☺️',
-  '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗',
-  '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓',
-  '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕',
-  '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤'
-];
-
 interface AvatarState {
   avatarEmoji: string;
   setAvatar: (emoji: string) => void;
   getRandomEmoji: () => string;
 }
 
-export const useAvatarStore = create<AvatarState>((set: (arg0: { avatarEmoji: any; }) => void) => ({
-  avatarEmoji: '🙂', // Default emoji
-  
-  setAvatar: (emoji: any) => {
+export const useAvatarStore = create<AvatarState>((set) => ({
+  avatarEmoji: `https://api.dicebear.com/9.x/open-peeps/png?seed=default`, // Default avatar
+
+  setAvatar: (emoji: string) => {
     set({ avatarEmoji: emoji });
   },
-  
+
   getRandomEmoji: () => {
-    return PEOPLE_EMOJIS[Math.floor(Math.random() * PEOPLE_EMOJIS.length)];
-  }
+    const seed = Math.random().toString(36).substring(7);
+    return `https://api.dicebear.com/9.x/open-peeps/png?seed=${seed}`;
+  },
 }));
 
-// Standalone functions
 export const avatarStore = {
-  setAvatar: (emoji: string) => useAvatarStore.getState().setAvatar(emoji),
-  getRandomEmoji: () => useAvatarStore.getState().getRandomEmoji(),
+  setAvatar: (emoji: string) => {
+    useAvatarStore.getState().setAvatar(emoji);
+  },
+  getRandomEmoji: () => {
+    return useAvatarStore.getState().getRandomEmoji();
+  },
 };

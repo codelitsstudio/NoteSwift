@@ -8,6 +8,9 @@ import {
   Dimensions,
   Animated,
   Easing,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 
 interface TextInputFieldProps {
@@ -90,6 +93,37 @@ export default function TextInputField({
   );
 }
 
+// Wrapper component for keyboard avoidance
+export function KeyboardAvoidingTextInput(props: TextInputFieldProps) {
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.keyboardAvoidingView}
+    >
+      <TextInputField {...props} />
+    </KeyboardAvoidingView>
+  );
+}
+
+// Alternative: Form wrapper with ScrollView and KeyboardAvoidingView
+export function KeyboardAvoidingForm({ children }: { children: React.ReactNode }) {
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.flex1}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     width: "100%",
@@ -110,5 +144,15 @@ const styles = StyleSheet.create({
     fontSize: width < 360 ? 12 : 14,
     color: "#111827",
     paddingVertical: 12,
+  },
+  keyboardAvoidingView: {
+    width: "100%",
+  },
+  flex1: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
 });

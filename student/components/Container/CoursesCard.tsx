@@ -21,7 +21,7 @@ export default function CourseCard({
   buttonLabel = "Join Now", // fallback label
 }: Props) {
   return (
-    <View className="bg-white rounded-3xl shadow-md w-[48%] p-4 items-start">
+    <View className="bg-white rounded-3xl w-[48%] p-4 items-start ">
       <Image
         source={image}
         style={{ width: "100%", height: 120, borderRadius: 16 }}

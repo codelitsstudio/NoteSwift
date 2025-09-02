@@ -53,7 +53,7 @@ export default function HomePage() {
       className="flex-1 bg-white"
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">

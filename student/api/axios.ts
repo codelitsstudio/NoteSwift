@@ -1,11 +1,11 @@
-import instance from "axios"
+import axios from "axios";
 
-export const URI = "http://10.0.2.2:5000/api"
+export const URI = "http://192.168.1.64:5000/api"; // use your actual machine IP
 
-const api = instance.create({
+const api = axios.create({
     baseURL: URI,
-    withCredentials: true,
-    headers: { 'Access-Control-Allow-Origin': '*' }
-})
+    withCredentials: true, // keep if using cookies/sessions
+    // headers: { 'Access-Control-Allow-Origin': '*' } // remove this
+});
 
-export default api
+export default api;

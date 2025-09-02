@@ -1,26 +1,26 @@
 import React from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 
 type AccessItem = {
   label: string;
-  icon: any; // require('path')
+  icon: keyof typeof MaterialIcons.glyphMap;
 };
 
 const accessItems: AccessItem[] = [
-  { label: "My Batch", icon: require("../../assets/images/mybatch.png") },
-  { label: "My History", icon: require("../../assets/images/history.png") },
-  { label: "My Doubts", icon: require("../../assets/images/doubt.png") },
-  { label: "Leaderboard", icon: require("../../assets/images/leaderboard.png") },
-  { label: "My Courses", icon: require("../../assets/images/courses.png") },
-  { label: "My Rank", icon: require("../../assets/images/rank.png") },
-  { label: "Bookmarks", icon: require("../../assets/images/bookmark.png") },
-  { label: "Downloads", icon: require("../../assets/images/downloads.png") },
+  { label: "My Batch", icon: "group" },
+  { label: "My History", icon: "history" },
+  { label: "My Doubts", icon: "help-outline" },
+  { label: "Leaderboard", icon: "leaderboard" },
+  { label: "Courses", icon: "menu-book" },
+  { label: "My Rank", icon: "emoji-events" },
+  { label: "Bookmarks", icon: "bookmark-outline" },
+  { label: "Downloads", icon: "download" },
 ];
 
 const QuickAccess: React.FC = () => {
   return (
-    <View className="bg-white p-4 rounded-xl shadow-sm">
-
+    <View className="bg-white p-4 rounded-xl border border-gray-100">
       <View className="flex-row flex-wrap justify-between">
         {accessItems.map((item, index) => (
           <TouchableOpacity
@@ -28,11 +28,7 @@ const QuickAccess: React.FC = () => {
             className="w-[22%] mb-4 items-center"
             activeOpacity={0.7}
           >
-            <Image
-              source={item.icon}
-              style={{ width: 30, height: 30 }}
-              resizeMode="contain"
-            />
+            <MaterialIcons name={item.icon} size={28} color="#374151" />
             <Text className="text-[12px] text-center mt-1 text-gray-700">
               {item.label}
             </Text>

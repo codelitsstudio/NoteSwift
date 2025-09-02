@@ -20,7 +20,7 @@ module.exports = {
           400: "#6A6A6A",
            200: "#475569" 
         },
-          customBlue: "#3592F2",
+          customBlue: "#3B82F6",
           buttonBlue: "#007AFF"
       },
       padding: {

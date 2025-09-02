@@ -9,8 +9,6 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   ScrollView,
-  StyleSheet,
-  Dimensions,
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
@@ -22,13 +20,6 @@ import { useRouter } from 'expo-router';
 import { BottomSheetPicker } from '../../../components/Picker/BottomSheetPicker';
 import { useNavStore } from '@/stores/navigationStore';
 
-const { width } = Dimensions.get('window');
-
-
-useEffect(() => {
-  useNavStore.getState().setTab("Register"); // ✅ THIS IS THE FIXED WAY
-}, []);
-
 export default function Register() {
   const signup_data = useAuthStore(state => state.signup_data);
   const setSignupData = useAuthStore(state => state.setSignupData);
@@ -36,6 +27,10 @@ export default function Register() {
 
   const fullName = signup_data.full_name;
   const selectedGrade = signup_data.grade;
+
+  useEffect(() => {
+    useNavStore.getState().setTab("Register");
+  }, []);
 
   const grades = Array.from({ length: 12 }, (_, i) => ({
     label: `Grade ${i + 1}`,
@@ -63,25 +58,35 @@ export default function Register() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView className="flex-1 bg-white">
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
-          style={[styles.container, { backgroundColor: 'white' }]}
+          className="flex-1 bg-white"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 0}
         >
           <ScrollView
-            contentContainerStyle={[styles.inner, { backgroundColor: 'white', paddingBottom: 40 }]}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+              paddingBottom: 40,
+              backgroundColor: 'white'
+            }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
             <ImageHeader source={require('../../../assets/images/illl-2.png')} />
 
-            <View style={styles.form}>
-              <Text style={styles.title}>Register</Text>
-              <Text style={styles.subtitle}>Please Enter Your Credentials To Register</Text>
+            <View className="flex-1 justify-center">
+              <Text className="text-2xl font-bold text-center text-gray-800 mt-0.5">
+                Register
+              </Text>
+              <Text className="text-sm text-gray-500 text-center font-semibold mt-1 mb-8">
+                Please Enter Your Credentials To Register
+              </Text>
 
-              <View style={styles.inputGroup}>
+              <View className="gap-2.5 mb-1">
                 <TextInputField
                   label="Full Name"
                   placeholder="Enter your full name…"
@@ -100,19 +105,28 @@ export default function Register() {
 
               <ButtonPrimary title="Next" onPress={handleRegister} />
 
-              <View style={styles.footer}>
-                <TouchableOpacity style={styles.logoWrapper}>
+              <View className="items-center mt-1.5">
+                <TouchableOpacity className="w-16 h-16 bg-white rounded-full items-center justify-center shadow-lg mb-3">
                   <Image
-                    source={require('../../../assets/images/logo.png')}
-                    style={styles.logo}
+                    source={require('../../../assets/images/icon.png')}
+                    className="w-24 h-24"
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
 
-                <View style={styles.registerRow}>
-                  <Text style={styles.registerText}>Already have an account? </Text>
-                  <TouchableOpacity onPress={() => router.push('/onboarding/Login/login')}>
-                    <Text style={styles.registerLink}>Login</Text>
+                <View className="flex-row items-center mt-2">
+                  <Text className="text-sm text-gray-500 font-semibold">
+                    Already have an account?{' '}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      useNavStore.getState().setTab("Login");
+                      router.back();
+                    }}
+                  >
+                    <Text className="text-sm text-blue-500 font-semibold">
+                      Back to Login
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -123,76 +137,3 @@ export default function Register() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  inner: {
-    flexGrow: 1,
-    justifyContent: 'center', // same as login.tsx for vertical centering on larger screens
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  form: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: width < 360 ? 24 : 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#1F2937',
-    marginTop: 2,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    fontWeight: '600',
-    marginTop: 4,
-    marginBottom: 32,
-  },
-  inputGroup: {
-    gap: 10,
-    marginBottom: 4,
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  logoWrapper: {
-    width: 64,
-    height: 64,
-    backgroundColor: 'white',
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    marginBottom: 12,
-  },
-  logo: {
-    width: 82,
-    height: 82,
-  },
-  registerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  registerText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  registerLink: {
-    fontSize: 14,
-    color: '#007AFF', // blue color matching login.tsx
-    fontWeight: '600',
-  },
-});

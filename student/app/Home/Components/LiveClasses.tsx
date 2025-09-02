@@ -1,4 +1,3 @@
-// components/Container/LiveClasses.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -12,6 +11,7 @@ const classes = [
     teacher: 'Rabin Pandey',
     imageUrl:
       'https://tse1.mm.bing.net/th/id/OIP.r8OzEmyuDyDFPA64HsYQkAAAAA?w=391&h=500&rs=1&pid=ImgDetMain&o=7&rm=3',
+    isLive: true,
   },
   {
     id: 2,
@@ -20,6 +20,7 @@ const classes = [
     teacher: 'Anjana Shrestha',
     imageUrl:
       'https://m.media-amazon.com/images/I/51Q3eT61ilL._SY445_SX342_.jpg',
+    isLive: false,
   },
 ];
 
@@ -28,13 +29,15 @@ export default function LiveClasses() {
 
   return (
     <View className="mb-4">
+      {/* Header */}
       <View className="flex-row justify-between items-center mb-4">
-        <Text className="text-2xl font-bold text-gray-900">Live Classes</Text>
+        <Text className="text-2xl font-bold text-gray-900">Live Today</Text>
         <TouchableOpacity onPress={() => router.push('/')}>
           <Text className="text-base text-blue-500 font-medium">View More</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Class list */}
       {classes.map((cls) => (
         <LiveClassCard
           key={cls.id}
@@ -42,7 +45,12 @@ export default function LiveClasses() {
           time={cls.time}
           teacher={cls.teacher}
           imageUrl={cls.imageUrl}
-          onPress={() => router.push(`./Class/${cls.id.toString()}`)}
+          isLive={cls.isLive}
+          onPress={() =>
+            cls.isLive
+              ? router.push(`./Class/${cls.id.toString()}`)
+              : console.log('Notify Me clicked!')
+          }
         />
       ))}
     </View>
