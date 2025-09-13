@@ -23,8 +23,6 @@ const FirstCourseDescription = () => {
     isEnrolled,
     enrollInCourse,
     is_loading,
-    fetchUserEnrollments,
-    enrolledCourses
   } = useCourseStore();
   
   const { addNotification } = useNotificationStore();

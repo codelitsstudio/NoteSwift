@@ -230,7 +230,7 @@ const handleSkip = () => {
               {/* Text */}
               <View className="items-center px-4" style={{ marginTop: isSmallDevice ? height * 0.01 : height * 0.02, marginBottom: height * 0.03 }}>
                 <Text className="text-center text-gray-900 font-bold" style={{ fontSize: width * 0.065, lineHeight: width * 0.08, marginBottom: height * 0.015 }}>
-                  {slide.title} <Text className="text-blue-500">{slide.titleHighlight}</Text>
+                  <Text>{slide.title}</Text> <Text className="text-blue-500">{slide.titleHighlight}</Text>
                 </Text>
                 <Text className="text-center text-gray-500" style={{ fontSize: width * 0.04, lineHeight: width * 0.055 }}>
                   {slide.description}

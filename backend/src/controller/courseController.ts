@@ -1,6 +1,6 @@
 // backend/controllers/courseController.ts
 import { Request, Response } from "express";
-import Course from "../models/Course";
+import Course from "../models/Course.model";
 import CourseEnrollment from "../models/CourseEnrollment";
 import { Types } from "mongoose";
 
@@ -15,10 +15,21 @@ interface AuthRequest extends Request {
 // Get featured course
 export const getFeaturedCourse = async (req: Request, res: Response): Promise<void> => {
   try {
-    const featuredCourse = await Course.findOne({
-      isActive: true,
-      isFeatured: true,
-    }).sort({ createdAt: -1 });
+    // Get the specific study habits course as featured course
+    let featuredCourse = await Course.findOne({
+      title: 'Learn How To Actually Study Before It\'s Too Late',
+      status: 'Published'
+    });
+
+    // If study habits course doesn't exist, fall back to any published course
+    if (!featuredCourse) {
+      console.log('⚠️ Study habits course not found, falling back to any published course');
+      featuredCourse = await Course.findOne({
+        status: 'Published'
+      }).sort({ createdAt: -1 });
+    } else {
+      console.log('✅ Found study habits course as featured course');
+    }
 
     if (!featuredCourse) {
       res.status(404).json({
@@ -28,6 +39,7 @@ export const getFeaturedCourse = async (req: Request, res: Response): Promise<vo
       return;
     }
 
+    console.log('📤 Returning featured course:', featuredCourse.title);
     res.json({
       success: true,
       data: featuredCourse,
@@ -135,7 +147,7 @@ export const getUserEnrollments = async (req: AuthRequest, res: Response): Promi
     const enrollments = await CourseEnrollment.find({
       studentId: userId,
       isActive: true,
-    }).populate("courseId", "title description thumbnail");
+    }).populate("courseId", "title description subject tags");
 
     res.json({
       success: true,
@@ -158,12 +170,12 @@ export const getAllCourses = async (req: Request, res: Response): Promise<void> 
     const limit = parseInt(req.query.limit as string, 10) || 10;
     const skip = (page - 1) * limit;
 
-    const courses = await Course.find({ isActive: true })
+    const courses = await Course.find({ status: 'Published' })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Course.countDocuments({ isActive: true });
+    const total = await Course.countDocuments({ status: 'Published' });
 
     res.json({
       success: true,

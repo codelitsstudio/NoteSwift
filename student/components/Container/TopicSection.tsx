@@ -12,7 +12,7 @@ const topics = [
 
 export default function TopicsSection() {
   return (
-    <View className="mb-6">
+    <View className="mb-6 mt-6">
       <Text className="text-2xl font-bold text-gray-900 mb-3">Topics</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {topics.map((topic) => (

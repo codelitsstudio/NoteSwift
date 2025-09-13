@@ -9,13 +9,11 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  teacherName: string;
-  thumbnail: string;
-  originalPrice?: string;
-  discountPercentage?: number;
-  isActive: boolean;
-  isFeatured: boolean;
+  subject: string;
+  tags: string[];
+  status: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface CourseEnrollment {

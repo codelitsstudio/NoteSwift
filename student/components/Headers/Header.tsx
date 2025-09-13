@@ -10,7 +10,7 @@ import Toast from 'react-native-toast-message';
 
 export default function Header() {
   const { avatarEmoji, setAvatar, getRandomEmoji } = useAvatarStore();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -34,7 +34,10 @@ export default function Header() {
 
   // Convert route path to page title
   const getPageTitle = () => {
-    if (pathname === "/Home/HomePage") return "Home";
+    if (pathname === "/Home/HomePage") {
+      const firstName = user?.full_name?.split(' ')[0] || 'User';
+      return `Hi, ${firstName}`;
+    }
     if (pathname === "/Learn/LearnPage") return "Learn";
     if (pathname === "/Profile/ProfilePage") return "Profile";
     if (pathname === "/Settings/SettingsPage") return "Settings";
@@ -55,12 +58,23 @@ export default function Header() {
     }}
   >
 
-        {/* Left: Big Page Title */}
-        <Text className="text-4xl font-extrabold text-black">
-          {getPageTitle()}
-        </Text>
+        {/* Left: Avatar + Page Title/Greeting */}
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={() => setMenuVisible(!menuVisible)}
+            className="w-10 h-10 bg-gray-200 rounded-full items-center justify-center"
+          >
+            <Image
+              source={{ uri: avatarEmoji }}
+              style={{ width: 40, height: 40, borderRadius: 20 }}
+            />
+          </TouchableOpacity>
+          <Text className={pathname === "/Home/HomePage" ? "text-lg font-bold text-black" : "text-2xl font-extrabold text-black"}>
+            {getPageTitle()}
+          </Text>
+        </View>
 
-        {/* Right: Icons + Avatar */}
+        {/* Right: Notifications Icon */}
         <View className="flex-row items-center gap-4">
           <TouchableOpacity
             onPress={() => router.push('/Notification/NotificationPage')}
@@ -75,18 +89,6 @@ export default function Header() {
               </View>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setMenuVisible(!menuVisible)}
-            className="w-10 h-10 bg-gray-200 rounded-full items-center justify-center"
-          >
-   <Image
-  source={{ uri: avatarEmoji }} // now PNG URL
-  style={{ width: 40, height: 40, borderRadius: 20 }}
-/>
-          </TouchableOpacity>
-
-
         </View>
       </View>
     </SafeAreaView>

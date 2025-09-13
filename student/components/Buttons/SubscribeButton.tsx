@@ -1,13 +1,16 @@
 import React, { memo } from "react";
 import { View, Text, Pressable } from "react-native";
-import { useRouter } from "expo-router"; // Add the router import
+import { useRouter } from "expo-router";
 
 function SubscribeButton({ selectedPlan }: { selectedPlan: string }) {
-  const router = useRouter(); // Instantiate the router
+  const router = useRouter();
 
   const handlePress = () => {
-    // Redirect to subscription management after subscription
-    router.push("/Screens/subscriptionManagement"); // Change the path if necessary
+    // Navigate to Step 2 (Marketplace) with the selected trial type
+    router.push({
+      pathname: '/Home/ProMarketplace' as any,
+      params: { trialType: selectedPlan }
+    });
   };
 
   return (
@@ -15,12 +18,12 @@ function SubscribeButton({ selectedPlan }: { selectedPlan: string }) {
       <Pressable
         onPress={handlePress} // Use the handlePress function for navigation
         android_ripple={{ color: "#2563eb" }}
-        className="bg-buttonBlue py-4 rounded-2xl items-center"
+        className="bg-buttonBlue py-4 rounded-3xl items-center"
       >
-        <Text className="text-white text-lg font-semibold">Subscribe Now</Text>
+        <Text className="text-white text-lg font-semibold">Next</Text>
       </Pressable>
-      <Text className="text-gray-400 text-center mt-2 text-sm">
-        Recurring billing – cancel anytime.
+      <Text className="text-gray-400 text-center mt-2 mb-3 text-sm">
+    One-time payment – no recurring charges.
       </Text>
     </View>
   );

@@ -17,6 +17,7 @@ type Props = {
   bottom?: number; // distance from bottom of the screen (default sits above nav)
   containerStyle?: StyleProp<ViewStyle>;
   buttonStyle?: StyleProp<ViewStyle>;
+  isSelected?: boolean; // prop to control button color
 };
 
 const FloatingEnrollButton: React.FC<Props> = ({
@@ -26,13 +27,16 @@ const FloatingEnrollButton: React.FC<Props> = ({
   bottom = 72,
   containerStyle,
   buttonStyle,
+  isSelected = false,
 }) => {
+  const buttonBackgroundColor = isSelected ? '#10B981' : '#3B82F6'; // Green if selected, blue otherwise
+  
   return (
     <View style={[styles.container, { bottom }, containerStyle]}>
       <TouchableOpacity
         activeOpacity={0.95}
         onPress={onPress}
-        style={[styles.button, buttonStyle]}
+        style={[styles.button, { backgroundColor: buttonBackgroundColor }, buttonStyle]}
         accessibilityRole="button"
         accessibilityLabel={title}
       >

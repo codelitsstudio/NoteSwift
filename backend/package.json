@@ -3,7 +3,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon -r tsconfig-paths/register src/app.ts",
     "start": "node compiled/server/src/app.js",
-    "build": "tsc"
+    "build": "tsc",
+    "db:health": "curl -X GET http://localhost:5000/api/admin/database/health",
+    "db:maintenance": "curl -X POST http://localhost:5000/api/admin/database/maintenance",
+    "db:seed": "curl -X POST http://localhost:5000/api/admin/database/seed",
+    "db:optimize": "curl -X POST http://localhost:5000/api/admin/database/optimize"
   },
   "dependencies": {
     "@types/bcrypt": "^5.0.2",

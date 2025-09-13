@@ -208,6 +208,14 @@ export default function RootLayout() {
                   <Stack.Screen name="onboarding/Register/emailVerify" options={{ headerShown: false }} />
                   <Stack.Screen name="onboarding/Register/PasswordPage" options={{ headerShown: false }} />
                   <Stack.Screen name="onboarding/Login/OnboardingPage" options={{ headerShown: false }} />
+                  <Stack.Screen name="ProDashboard/DashboardHome" options={{ headerShown: false }} />
+                  <Stack.Screen name="ProDashboard/MyPackages" options={{ headerShown: false }} />
+                  <Stack.Screen name="ProDashboard/PaymentHistory" options={{ headerShown: false }} />
+                  <Stack.Screen name="ProDashboard/AddMorePackages" options={{ headerShown: false }} />
+                  <Stack.Screen name="ProDashboard/AccountSettings" options={{ headerShown: false }} />
+                  <Stack.Screen name="Home/ProMarketplace" options={{ headerShown: false }} />
+                  <Stack.Screen name="Home/ProCheckout" options={{ headerShown: false }} />
+
                 </Stack>
 
                 {/* Offline Banner */}

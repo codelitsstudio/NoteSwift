@@ -1,5 +1,5 @@
 import JsonResponse from "lib/Response";
-import Course from "models/Course.model";
+import Course from "../../models/Course.model";
 import { Controller } from "types/controller";
 import { GetStudentLearnFeed } from "@shared/api/student/learn";
 export const getStudentLearnFeed: Controller = async(req, res) => {

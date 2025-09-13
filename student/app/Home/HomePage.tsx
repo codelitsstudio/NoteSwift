@@ -20,6 +20,7 @@ import { CourseNotificationSheet } from '../../components/Picker/CourseNotificat
 import { useCourseStore } from '../../stores/courseStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import SearchBar from '../../components/InputFields/SearchBar';
 
 export default function HomePage() {
   // Network status monitoring
@@ -29,6 +30,7 @@ export default function HomePage() {
   const params = useSearchParams();
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { user, isLoggedIn } = useAuthStore();
   const { 
@@ -37,8 +39,7 @@ export default function HomePage() {
     fetchUserEnrollments, 
     checkAndShowPopup,
     enrollInCourse,
-    isEnrolled,
-    is_loading
+    isEnrolled
   } = useCourseStore();
 
   // Handle login success toast
@@ -121,53 +122,6 @@ export default function HomePage() {
   };
 
   // Handle course enrollment (legacy support)
-  const handleCourseEnroll = async (courseId: string) => {
-    if (!featuredCourse) return;
-
-    const actualCourseId = featuredCourse.id || featuredCourse._id;
-    if (isEnrolled(actualCourseId)) {
-      return;
-    }
-
-    try {
-      const success = await enrollInCourse(actualCourseId);
-      
-      if (success) {
-        setNotificationVisible(false);
-        Toast.show({
-          type: "success",
-          position: "top",
-          text1: "Enrollment Successful! 🎉",
-          text2: `You've enrolled in ${featuredCourse.title}`,
-          visibilityTime: 4000,
-          autoHide: true,
-          topOffset: 50,
-        });
-      } else {
-        Toast.show({
-          type: "error",
-          position: "top",
-          text1: "Enrollment Failed",
-          text2: "Please try again later",
-          visibilityTime: 3000,
-          autoHide: true,
-          topOffset: 50,
-        });
-      }
-    } catch (error) {
-      console.error('Error enrolling in course:', error);
-      Toast.show({
-        type: "error",
-        position: "top",
-        text1: "Something went wrong",
-        text2: "Please try again later",
-        visibilityTime: 3000,
-        autoHide: true,
-        topOffset: 50,
-      });
-    }
-  };
-
   // Handle popup close
   const handleClosePopup = () => {
     console.log('handleClosePopup called');
@@ -216,6 +170,8 @@ export default function HomePage() {
         showsVerticalScrollIndicator={false}
       >
         <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
+          <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+
           <TopicsSection />
           <NoteswiftProCard />
           <FeaturedClasses />

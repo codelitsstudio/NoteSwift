@@ -9,7 +9,7 @@ export default function NoteswiftProCard() {
     <View className="bg-blue-600 rounded-3xl p-5 mb-6">
       <Text className="text-white text-xl font-bold mb-2">Noteswift Pro</Text>
       <Text className="text-white text-base mb-4">
-        Unlock premium notes, tools, and exclusive resources.
+        Unlock premium classes, videos, notes and exclusive resources.
       </Text>
       <TouchableOpacity
         className="bg-white px-5 py-2 rounded-full self-start"

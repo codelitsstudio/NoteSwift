@@ -69,12 +69,12 @@ export function CourseNotificationSheet({
   const alreadyEnrolled = isEnrolled(courseId);
 
   // Debug logging
-  console.log('Featured Course Thumbnail:', featuredCourse.thumbnail);
-  console.log('Thumbnail starts with http:', featuredCourse.thumbnail.startsWith('http'));
-  console.log('Thumbnail equals course-1-thumbnail.jpg:', featuredCourse.thumbnail === 'course-1-thumbnail.jpg');
+  console.log('Featured Course from API:', featuredCourse);
+  console.log('Course ID:', courseId);
+  console.log('Already enrolled:', alreadyEnrolled);
 
   const handleEnroll = async () => {
-    if (alreadyEnrolled || !featuredCourse) return;
+    if (alreadyEnrolled) return;
     
     try {
       const success = await enrollInCourse(courseId);
@@ -198,15 +198,7 @@ export function CourseNotificationSheet({
         {/* Thumbnail */}
         <View style={styles.thumbnailContainer}>
           <Image 
-            source={
-              featuredCourse.thumbnail.startsWith('http') 
-                ? { uri: featuredCourse.thumbnail }
-                : featuredCourse.thumbnail === 'course-1-thumbnail.jpg'
-                  ? require('../../assets/images/course-1-thumbnail.jpg')
-                  : featuredCourse.thumbnail.endsWith('.jpg') || featuredCourse.thumbnail.endsWith('.png')
-                    ? require('../../assets/images/course-1-thumbnail.jpg') // fallback to our local image
-                    : { uri: featuredCourse.thumbnail }
-            } 
+            source={require('../../assets/images/course-1-thumbnail.jpg')} // Use default thumbnail since new schema doesn't have thumbnail field
             style={styles.thumbnail} 
             resizeMode="cover"
             onError={(error) => console.log('Image loading error:', error.nativeEvent.error)}
@@ -220,17 +212,15 @@ export function CourseNotificationSheet({
           
           <View style={styles.teacherContainer}>
             <MaterialIcons name="person" size={16} color="#6B7280" />
-            <Text style={styles.teacherName}>By {featuredCourse.teacherName}</Text>
+            <Text style={styles.teacherName}>By ThatGuy (US) & NoteSwift Research Team</Text>
           </View>
           
           <Text style={styles.description}>{featuredCourse.description}</Text>
 
-          {featuredCourse.originalPrice && (
-            <View style={styles.priceContainer}>
-              <Text style={styles.originalPrice}>${featuredCourse.originalPrice}</Text>
-              <Text style={styles.freePrice}>Free Now</Text>
-            </View>
-          )}
+          {/* Price info - using default since new schema doesn't have pricing fields */}
+          <View style={styles.priceContainer}>
+            <Text style={styles.freePrice}>Free Course</Text>
+          </View>
 
           <TouchableOpacity 
             onPress={handleEnroll} 

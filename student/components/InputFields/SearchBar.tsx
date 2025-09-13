@@ -23,7 +23,7 @@ const SearchBar: React.FC<Props> = ({ value, onChangeText }) => {
     >
       <MaterialIcons name="search" size={24} color="#8c8c8c" />
       <TextInput
-        placeholder="Search enrolled classes..."
+        placeholder="Search for Relevant Classes..."
         placeholderTextColor="#999999"
         value={value}
         onChangeText={onChangeText}
