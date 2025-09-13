@@ -1,5 +1,5 @@
 // backend/src/models/User.ts
-import { Schema, model } from 'mongoose';
+import { Schema, model, models } from 'mongoose';
 
 export interface IUser {
   username: string;
@@ -13,4 +13,4 @@ const userSchema = new Schema<IUser>({
   avatarEmoji: { type: String, required: true },
 });
 
-export const User = model<IUser>('User', userSchema);
+export const User = (models.User as any) || model<IUser>('User', userSchema);

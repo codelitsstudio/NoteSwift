@@ -43,43 +43,170 @@ export default function Login() {
     useNavStore.getState().setTab("RegisterAddress");
   }, []);
 
-  const isValidPhone = (value: string) => /^\d{10}$/.test(value.trim());
+  const isValidEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value.trim());
+  };
 
-const handleLogin = async () => {
-  if (!isValidPhone(loginData.phone_number)) {
-    Alert.alert(
-      "Invalid phone number",
-      "Phone number must be exactly 10 digits."
-    );
-    return;
-  }
+  const getEmailValidationMessage = (email: string) => {
+    if (!email || email.trim().length === 0) {
+      return "Email address is required";
+    }
+    if (email.length < 5) {
+      return "Email address is too short";
+    }
+    if (!email.includes("@")) {
+      return "Email must contain @ symbol";
+    }
+    if (!email.includes(".")) {
+      return "Email must contain a domain (e.g., .com, .org)";
+    }
+    if (email.startsWith("@") || email.endsWith("@")) {
+      return "Email cannot start or end with @";
+    }
+    if (email.includes("..")) {
+      return "Email cannot contain consecutive dots";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return "Please enter a valid email format (e.g., user@example.com)";
+    }
+    return null;
+  };
 
-  if (!loginData.password || loginData.password.length < 4) {
-    Alert.alert(
-      "Invalid Password",
-      "Password must be at least 4 characters long."
-    );
-    return;
-  }
+  const getPasswordValidationMessage = (password: string) => {
+    if (!password || password.length === 0) {
+      return "Password is required";
+    }
+    if (password.length < 4) {
+      return "Password must be at least 4 characters long";
+    }
+    if (password.length > 50) {
+      return "Password is too long (maximum 50 characters)";
+    }
+    if (password.includes(" ")) {
+      return "Password cannot contain spaces";
+    }
+    return null;
+  };
 
-  const res = await login(loginData.phone_number, loginData.password);
-  if (!res) {
-    return Alert.alert(api_message);
-  }
+  const handleLogin = async () => {
+    // Enhanced email validation
+    const emailError = getEmailValidationMessage(loginData.email);
+    if (emailError) {
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Invalid Email",
+        text2: emailError,
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
+      return;
+    }
 
-  Toast.show({
-    type: "success",
-    position: "top",
-    text1: "Success",
-    text2: "Logged in successfully!",
-    visibilityTime: 3000,
-    autoHide: true,
-    topOffset: 50,
-  });
+    // Enhanced password validation
+    const passwordError = getPasswordValidationMessage(loginData.password);
+    if (passwordError) {
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Invalid Password",
+        text2: passwordError,
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
+      return;
+    }
 
-  // ✅ Replace the route instead of pushing
-  router.replace("/Home/HomePage");
-};
+    try {
+      const res = await login(loginData.email, loginData.password);
+      if (!res) {
+        // Get specific error message from the API
+        let errorTitle = "Login Failed";
+        let errorMessage = api_message || "Invalid email or password";
+
+        // Parse common error scenarios for better user experience
+        if (api_message) {
+          if (api_message.toLowerCase().includes("student not found") || api_message.toLowerCase().includes("user not found") || api_message.toLowerCase().includes("email not found")) {
+            errorTitle = "Account Not Found";
+            errorMessage = "No account found with this email address. Please check your email or create a new account.";
+          } else if (api_message.toLowerCase().includes("invalid password") || api_message.toLowerCase().includes("password incorrect") || api_message.toLowerCase().includes("incorrect password")) {
+            errorTitle = "Incorrect Password";
+            errorMessage = "The password you entered is incorrect. Please try again or reset your password.";
+          } else if (api_message.toLowerCase().includes("email or password missing")) {
+            errorTitle = "Missing Information";
+            errorMessage = "Please enter both email and password to continue.";
+          } else if (api_message.toLowerCase().includes("blocked") || api_message.toLowerCase().includes("suspended")) {
+            errorTitle = "Account Blocked";
+            errorMessage = "Your account has been temporarily blocked. Please contact support.";
+          } else if (api_message.toLowerCase().includes("network") || api_message.toLowerCase().includes("connection")) {
+            errorTitle = "Connection Error";
+            errorMessage = "Unable to connect to server. Please check your internet connection and try again.";
+          } else if (api_message.toLowerCase().includes("server") || api_message.toLowerCase().includes("500")) {
+            errorTitle = "Server Error";
+            errorMessage = "Our servers are experiencing issues. Please try again in a few moments.";
+          }
+        }
+
+        Toast.show({
+          type: "error",
+          position: "top",
+          text1: errorTitle,
+          text2: errorMessage,
+          visibilityTime: 5000,
+          autoHide: true,
+          topOffset: 50,
+        });
+        return;
+      }
+
+      // Only show success toast if login was actually successful
+      Toast.show({
+        type: "success",
+        position: "top",
+        text1: "Welcome Back!",
+        text2: "Successfully logged into your account",
+        visibilityTime: 2000,
+        autoHide: true,
+        topOffset: 50,
+      });
+
+      // ✅ Replace the route instead of pushing
+      router.replace("/Home/HomePage");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      
+      let errorTitle = "Login Failed";
+      let errorMessage = "An unexpected error occurred";
+
+      if (error.message) {
+        if (error.message.includes("Network Error") || error.message.includes("timeout")) {
+          errorTitle = "Connection Error";
+          errorMessage = "Please check your internet connection and try again";
+        } else if (error.message.includes("401")) {
+          errorTitle = "Invalid Credentials";
+          errorMessage = "Email or password is incorrect";
+        } else if (error.message.includes("429")) {
+          errorTitle = "Too Many Attempts";
+          errorMessage = "Please wait a moment before trying again";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: errorTitle,
+        text2: errorMessage,
+        visibilityTime: 5000,
+        autoHide: true,
+        topOffset: 50,
+      });
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -89,19 +216,19 @@ const handleLogin = async () => {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={Platform.OS === "ios" ? 1 : 0}
         >
- <ScrollView
-  contentContainerStyle={{
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingBottom: 40,
-  }}
-  keyboardShouldPersistTaps="handled"
-  showsVerticalScrollIndicator={false}
->
-
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: "center",
+              paddingBottom: 40,
+            }}
+            className="px-6 bg-white"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <ImageHeader source={require("../../../assets/images/illl-1.png")} />
 
-            <View className="flex-1 justify-center px-6">
+            <View className="flex-1 justify-center">
               <Text
                 className={`text-center font-bold text-gray-900 mt-2 ${
                   width < 360 ? "text-2xl" : "text-[28px]"
@@ -110,24 +237,23 @@ const handleLogin = async () => {
                 Login
               </Text>
               <Text className="text-sm font-semibold text-gray-500 text-center mt-1 mb-8">
-                Please Sign In To Continue
+                Please Enter Your Email To Login
               </Text>
 
               <View className="gap-2.5 mb-2">
                 <TextInputField
-                  label="Phone Number"
-                  placeholder="Enter your Phone Number…"
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  value={loginData.phone_number}
+                  label="Email Address"
+                  placeholder="Enter your email address"
+                  keyboardType="email-address"
+                  value={loginData.email}
                   onChangeText={(text) =>
-                    setLoginData({ ...loginData, phone_number: text })
+                    setLoginData({ ...loginData, email: text })
                   }
                 />
 
                 <TextInputField
                   label="Password"
-                  placeholder="Enter your Password…"
+                  placeholder="Enter your password"
                   secure
                   value={loginData.password}
                   onChangeText={(text) =>
@@ -154,7 +280,8 @@ const handleLogin = async () => {
                   <TouchableOpacity
                     onPress={() => {
                       useNavStore.getState().setTab("Register");
-                      router.push("/onboarding/Register/register");
+                      useNavStore.getState().setBackNavigation(false);
+                      router.push("/onboarding/Register/registerEmail");
                     }}
                   >
                     <Text className="text-sm text-blue-500 font-semibold">

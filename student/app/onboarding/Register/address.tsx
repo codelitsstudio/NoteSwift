@@ -21,6 +21,7 @@ import { useRouter } from "expo-router";
 import { BottomSheetPicker } from "../../../components/Picker/BottomSheetPicker";
 import nepalData from "../../../data/nepalLocationData.json";
 import { useNavStore } from "@/stores/navigationStore";
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get("window");
 
@@ -79,22 +80,64 @@ export default function LocationSelector() {
     router.back();
   };
 
+  const getInstitutionValidationMessage = (institution: string) => {
+    if (!institution || institution.trim().length === 0) {
+      return "Institution name is required";
+    }
+    if (institution.trim().length < 2) {
+      return "Institution name must be at least 2 characters long";
+    }
+    if (institution.trim().length > 100) {
+      return "Institution name is too long (maximum 100 characters)";
+    }
+    return null;
+  };
+
   const handleNext = () => {
+    // Enhanced address validation
     if (!selectedProvince) {
-      Alert.alert("Select Province", "Please select your province.");
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Province Required",
+        text2: "Please select your province to continue",
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
       return;
     }
+
     if (!selectedDistrict) {
-      Alert.alert("Select District", "Please select your district.");
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "District Required",
+        text2: "Please select your district to continue",
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
       return;
     }
-    if (!selectedInstitution || selectedInstitution.trim() === "") {
-      Alert.alert("Enter Institution", "Please enter your institution name.");
+
+    // Enhanced institution validation
+    const institutionError = getInstitutionValidationMessage(selectedInstitution || '');
+    if (institutionError) {
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Invalid Institution",
+        text2: institutionError,
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
       return;
     }
 
     useNavStore.getState().setTab("RegisterNumber");
-    router.push("/onboarding/Register/registerNumber");
+    router.push("/onboarding/Register/PasswordPage");
   };
 
   return (

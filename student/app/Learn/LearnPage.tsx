@@ -12,9 +12,14 @@ import PrimaryNav from '../../components/Navigation/PrimaryNav';
 import SearchBar from '../../components/InputFields/SearchBar';
 import ActiveCourses from './Components/ActiveCourses';
 import ModelQuestions from './Components/ModelQuestions';
+import { OfflineScreen } from '../../components/Container/OfflineScreen';
 import { useLearnStore } from '@/stores/learnStore';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 
 export default function HomePage() {
+  // Network status monitoring
+  const isOnline = useNetworkStatus();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const fetchFeed = useLearnStore(state=>state.fetchFeed);
   useEffect(()=>{
@@ -26,6 +31,9 @@ export default function HomePage() {
       keyboardVerticalOffset={80}
       className="flex-1 bg-white"
     >
+      {/* Show offline screen when no internet */}
+      {!isOnline && <OfflineScreen />}
+      
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"

@@ -16,14 +16,20 @@ export const navOrder = [
 interface NavStore {
   prevTab: string;
   currentTab: string;
+  isBackNavigation: boolean;
   setTab: (newTab: string) => void;
+  setBackNavigation: (isBack: boolean) => void;
 }
 
 export const useNavStore = create<NavStore>((set, get) => ({
   prevTab: "Home",
   currentTab: "Home",
+  isBackNavigation: false,
   setTab: (newTab) => {
     const { currentTab } = get();
     set({ prevTab: currentTab, currentTab: newTab });
+  },
+  setBackNavigation: (isBack) => {
+    set({ isBackNavigation: isBack });
   },
 }));

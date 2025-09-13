@@ -19,6 +19,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useRouter } from 'expo-router';
 import { BottomSheetPicker } from '../../../components/Picker/BottomSheetPicker';
 import { useNavStore } from '@/stores/navigationStore';
+import Toast from 'react-native-toast-message';
 
 export default function Register() {
   const signup_data = useAuthStore(state => state.signup_data);
@@ -39,21 +40,68 @@ export default function Register() {
 
   const isValidName = (name: string) => name.trim().length > 0;
 
+  const getNameValidationMessage = (name: string) => {
+    if (!name || name.trim().length === 0) {
+      return "Full name is required";
+    }
+    if (name.trim().length < 2) {
+      return "Name must be at least 2 characters long";
+    }
+    if (name.trim().length > 50) {
+      return "Name is too long (maximum 50 characters)";
+    }
+    if (!/^[a-zA-Z\s]+$/.test(name.trim())) {
+      return "Name can only contain letters and spaces";
+    }
+    return null;
+  };
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
   const handleRegister = async () => {
-    if (!isValidName(fullName)) {
-      Alert.alert('Invalid Name', 'Please enter your full name.');
+    // Enhanced name validation
+    const nameError = getNameValidationMessage(fullName);
+    if (nameError) {
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Invalid Name",
+        text2: nameError,
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
       return;
     }
 
-    if (!selectedGrade) {
-      Alert.alert('Select Grade', 'Please select your grade.');
+    // Enhanced grade validation
+    if (!selectedGrade || selectedGrade <= 0 || selectedGrade > 12) {
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Invalid Grade",
+        text2: "Please select a valid grade (1-12)",
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
       return;
     }
 
     try {
       router.push('./address');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Something went wrong');
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Navigation Error",
+        text2: error.message || 'Unable to proceed to next step',
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
     }
   };
 
@@ -106,26 +154,17 @@ export default function Register() {
               <ButtonPrimary title="Next" onPress={handleRegister} />
 
               <View className="items-center mt-1.5">
-                <TouchableOpacity className="w-16 h-16 bg-white rounded-full items-center justify-center shadow-lg mb-3">
-                  <Image
-                    source={require('../../../assets/images/icon.png')}
-                    className="w-24 h-24"
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
+              
 
-                <View className="flex-row items-center mt-2">
+                <View className="flex-row items-center justify-center mt-2">
                   <Text className="text-sm text-gray-500 font-semibold">
-                    Already have an account?{' '}
+                    Need to fix something?{' '}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => {
-                      useNavStore.getState().setTab("Login");
-                      router.back();
-                    }}
+                    onPress={handleGoBack}
                   >
                     <Text className="text-sm text-blue-500 font-semibold">
-                      Back to Login
+                      Go Back
                     </Text>
                   </TouchableOpacity>
                 </View>

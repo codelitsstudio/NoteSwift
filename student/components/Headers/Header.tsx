@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAvatarStore } from '../../stores/avatarStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 import { useRouter, usePathname } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 export default function Header() {
   const { avatarEmoji, setAvatar, getRandomEmoji } = useAvatarStore();
   const { logout } = useAuthStore();
+  const { unreadCount } = useNotificationStore();
   const router = useRouter();
   const pathname = usePathname();
   const [menuVisible, setMenuVisible] = React.useState(false);
@@ -26,7 +28,8 @@ export default function Header() {
       autoHide: true,
       topOffset: 50,
     });
-    router.replace('/');
+    // Force navigation to login screen and replace the entire stack
+    router.replace('/onboarding/Login/login');
   };
 
   // Convert route path to page title
@@ -59,8 +62,18 @@ export default function Header() {
 
         {/* Right: Icons + Avatar */}
         <View className="flex-row items-center gap-4">
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/Notification/NotificationPage')}
+            className="relative"
+          >
             <MaterialIcons name="notifications" size={28} color="#374151" />
+            {unreadCount > 0 && (
+              <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-5 h-5 items-center justify-center">
+                <Text className="text-white text-xs font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity

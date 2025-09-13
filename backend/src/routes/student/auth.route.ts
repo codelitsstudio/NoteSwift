@@ -1,10 +1,14 @@
-import { loginStudent, signUpStudent } from "controller/student/auth.controller";
+import { loginStudent, signUpStudent, sendEmailRegistrationOTP, verifyEmailRegistrationOTP } from "controller/student/auth.controller";
 import { Router } from "express";
 
 const router = Router();
 
-
 router.post("/signup", signUpStudent);
 router.post("/login", loginStudent);
+// DEPRECATED: Phone-based OTP routes (now using email)
+// router.post("/send-registration-otp", sendRegistrationOTP);
+// router.post("/verify-registration-otp", verifyRegistrationOTP);
+router.post("/send-email-registration-otp", sendEmailRegistrationOTP);
+router.post("/verify-email-registration-otp", verifyEmailRegistrationOTP);
 
 export { router as StudentAuthRoute }

@@ -29,8 +29,14 @@ export const authenticateStudent = async (req: Request, res: Response, next: Nex
         }
 
         const student = await Student.findById(decoded.user_id).select("-password");
-        if (!student) return jsonResponse.notAuthorized("Admin not found");
+        if (!student) return jsonResponse.notAuthorized("Student not found");
 
+        // Set user in req.user for compatibility with courseController
+        req.user = {
+            id: student._id.toString(),
+            role: "student"
+        };
+        
         res.locals.student = student; 
         next();
     } catch (err) {

@@ -41,19 +41,18 @@ export default function ButtonSecondary({
   };
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      disabled={isDisabled}
-      activeOpacity={isDisabled ? 1 : 0.7}
-      className="self-center w-3/4 border border-customBlue py-4 rounded-full items-center mb-[50px] mt-2"
-    >
-      {loading ? (
-        <ActivityIndicator size="small" color="#007AFF" />
-      ) : (
-        <Text className="text-customBlue text-xl font-semibold">
-          {title}
-        </Text>
-      )}
-    </TouchableOpacity>
+   <TouchableOpacity
+  onPress={handlePress}
+  disabled={isDisabled}
+  activeOpacity={isDisabled ? 1 : 0.7}
+  className="self-center w-3/4 border border-customBlue py-4 rounded-full items-center mb-[50px] mt-2"
+>
+  {loading ? (
+    <ActivityIndicator size="small" color="#007AFF" />
+  ) : (
+    <Text className="text-customBlue text-xl font-semibold">{title}</Text>
+  )}
+</TouchableOpacity>
+
   );
 }

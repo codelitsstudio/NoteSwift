@@ -10,7 +10,7 @@ const schema = new Schema<TStudent<mongoose.Types.ObjectId>>({
         type: Number,
         required: true,
     },
-    phone_number: {
+    email: {
         type: String,
         required: true,
         unique: true
@@ -34,10 +34,17 @@ const schema = new Schema<TStudent<mongoose.Types.ObjectId>>({
         required: true
     }
 }, {timestamps: true});
+
+// Virtual for ID compatibility (frontend uses both _id and id)
+schema.virtual('id').get(function() {
+  return this._id.toHexString();
+});
+
 schema.set("toJSON", {
+  virtuals: true,
   transform: (_doc, ret) => {
     delete ret.password;
     return ret;
   },
 });
-export const Student = model("Student", schema);
+export const Student = mongoose.models.Student || model("Student", schema);

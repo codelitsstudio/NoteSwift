@@ -26,4 +26,7 @@ export const avatarStore = {
   getRandomEmoji: () => {
     return useAvatarStore.getState().getRandomEmoji();
   },
+  clearAvatar: () => {
+    useAvatarStore.getState().setAvatar(`https://api.dicebear.com/9.x/open-peeps/png?seed=default`);
+  },
 };

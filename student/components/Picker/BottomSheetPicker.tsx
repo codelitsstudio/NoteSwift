@@ -52,12 +52,12 @@ export function BottomSheetPicker({
 
   const borderColor = borderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#E5E7EB', customBlue], // grey to blue
+    outputRange: ['#D1D5DB', customBlue], // grey to blue
   });
 
   const backgroundColor = borderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#E5E7EB', '#F9FAFB'], // grey to lighter grey (or white)
+    outputRange: ['#F9FAFB', '#F9FAFB'], // grey to lighter grey (or white)
   });
 
 
@@ -185,17 +185,18 @@ const closeSheet = () => {
   );
 }
 
+
 const styles = StyleSheet.create({
   inputWrapper: {
     width: '100%',
-    borderRadius: 8,
-    borderWidth: 2,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: 16,          // Rounded like TextInputField
+    borderWidth: 1,            // Thin border
+    paddingHorizontal: 16,     // Same padding as TextInputField
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 44,
-    // Remove static backgroundColor here to allow animation
+    backgroundColor: 'transparent', // Transparent so only border shows
   },
 });

@@ -18,4 +18,4 @@ const adminSchema = new Schema<TAdmin>({
   },
 });
 
-export const Admin: Model<TAdmin> = mongoose.model("Admin", adminSchema);
+export const Admin: Model<TAdmin> = (mongoose.models.Admin as Model<TAdmin>) || mongoose.model("Admin", adminSchema);

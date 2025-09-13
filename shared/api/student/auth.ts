@@ -5,7 +5,7 @@ export namespace SignupStudent {
     export interface Req {
         full_name: string;
         grade: number;
-        phone_number: string;
+        email: string;
         password: string;
         address: {
             province?: string;
@@ -24,7 +24,7 @@ export namespace SignupStudent {
 
 export namespace LoginStudent {
     export interface Req {
-        phone_number: string;
+        email: string;
         password: string;
     }
 

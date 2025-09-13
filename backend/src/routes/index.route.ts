@@ -4,18 +4,45 @@ import { StudentLearnRoutes } from "./student/learn.route";
 import { authenticateStudent } from "middlewares/student.middleware";
 import { StudentUserRoutes } from "./student/user.route";
 import { AdminAuthRoutes } from "./admin/auth.route";
-
+import courseRoutes from "./courseRoutes";
+import mongoose from "mongoose";
 
 const router = Router();
 
+// Temporary route to fix database index issue
+router.get("/fix-db", async (req, res) => {
+    try {
+        const db = mongoose.connection.db;
+        const studentsCollection = db!.collection('students');
+        
+        // Try to drop the phone_number_1 index
+        try {
+            await studentsCollection.dropIndex('phone_number_1');
+            console.log('✅ Successfully dropped phone_number_1 index');
+        } catch (error: any) {
+            console.log('Index may not exist:', error.message);
+        }
+        
+        // List remaining indexes
+        const indexes = await studentsCollection.listIndexes().toArray();
+        console.log('Remaining indexes:');
+        indexes.forEach(idx => console.log(`  - ${idx.name}`));
+        
+        res.json({ success: true, message: 'Database index fixed', indexes });
+    } catch (error: any) {
+        res.json({ success: false, error: error.message });
+    }
+});
 
 //student
 router.use("/student/auth", StudentAuthRoute);
 router.use("/student/learn", StudentLearnRoutes);
 router.use("/student/user", authenticateStudent, StudentUserRoutes);
 
-//admin
+//courses
+router.use("/courses", courseRoutes);
 
+//admin
 router.use("/admin/auth", AdminAuthRoutes);
 
 export { router as MainRoutes };

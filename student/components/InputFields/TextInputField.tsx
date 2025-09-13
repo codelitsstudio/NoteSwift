@@ -1,17 +1,15 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
-  TextInput,
   Text,
+  TextInput,
   KeyboardTypeOptions,
   StyleSheet,
   Dimensions,
+  TouchableOpacity,
   Animated,
-  Easing,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 
 interface TextInputFieldProps {
   label: string;
@@ -25,9 +23,6 @@ interface TextInputFieldProps {
 
 const { width } = Dimensions.get("window");
 
-// Replace this with your Tailwind customBlue hex color
-const customBlue = "#3B82F6";
-
 export default function TextInputField({
   label,
   placeholder,
@@ -37,122 +32,87 @@ export default function TextInputField({
   keyboardType = "default",
   maxLength,
 }: TextInputFieldProps) {
-  const borderAnim = useRef(new Animated.Value(0)).current;
+  const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  const animateTo = (toValue: number) => {
-    Animated.timing(borderAnim, {
-      toValue,
-      duration: 300,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: false,
-    }).start();
-  };
+  // Animated value for border color
+  const borderAnim = useRef(new Animated.Value(0)).current; // 0 = unfocused, 1 = focused
 
   useEffect(() => {
-    if (isFocused || value.trim() !== "") {
-      animateTo(1);
-    } else {
-      animateTo(0);
-    }
-  }, [isFocused, value]);
+    Animated.timing(borderAnim, {
+      toValue: isFocused ? 1 : 0,
+      duration: 150, // smooth transition duration in ms
+      useNativeDriver: false,
+    }).start();
+  }, [isFocused]);
+
+  // Interpolating border color
+  const borderColor = borderAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["#D1D5DB", "#3B82F6"], // gray -> customBlue
+  });
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
+
       <Animated.View
         style={[
-          styles.animatedInputWrapper,
-          {
-            borderColor: borderAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: ["transparent", customBlue],
-            }),
-            backgroundColor: borderAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: ["#E5E7EB", "#F9FAFB"],
-            }),
-          },
+          styles.inputWrapper,
+          { borderColor }, // Animated border color
         ]}
       >
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
-          secureTextEntry={secure}
+          placeholderTextColor="#9CA3AF"
+          secureTextEntry={secure && !showPassword}
           value={value}
           onChangeText={onChangeText}
           keyboardType={keyboardType}
           maxLength={maxLength}
+          autoCapitalize="none"
+          autoCorrect={false}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          underlineColorAndroid="transparent"
         />
+
+        {secure && (
+          <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
+            <MaterialIcons
+              name={showPassword ? "visibility-off" : "visibility"}
+              size={22}
+              color="#3B82F6"
+            />
+          </TouchableOpacity>
+        )}
       </Animated.View>
     </View>
-  );
-}
-
-// Wrapper component for keyboard avoidance
-export function KeyboardAvoidingTextInput(props: TextInputFieldProps) {
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.keyboardAvoidingView}
-    >
-      <TextInputField {...props} />
-    </KeyboardAvoidingView>
-  );
-}
-
-// Alternative: Form wrapper with ScrollView and KeyboardAvoidingView
-export function KeyboardAvoidingForm({ children }: { children: React.ReactNode }) {
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.flex1}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    marginBottom: 8,
+    marginBottom: 16,
   },
   label: {
     color: "#4B5563",
-    fontWeight: "500",
-    marginBottom: 8,
-    fontSize: width < 360 ? 14 : 15,
+    fontWeight: "600",
+    marginBottom: 6,
+    fontSize: width < 360 ? 13 : 14,
   },
-  animatedInputWrapper: {
-    borderWidth: 2,
-    borderRadius: 8,
-    paddingHorizontal: 14,
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 16,
   },
   input: {
-    fontSize: width < 360 ? 12 : 14,
-    color: "#111827",
-    paddingVertical: 12,
-  },
-  keyboardAvoidingView: {
-    width: "100%",
-  },
-  flex1: {
     flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 20,
+    height: 44,
+    fontSize: width < 360 ? 12.5 : 14,
+    color: "#111827",
   },
 });

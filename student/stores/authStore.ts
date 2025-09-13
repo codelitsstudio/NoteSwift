@@ -1,14 +1,18 @@
-import { createStudent, signInStudent } from '@/api/student/auth';
+import { createStudent, signInStudent, sendRegistrationOTP, verifyRegistrationOTP, sendEmailRegistrationOTP, verifyEmailRegistrationOTP } from '@/api/student/auth';
 import { LoginStudent, SignupStudent } from '@shared/api/student/auth';
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { ApiState } from './common';
 import { TStudentWithNoSensitive } from "@shared/model/students/Student";
 import { avatarStore } from './avatarStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type User = TStudentWithNoSensitive;
 
-interface SignupStudentData extends SignupStudent.Req {
-    otpCode?: string
+interface SignupStudentData extends Omit<SignupStudent.Req, 'email'> {
+    otpCode?: string;
+    email?: string;
+    phone_number: string;
 }
 
 interface AuthState extends ApiState{
@@ -18,7 +22,10 @@ interface AuthState extends ApiState{
     login_data: LoginStudent.Req;
     login: (phone: string, password: string) => Promise<boolean>;
     signUp: (data: SignupStudentData) => Promise<boolean>;
-    verifyOtp: (otpCode: string) => Promise<void>;
+    sendRegistrationOTP: (phone_number: string) => Promise<boolean>;
+    sendEmailRegistrationOTP: (email: string) => Promise<boolean>;
+    verifyOtp: (otpCode: string) => Promise<boolean>;
+    verifyEmailOtp: (otpCode: string) => Promise<boolean>;
     logout: () => void;
     otpCode: string;
     setOtpCode: (val: string) => void;
@@ -38,15 +45,18 @@ const defaultSignupData: SignupStudentData = {
     full_name: "",
     grade: 0,
     password: "",
-    otpCode: ""
+    otpCode: "",
+    email: ""
 }
 
 const defaultLoginData: LoginStudent.Req = {
     password: "",
-    phone_number: ""
+    email: ""
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
     is_loading: false,
     api_message: "",
     user: null,
@@ -57,15 +67,27 @@ export const useAuthStore = create<AuthState>((set) => ({
     signUp: async(data) => {
         try {
             set({is_loading: true, api_message: ""});
-            const res = await createStudent(data);
+            // Ensure email is defined for the API call
+            const studentData = {
+                ...data,
+                email: data.email || '', // Provide default empty string if undefined
+            };
+            const res = await createStudent(studentData);
             
             if (!res.error && res.result) {
                 // Generate new emoji for registration
                 const newEmoji = avatarStore.getRandomEmoji();
                 avatarStore.setAvatar(newEmoji);
                 
-                // Update user with new emoji
-                const updatedUser = {...res.result.user, avatarEmoji: newEmoji};
+                // Update user with new emoji and ensure both id and _id are present
+                const user = res.result.user;
+                const updatedUser = {
+                    ...user,
+                    id: user.id || user._id?.toString() || user._id,
+                    _id: user._id?.toString() || user.id,
+                    avatarEmoji: newEmoji
+                };
+                
                 set({ user: updatedUser, isLoggedIn: true });
             }
             
@@ -77,18 +99,25 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
     },
     
-    login: async (phone, password) => {
+    login: async (email, password) => {
         try {
             set({is_loading: true, api_message: ""});
-            const res = await signInStudent({phone_number: phone, password});
+            const res = await signInStudent({email: email, password});
             
             if (!res.error && res.result) {
                 // Generate new emoji for every login
                 const newEmoji = avatarStore.getRandomEmoji();
                 avatarStore.setAvatar(newEmoji);
                 
-                // Update user with new emoji
-                const updatedUser = {...res.result.user, avatarEmoji: newEmoji};
+                // Update user with new emoji and ensure both id and _id are present
+                const user = res.result.user;
+                const updatedUser = {
+                    ...user,
+                    id: user.id || user._id?.toString() || user._id,
+                    _id: user._id?.toString() || user.id,
+                    avatarEmoji: newEmoji
+                };
+                
                 set({ user: updatedUser, isLoggedIn: true });
             }
             
@@ -101,7 +130,132 @@ export const useAuthStore = create<AuthState>((set) => ({
     },
     
     verifyOtp: async (otpCode) => {
-        // OTP verification logic
+        try {
+            set({is_loading: true, api_message: ""});
+            
+            const phone_number = get().signup_data.phone_number;
+            if (!phone_number) {
+                set({is_loading: false, api_message: "Phone number not found"});
+                return false;
+            }
+
+            // Use real Twilio OTP verification
+            const response = await verifyRegistrationOTP(phone_number, otpCode);
+            
+            if (response.message === "OTP verified successfully") {
+                set({is_loading: false, api_message: "OTP verified successfully"});
+                return true;
+            } else {
+                set({is_loading: false, api_message: response.message || "Invalid OTP code"});
+                return false;
+            }
+        } catch (error: any) {
+            console.log('OTP verification error:', error);
+            let errorMessage = 'OTP verification failed';
+            
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            set({is_loading: false, api_message: errorMessage});
+            return false;
+        }
+    },
+
+    sendRegistrationOTP: async (phone_number: string) => {
+        set({ is_loading: true, api_message: '' });
+        try {
+            const response = await sendRegistrationOTP(phone_number);
+            set({ 
+                is_loading: false, 
+                api_message: response.message || 'OTP sent successfully'
+            });
+            return true;
+        } catch (error: any) {
+            console.log('Registration OTP error:', error);
+            let errorMessage = 'Failed to send OTP';
+            
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            set({ 
+                is_loading: false, 
+                api_message: errorMessage
+            });
+            return false;
+        }
+    },
+
+    sendEmailRegistrationOTP: async (email: string) => {
+        set({ is_loading: true, api_message: '' });
+        try {
+            console.log("📤 Sending email registration OTP for:", email);
+            const response = await sendEmailRegistrationOTP(email);
+            console.log("✅ Success response:", response);
+            set({ 
+                is_loading: false, 
+                api_message: response.message || 'Verification email sent successfully'
+            });
+            return true;
+        } catch (error: any) {
+            console.log('❌ Email Registration OTP error:', error);
+            let errorMessage = 'Failed to send verification email';
+            
+            // The error message is now directly from the thrown Error
+            if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            console.log("❌ Final error message:", errorMessage);
+            set({ 
+                is_loading: false, 
+                api_message: errorMessage
+            });
+            return false;
+        }
+    },
+
+    verifyEmailOtp: async (otpCode) => {
+        try {
+            set({is_loading: true, api_message: ""});
+            
+            const email = get().signup_data.email;
+            if (!email) {
+                set({is_loading: false, api_message: "Email address not found"});
+                return false;
+            }
+
+            // Use real email OTP verification
+            const response = await verifyEmailRegistrationOTP(email, otpCode);
+            
+            console.log('📱 Frontend - Full response:', JSON.stringify(response, null, 2));
+            
+            // Check for successful response (error: false means success)
+            if (!response.error && response.status === 200) {
+                set({is_loading: false, api_message: "Email verified successfully"});
+                return true;
+            } else {
+                set({is_loading: false, api_message: response.message || "Invalid verification code"});
+                return false;
+            }
+        } catch (error: any) {
+            console.log('Email OTP verification error:', error);
+            let errorMessage = 'Email verification failed';
+            
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            set({is_loading: false, api_message: errorMessage});
+            return false;
+        }
     },
     
     logout: () => {
@@ -111,6 +265,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             login_data: defaultLoginData,
             signup_data: defaultSignupData
         });
+        // Clear avatar data
+        avatarStore.clearAvatar();
     },
     
     setSignupData: (data: SignupStudentData) => {
@@ -131,4 +287,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     clearLoginData: () => {
         set({login_data: defaultLoginData});
     }
-}));
+}),
+{
+  name: 'auth-store',
+  storage: createJSONStorage(() => AsyncStorage),
+  // Only persist user and login state, not temporary form data
+  partialize: (state) => ({
+    user: state.user,
+    isLoggedIn: state.isLoggedIn,
+  }),
+}
+));

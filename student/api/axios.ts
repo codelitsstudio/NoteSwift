@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const URI = "http://192.168.1.64:5000/api"; // use your actual machine IP
+export const URI = "http://192.168.1.191:5000/api";
 
 const api = axios.create({
     baseURL: URI,

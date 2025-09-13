@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, Image, Dimensions, SafeAreaView, ScrollVi
 import { useRouter } from 'expo-router';
 import ButtonOnboard from '../../../components/Buttons/ButtonOnboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '@/stores/authStore';
+import Toast from 'react-native-toast-message';
 
 const { width, height } = Dimensions.get('window');
 
@@ -10,6 +12,39 @@ const OnboardingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const router = useRouter();
   const isSmallDevice = height < 700;
+  
+  // Get signup data and auth functions
+  const signup_data = useAuthStore(state => state.signup_data);
+  const signUp = useAuthStore(state => state.signUp);
+  const clearSignupData = useAuthStore(state => state.clearSignupData);
+  const api_message = useAuthStore(state => state.api_message);
+  const is_loading = useAuthStore(state => state.is_loading);
+  
+  // Check if user is coming from registration flow
+  const isRegistrationFlow = signup_data && signup_data.email && signup_data.password;
+
+  // Handle hardware back button to prevent navigation stack issues
+  useEffect(() => {
+    const handleBackPress = () => {
+      // For registration flow, allow normal back navigation within onboarding slides
+      if (isRegistrationFlow) {
+        if (currentSlide > 0) {
+          setCurrentSlide(currentSlide - 1);
+          return true; // Prevent default behavior
+        }
+        // If on first slide, do nothing (user needs to complete registration)
+        return true;
+      } else {
+        // For normal users, go directly to home
+        router.replace('/Home/HomePage');
+        return true; // Prevent default behavior
+      }
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+    return () => backHandler.remove();
+  }, [currentSlide, isRegistrationFlow, router]);
 
   const slides = [
     {
@@ -59,11 +94,68 @@ const OnboardingPage = () => {
   const goToSlide = (index: number) => setCurrentSlide(index);
 
 const handleGetStarted = async () => {
-  await AsyncStorage.setItem('onboarding_completed', 'true'); // mark onboarding done
-  router.replace('/Home/HomePage'); // replace route so user cannot back
+  // If coming from registration flow, complete the registration
+  if (isRegistrationFlow) {
+    try {
+      const res = await signUp(signup_data);
+      if (!res) {
+        Toast.show({
+          type: "error",
+          position: "top",
+          text1: "Registration Failed",
+          text2: api_message || "Failed to create account",
+          visibilityTime: 4000,
+          autoHide: true,
+          topOffset: 50,
+        });
+        return;
+      }
+
+      // Registration successful!
+      Toast.show({
+        type: 'success',
+        position: "top",
+        text1: 'Welcome to NoteSwift!',
+        text2: 'Your account has been created successfully.',
+        visibilityTime: 3000,
+        autoHide: true,
+        topOffset: 50,
+      });
+
+      clearSignupData();
+      await AsyncStorage.setItem('onboarding_completed', 'true');
+      
+      // Navigate to home after successful registration
+      setTimeout(() => {
+        router.replace('/Home/HomePage');
+      }, 2000);
+      
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Registration Failed",
+        text2: "An unexpected error occurred",
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 50,
+      });
+    }
+  } else {
+    // Normal onboarding flow (existing users)
+    await AsyncStorage.setItem('onboarding_completed', 'true');
+    router.replace('/Home/HomePage');
+  }
 };
+
 const handleSkip = () => {
-  router.replace('/Home/HomePage');
+  // If in registration flow, skip to the last slide (final registration step)
+  if (isRegistrationFlow) {
+    setCurrentSlide(slides.length - 1); // Go to the last slide with Get Started button
+  } else {
+    // Normal users skip entirely to home
+    router.replace('/Home/HomePage');
+  }
 };
 
 

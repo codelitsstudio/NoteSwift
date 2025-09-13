@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavStore } from "../../stores/navigationStore";
-import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
 
 interface NavItem {
@@ -34,7 +33,6 @@ const PrimaryNav: React.FC<Props> = ({ current }) => {
 
   const handlePress = (item: NavItem) => {
     if (current !== item.key) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setTab(item.key);
       router.push(item.route as any);
     }

@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import "dotenv/config";
 import { MainRoutes } from "routes/index.route";
 import userRoutes from './routes/userRoutes';
+import courseRoutes from './routes/courseRoutes';
 
 const app = Express();
 
@@ -39,6 +40,7 @@ app.use(cors({
 //api
 app.use("/api", MainRoutes)
 app.use('/api/users', userRoutes);
+app.use('/api/courses', courseRoutes);
 
 async function INIT() {
     app.listen(PORT, () => {

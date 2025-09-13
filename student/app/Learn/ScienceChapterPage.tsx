@@ -10,8 +10,7 @@ import {
 import PrimaryNav from '../../components/Navigation/PrimaryNav';
 import SearchBar from '../../components/InputFields/SearchBar';
 import SubjectCard from '../../components/Container/SubjectCard';
-import RadialBox from '../../components/RadialBox/RadialBox';
-import SubjectProgressCard from '../../components/RadialBox/RadialBox';
+import SubjectProgressCard from '../../components/Container/SubjectProgressCard';
 import { useRouter } from 'expo-router';
 
 
