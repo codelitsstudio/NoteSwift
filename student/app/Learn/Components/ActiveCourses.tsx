@@ -24,7 +24,7 @@ const allCourses: Course[] = [
     grade: 'Niru Nirmala',
     batch: '9:00pm - 10:00pm',
     image: require('../../../assets/images/science.png'),
-    buttonLabel: 'Join Now',
+    buttonLabel: 'Notify me',
     routeName: '/Learn/ScienceSubjectPage',
   },
   {
@@ -33,7 +33,7 @@ const allCourses: Course[] = [
     grade: 'Raju Shrestha',
     batch: '8:00pm - 9:00pm',
     image: require('../../../assets/images/maths.avif'),
-    buttonLabel: 'Join Now',
+    buttonLabel: 'Notify me',
     routeName: '/Learn/MathSubjectPage',
   },
 ];

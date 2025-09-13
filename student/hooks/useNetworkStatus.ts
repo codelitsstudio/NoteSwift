@@ -60,7 +60,7 @@ export const useNetworkStatus = () => {
           Toast.show({
             type: 'success',
             position: 'top',
-            text1: '✅ Back online',
+            text1: 'Back online',
             text2: 'Internet connection restored',
             visibilityTime: 3000,
             autoHide: true,

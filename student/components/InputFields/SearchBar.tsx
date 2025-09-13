@@ -11,7 +11,7 @@ type Props = {
 const SearchBar: React.FC<Props> = ({ value, onChangeText }) => {
   return (
     <View
-      className="flex-row items-center bg-white px-4 py-1"
+      className="flex-row items-center bg-white px-4 py-3"
       style={{
         borderRadius: 20,
         shadowColor: "#000",

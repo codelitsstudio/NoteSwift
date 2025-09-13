@@ -6,7 +6,6 @@ import FeatureCard from "./Components/FeatureCard";
 import SubscribeButton from "../../components/Buttons/SubscribeButton";
 
 export default function NoteswiftProDetail() {
-  const [activeTab, setActiveTab] = useState<"premium" | "plus">("premium");
   const [selectedPlan, setSelectedPlan] = useState<string>("monthly");
 
   const handleSelectPlan = useCallback((id: string) => {
@@ -37,29 +36,10 @@ export default function NoteswiftProDetail() {
  
   ];
 
-  const plusPlans = [
-    {
-      id: "plus-monthly",
-      title: "Monthly",
-      price: "$19.99/month",
-      description: "Premium + Live Classes + Exclusive Mentorship.",
-      icon: "cast-for-education",
-    },
-    {
-      id: "plus-yearly",
-      title: "Yearly",
-      price: "$179.99/year",
-      description: "Save more with a yearly Pro Plus subscription.",
-      icon: "school",
-    },
-  ];
-
-  const plans = activeTab === "premium" ? premiumPlans : plusPlans;
-
   return (
     <View className="flex-1 bg-white">
-      {/* Tabs */}
-      <ProHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Header */}
+      <ProHeader />
 
       {/* Scrollable Content */}
       <ScrollView
@@ -71,7 +51,7 @@ export default function NoteswiftProDetail() {
      
 
         {/* Subscription Plans */}
-        {plans.map((plan) => (
+        {premiumPlans.map((plan) => (
           <FeatureCard
             key={plan.id}
             plan={plan}

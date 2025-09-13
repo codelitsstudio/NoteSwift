@@ -15,6 +15,8 @@ import ModelQuestions from './Components/ModelQuestions';
 import { OfflineScreen } from '../../components/Container/OfflineScreen';
 import { useLearnStore } from '@/stores/learnStore';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import MyCourses from './Components/MyCourses';
+import LiveClasses from './Components/LiveClasses';
 
 export default function HomePage() {
   // Network status monitoring
@@ -39,20 +41,22 @@ export default function HomePage() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
-          <Text className="text-2xl font-bold mb-3 text-gray-900">
+          <Text className="text-2xl font-bold mb-6 text-gray-900">
             Lets
             <Text className="text-customBlue font-semibold"> Learn !</Text>
           </Text>
 
           <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
-
-          <View className="flex-row justify-between items-center mt-4 mb-4">
-            <Text className="text-2xl font-bold text-gray-900">Your Active Classes</Text>
+            
+          <LiveClasses />
+      <MyCourses />
+          <View className="flex-row justify-between items-center mt-6 mb-4">
+            <Text className="text-[1.3rem] font-bold text-gray-900">Upcoming Classes</Text>
             <TouchableOpacity onPress={() => {}}>
               <Text className="text-base text-blue-500 font-medium">View More</Text>
             </TouchableOpacity>
           </View>
-
+    
           <ActiveCourses searchQuery={searchQuery} />
                     <View className="flex-row justify-between items-center mt-4 mb-4">
             <Text className="text-2xl font-bold text-gray-900">Model Questions</Text>
