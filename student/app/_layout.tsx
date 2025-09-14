@@ -191,6 +191,7 @@ export default function RootLayout() {
                     name="Notification/NotificationPage"
                     options={{ header: () => <HeaderThree title="Notifications" /> }}
                   />
+            
 
                   {/* Dynamic Routes */}
                   <Stack.Screen name="Learn/[chapter]" options={{ headerShown: false }} />
@@ -215,6 +216,8 @@ export default function RootLayout() {
                   <Stack.Screen name="ProDashboard/AccountSettings" options={{ headerShown: false }} />
                   <Stack.Screen name="Home/ProMarketplace" options={{ headerShown: false }} />
                   <Stack.Screen name="Home/ProCheckout" options={{ headerShown: false }} />
+                  <Stack.Screen name="Profile/ProfilePage" options={{ headerShown: false }} />
+                  <Stack.Screen name="Settings/SettingsPage" options={{ headerShown: false }} />
 
                 </Stack>
 

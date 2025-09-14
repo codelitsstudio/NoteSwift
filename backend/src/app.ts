@@ -71,21 +71,48 @@ async function initializeDatabase() {
 
 //Middlewares
 app.use(cookieParser());
-app.use(bodyParser.json());
+// Increase payload limit for image uploads
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors({
     origin: "*",
     credentials: true
 }))
 
+// Add request logging middleware
+app.use((req, res, next) => {
+    console.log(`🔍 Incoming request: ${req.method} ${req.url} from ${req.ip}`);
+    next();
+});
+
 //api
+app.get("/", (req, res) => {
+    console.log('🏠 Root endpoint hit from:', req.ip);
+    res.json({ message: "Backend root is working!", port: PORT });
+});
+
+app.get("/api/test", (req, res) => {
+    console.log('🧪 Test endpoint hit from:', req.ip);
+    res.json({ message: "API test endpoint working!", timestamp: new Date().toISOString() });
+});
+
+console.log('🔧 Mounting main routes at /api...');
 app.use("/api", MainRoutes)
+console.log('🔧 Main routes mounted successfully');
+
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/admin', adminRoutes);
 
 async function INIT() {
-    app.listen(PORT, () => {
-        console.log("Listening on port " + PORT + "....")
+    app.listen(Number(PORT), '0.0.0.0', () => {
+        console.log("Listening on port " + PORT + " on all interfaces....")
+        console.log('🔍 Server accessible at:');
+        console.log('  - Local: http://localhost:5000/');
+        console.log('  - Network: http://192.168.1.172:5000/');
+        console.log('🔍 API endpoints:');
+        console.log('  - http://192.168.1.172:5000/api/ping');
+        console.log('  - http://192.168.1.172:5000/api/student/user/me');
         
         // Start periodic maintenance
         MaintenanceScheduler.startPeriodicMaintenance();

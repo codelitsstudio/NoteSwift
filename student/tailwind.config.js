@@ -21,6 +21,7 @@ module.exports = {
            200: "#475569" 
         },
           customBlue: "#3B82F6",
+          customRed: '#dc2626',
           buttonBlue: "#007AFF"
       },
       padding: {

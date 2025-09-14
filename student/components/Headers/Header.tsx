@@ -9,7 +9,7 @@ import { useRouter, usePathname } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 export default function Header() {
-  const { avatarEmoji, setAvatar, getRandomEmoji } = useAvatarStore();
+  const { avatarEmoji } = useAvatarStore();
   const { logout, user } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const router = useRouter();
@@ -32,6 +32,23 @@ export default function Header() {
     router.replace('/onboarding/Login/login');
   };
 
+  // Get avatar source with same priority logic as ProfileHeader
+  const getAvatarSource = () => {
+    if (user?.profileImage) {
+      // User has uploaded a custom image
+      return { uri: user.profileImage };
+    } else if (user?.avatarEmoji && user.avatarEmoji.startsWith('http')) {
+      // User has a Dicebear avatar URL
+      return { uri: user.avatarEmoji };
+    } else if (avatarEmoji && avatarEmoji.startsWith('http')) {
+      // Fallback to store avatar URL
+      return { uri: avatarEmoji };
+    } else {
+      // Default fallback
+      return { uri: 'https://api.dicebear.com/9.x/open-peeps/png?seed=default' };
+    }
+  };
+
   // Convert route path to page title
   const getPageTitle = () => {
     if (pathname === "/Home/HomePage") {
@@ -39,6 +56,7 @@ export default function Header() {
       return `Hi, ${firstName}`;
     }
     if (pathname === "/Learn/LearnPage") return "Learn";
+        if (pathname === "/More/MorePage") return "More";
     if (pathname === "/Profile/ProfilePage") return "Profile";
     if (pathname === "/Settings/SettingsPage") return "Settings";
     return "...."; // fallback
@@ -60,21 +78,22 @@ export default function Header() {
 
         {/* Left: Avatar + Page Title/Greeting */}
         <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => setMenuVisible(!menuVisible)}
-            className="w-10 h-10 bg-gray-200 rounded-full items-center justify-center"
-          >
-            <Image
-              source={{ uri: avatarEmoji }}
-              style={{ width: 40, height: 40, borderRadius: 20 }}
-            />
-          </TouchableOpacity>
-          <Text className={pathname === "/Home/HomePage" ? "text-lg font-bold text-black" : "text-2xl font-extrabold text-black"}>
+        <TouchableOpacity
+  onPress={() => router.push('/Profile/ProfilePage')}
+  className="w-10 h-10 bg-gray-200 rounded-full items-center justify-center"
+>
+  <Image
+    source={getAvatarSource()}
+    style={{ width: 40, height: 40, borderRadius: 20 }}
+  />
+</TouchableOpacity>
+
+          <Text className={pathname === "/Home/HomePage" ? "text-lg font-semibold text-black" : "text-2xl font-bold text-black"}>
             {getPageTitle()}
           </Text>
         </View>
 
-        {/* Right: Notifications Icon */}
+        {/* Right: Notifications Icon + Settings Icon */}
         <View className="flex-row items-center gap-4">
           <TouchableOpacity
             onPress={() => router.push('/Notification/NotificationPage')}
@@ -88,6 +107,13 @@ export default function Header() {
                 </Text>
               </View>
             )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/Settings/SettingsPage')}
+            className="ml-1"
+            accessibilityLabel="Settings"
+          >
+            <MaterialIcons name="settings" size={26} color="#374151" />
           </TouchableOpacity>
         </View>
       </View>

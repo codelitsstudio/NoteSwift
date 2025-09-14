@@ -35,6 +35,16 @@ router.get("/fix-db", async (req, res) => {
 });
 
 //student
+console.log('🔧 Registering student routes...');
+
+// Test endpoint for connectivity
+router.get("/ping", (req, res) => {
+    console.log('🏓 PING endpoint hit from:', req.ip);
+    res.json({ message: "Backend is reachable!", timestamp: new Date().toISOString() });
+});
+
+console.log('🔧 Ping route registered at /ping');
+
 router.use("/student/auth", StudentAuthRoute);
 router.use("/student/learn", StudentLearnRoutes);
 router.use("/student/user", authenticateStudent, StudentUserRoutes);

@@ -46,7 +46,7 @@ export default function HeaderThree({
         {showSettings ? (
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push("/Home/HomePage")}
+            onPress={() => router.push("/Settings/SettingsPage")}
             className="w-14 h-11 items-center justify-center"
           >
             <Ionicons name="settings-outline" size={25} color="#0A84FF" />

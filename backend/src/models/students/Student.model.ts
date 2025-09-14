@@ -32,6 +32,48 @@ const schema = new Schema<TStudent<mongoose.Types.ObjectId>>({
     password: {
         type: String,
         required: true
+    },
+    avatarEmoji: {
+        type: String,
+        required: true // Assigned at registration, never changes
+    },
+    profileImage: {
+        type: String,
+        required: false // Optional uploaded image URL
+    },
+    notification_preferences: {
+        push_notifications: {
+            type: Boolean,
+            default: true
+        },
+        email_notifications: {
+            type: Boolean,
+            default: true
+        },
+        lesson_reminders: {
+            type: Boolean,
+            default: true
+        },
+        progress_updates: {
+            type: Boolean,
+            default: true
+        },
+        course_announcements: {
+            type: Boolean,
+            default: true
+        },
+        study_streak_reminders: {
+            type: Boolean,
+            default: true
+        },
+        weekly_progress_report: {
+            type: Boolean,
+            default: false
+        },
+        new_content_alerts: {
+            type: Boolean,
+            default: true
+        }
     }
 }, {timestamps: true});
 

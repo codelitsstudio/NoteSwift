@@ -18,6 +18,7 @@ interface SignupStudentData extends Omit<SignupStudent.Req, 'email'> {
 interface AuthState extends ApiState{
     user: User | null;
     isLoggedIn: boolean;
+    token: string | null;
     signup_data: SignupStudentData;
     login_data: LoginStudent.Req;
     login: (phone: string, password: string) => Promise<boolean>;
@@ -27,6 +28,7 @@ interface AuthState extends ApiState{
     verifyOtp: (otpCode: string) => Promise<boolean>;
     verifyEmailOtp: (otpCode: string) => Promise<boolean>;
     logout: () => void;
+    updateUser: (userData: Partial<User>) => void;
     otpCode: string;
     setOtpCode: (val: string) => void;
     setLoginData: (data: LoginStudent.Req) => void;
@@ -61,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
     api_message: "",
     user: null,
     isLoggedIn: false,
+    token: null,
     signup_data: defaultSignupData,
     login_data: defaultLoginData,
     
@@ -75,20 +78,22 @@ export const useAuthStore = create<AuthState>()(
             const res = await createStudent(studentData);
             
             if (!res.error && res.result) {
-                // Generate new emoji for registration
-                const newEmoji = avatarStore.getRandomEmoji();
-                avatarStore.setAvatar(newEmoji);
+                // Use the permanent avatar emoji assigned by the backend
+                const user = res.result.user as any;
+                avatarStore.setAvatar(user.avatarEmoji);
                 
-                // Update user with new emoji and ensure both id and _id are present
-                const user = res.result.user;
+                // Ensure both id and _id are present
                 const updatedUser = {
                     ...user,
                     id: user.id || user._id?.toString() || user._id,
                     _id: user._id?.toString() || user.id,
-                    avatarEmoji: newEmoji
                 };
                 
-                set({ user: updatedUser, isLoggedIn: true });
+                set({ 
+                    user: updatedUser, 
+                    isLoggedIn: true,
+                    token: res.result.token 
+                });
             }
             
             set({is_loading: false, api_message: res.message});
@@ -105,20 +110,22 @@ export const useAuthStore = create<AuthState>()(
             const res = await signInStudent({email: email, password});
             
             if (!res.error && res.result) {
-                // Generate new emoji for every login
-                const newEmoji = avatarStore.getRandomEmoji();
-                avatarStore.setAvatar(newEmoji);
+                // Use the permanent avatar emoji from database
+                const user = res.result.user as any;
+                avatarStore.setAvatar(user.avatarEmoji);
                 
-                // Update user with new emoji and ensure both id and _id are present
-                const user = res.result.user;
+                // Ensure both id and _id are present
                 const updatedUser = {
                     ...user,
                     id: user.id || user._id?.toString() || user._id,
                     _id: user._id?.toString() || user.id,
-                    avatarEmoji: newEmoji
                 };
                 
-                set({ user: updatedUser, isLoggedIn: true });
+                set({ 
+                    user: updatedUser, 
+                    isLoggedIn: true,
+                    token: res.result.token 
+                });
             }
             
             set({is_loading: false, api_message: res.message});
@@ -262,11 +269,18 @@ export const useAuthStore = create<AuthState>()(
         set({
             user: null,
             isLoggedIn: false,
+            token: null,
             login_data: defaultLoginData,
             signup_data: defaultSignupData
         });
         // Clear avatar data
         avatarStore.clearAvatar();
+    },
+    
+    updateUser: (userData: Partial<User>) => {
+        set((state) => ({
+            user: state.user ? { ...state.user, ...userData } : null
+        }));
     },
     
     setSignupData: (data: SignupStudentData) => {
@@ -295,6 +309,7 @@ export const useAuthStore = create<AuthState>()(
   partialize: (state) => ({
     user: state.user,
     isLoggedIn: state.isLoggedIn,
+    token: state.token, // Add token to persistence
   }),
 }
 ));

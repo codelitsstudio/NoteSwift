@@ -14,9 +14,7 @@ export namespace SignupStudent {
         }
     }
     export interface Res {
-        user: TStudentWithNoSensitive & {
-            avatarEmoji:boolean
-        }
+        user: TStudentWithNoSensitive
         token: string
     }
     export type ApiRes = ApiResponse<Res>;
@@ -29,9 +27,7 @@ export namespace LoginStudent {
     }
 
     export interface Res {
-        user: TStudentWithNoSensitive & {
-            avatarEmoji:boolean
-        }
+        user: TStudentWithNoSensitive
         token: string
     }
 
