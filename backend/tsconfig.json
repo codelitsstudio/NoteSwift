@@ -3,6 +3,12 @@
     "target": "es5",                               
     "baseUrl": "./src",
     "paths": {
+      "controller/*": ["controller/*"],
+      "services/*": ["services/*"],
+      "models/*": ["models/*"],
+      "lib/*": ["lib/*"],
+      "middlewares/*": ["middlewares/*"],
+      "routes/*": ["routes/*"],
       "@shared/*": ["../../shared/*"]
     },                       
     "module": "commonjs",    
