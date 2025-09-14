@@ -10,7 +10,7 @@ const TabNav: React.FC<{ active: TabKey; onChange: (t: TabKey) => void }> = ({
   onChange,
 }) => {
   return (
-    <View className="px-4 py-3 bg-transparent">
+    <View className="px-4 pt-4 pb-2 bg-transparent">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -23,17 +23,15 @@ const TabNav: React.FC<{ active: TabKey; onChange: (t: TabKey) => void }> = ({
               <TouchableOpacity
                 key={t}
                 onPress={() => onChange(t)}
-                activeOpacity={0.75}
+                activeOpacity={0.8}
                 className="mr-6 pb-1"
               >
                 <Text
-                  // bigger tab text
-                  className={`text-medium font-semibold ${isActive ? "text-gray-900" : "text-gray-500"}`}
+                  className={`text-base font-semibold ${isActive ? "text-gray-900" : "text-gray-500"}`}
                 >
                   {t}
                 </Text>
-
-                {isActive && <View className="h-0.5 bg-black mt-1 rounded-full w-8" />}
+                {isActive && <View className="h-0.5 bg-blue-600 mt-1 rounded-full w-8" />}
               </TouchableOpacity>
             );
           })}

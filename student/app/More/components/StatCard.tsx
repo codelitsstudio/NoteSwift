@@ -33,35 +33,36 @@ const StatCard = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Bottom Stats Section */}
-        <View className="flex-row justify-between mt-4">
-          {/* Top Courses */}
-          <View className="items-center flex-1">
-            <View className="flex-row items-center mb-1">
-              <MaterialIcons name="whatshot" size={16} color="#2563EB" />
-              <Text className="text-gray-500 text-xs font-medium ml-1">Top Courses</Text>
-            </View>
-            <Text className="text-gray-900 text-lg font-bold">15-20</Text>
-          </View>
+  {/* Bottom Stats Section */}
+<View className="flex-row justify-between mx-2 mt-4">
+  {/* Top Courses (start/left) */}
+  <View className="items-start">
+    <View className="flex-row items-center mb-1">
+      <MaterialIcons name="whatshot" size={16} color="#2563EB" />
+      <Text className="text-gray-500 text-xs font-medium ml-1">Top Courses</Text>
+    </View>
+    <Text className="text-gray-900 text-lg font-bold">15-20</Text>
+  </View>
 
-          {/* Categories */}
-          <View className="items-center flex-1">
-            <View className="flex-row items-center mb-1">
-              <MaterialIcons name="category" size={16} color="#2563EB" />
-              <Text className="text-gray-500 text-xs font-medium ml-1">Categories</Text>
-            </View>
-            <Text className="text-gray-900 text-lg font-bold">12-20</Text>
-          </View>
+  {/* Categories (center) */}
+  <View className="items-center">
+    <View className="flex-row items-center mb-1">
+      <MaterialIcons name="category" size={16} color="#2563EB" />
+      <Text className="text-gray-500 text-xs font-medium ml-1">Categories</Text>
+    </View>
+    <Text className="text-gray-900 text-lg font-bold">12-20</Text>
+  </View>
 
-          {/* Avg Rating */}
-          <View className="items-center flex-1">
-            <View className="flex-row items-center mb-1">
-              <MaterialIcons name="star" size={16} color="#2563EB" />
-              <Text className="text-gray-500 text-xs font-medium ml-1">Avg Rating</Text>
-            </View>
-            <Text className="text-gray-900 text-lg font-bold">4.5 ★</Text>
-          </View>
-        </View>
+  {/* Avg Rating (end/right) */}
+  <View className="items-end">
+    <View className="flex-row items-center mb-1">
+      <MaterialIcons name="star" size={16} color="#2563EB" />
+      <Text className="text-gray-500 text-xs font-medium ml-1">Avg Rating</Text>
+    </View>
+    <Text className="text-gray-900 text-lg font-bold">4.5 ★</Text>
+  </View>
+</View>
+
       </View>
     </View>
   );

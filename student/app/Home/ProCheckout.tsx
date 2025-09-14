@@ -94,10 +94,6 @@ export default function ProCheckout() {
         <View className="w-8 h-8 rounded-full items-center justify-center bg-blue-500">
           <Text className="text-sm font-bold text-white">✓</Text>
         </View>
-        <View className="w-8 h-0.5 mx-1 bg-blue-500" />
-        <View className="w-8 h-8 rounded-full items-center justify-center bg-blue-500">
-          <Text className="text-sm font-bold text-white">3</Text>
-        </View>
       </View>
 
       {/* Scrollable Content */}

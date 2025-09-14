@@ -17,7 +17,7 @@ const MorePage = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" >
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 mb-4">
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 mb-12">
 
         <Text className="text-xl px-5 mt-6 font-bold text-gray-900 mb-0">StatCards</Text>
         {/* Today's Progress Card (StatCard) - NOW FIRST */}
@@ -64,9 +64,9 @@ const MorePage = () => {
         
         <View className="px-5 pb-8">
           
-          {/* Study Tools & Features Section */}
+          {/* App Tools Section */}
           <View className="mb-6 mt-4">
-            <Text className="text-xl font-bold text-gray-900 mb-4">Study Tools & Features</Text>
+            <Text className="text-xl font-bold text-gray-900 mb-4">App Tools</Text>
             <View className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <MenuListItem 
                 icon="group-add" 
@@ -75,9 +75,29 @@ const MorePage = () => {
               />
               <View className="h-px bg-gray-100 mx-5" />
               <MenuListItem 
+                icon="settings" 
+                title="Settings" 
+                subtitle="App preferences and configuration" 
+                onPress={() => router.push('/Settings/SettingsPage')}
+              />
+            </View>
+          </View>
+
+          {/* Study Tools Section */}
+          <View className="mb-6">
+            <Text className="text-xl font-bold text-gray-900 mb-4">Study Tools</Text>
+            <View className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <MenuListItem 
                 icon="school" 
                 title="My Courses" 
                 subtitle="View your course list & performance" 
+              />
+              <View className="h-px bg-gray-100 mx-5" />
+              <MenuListItem 
+                icon="menu-book" 
+                title="All Courses" 
+                subtitle="Browse all available courses" 
+                onPress={() => router.push('/AllCourses/AllCoursesPage')}
               />
               <View className="h-px bg-gray-100 mx-5" />
               <MenuListItem 

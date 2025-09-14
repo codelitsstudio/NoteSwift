@@ -5,8 +5,9 @@ import TabNav, { TabKey } from "./TabNav";
 import LessonCard from "../Container/LessonCard";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
+type LessonShape = { id?: string; title: string; subtitle?: string; tags?: any[] };
 type DataShape = {
-  lessons?: Array<{ id?: string; title: string; tags?: any[] }>;
+  lessons?: LessonShape[];
   tests?: any[];
   notes?: any[];
   resources?: any[];
@@ -42,15 +43,79 @@ const ChapterTabs: React.FC<{ data: DataShape }> = ({ data }) => {
           contentContainerStyle={{ paddingBottom: 48 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Foundations Section */}
+          <View className="flex-row items-center px-4 mt-2 mb-2">
+            <View className="flex-1 h-px bg-gray-300" />
+            <Text className="mx-2 text-xs text-gray-500 font-semibold tracking-widest uppercase">Foundations</Text>
+            <View className="flex-1 h-px bg-gray-300" />
+          </View>
           {Array.isArray(data.lessons) && data.lessons.length ? (
-            data.lessons.map((lesson, i) => (
-              <LessonCard
-                key={lesson.id ?? `idx-${i}`}
-                title={lesson.title}
-                tags={lesson.tags}
-                onPress={() => openLesson(lesson.id)} // ✅ navigation fixed
-              />
-            ))
+            <>
+              {/* Show first lesson as Foundations */}
+              {data.lessons[0] && (
+                <>
+                  <LessonCard
+                    key={data.lessons[0].id ?? `idx-0`}
+                    title={data.lessons[0].title}
+                    tags={data.lessons[0].tags}
+                    onPress={() => openLesson(data.lessons?.[0]?.id)}
+                  />
+                  {/* Completion percentage above progress bar */}
+                  <Text className="mx-8 text-sm mt-2 text-blue-700 font-semibold mb-1">60%<Text className="mx-8 text-sm mt-2 text-gray-700 font-semibold mb-1"> of this module completed</Text></Text>
+                  {/* Progress bar with percentage */}
+                  <View className="mx-8 mb-1">
+                    <View className="flex-row items-center">
+                      <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden mr-2">
+                        <View className="h-2 bg-blue-500 rounded-full" style={{ width: '60%' }} />
+                      </View>
+                      <Text className="text-xs text-blue-600 font-semibold">60%</Text>
+                    </View>
+                  </View>
+                  {/* Short Description for Foundations below progress bar */}
+                  <View className="mx-8 mt-6 mb-6">
+<Text className="text-medium font-bold text-gray-800">
+Mastering Study Techniques
+</Text>
+<Text className="text-sm text-gray-500 mt-2">
+This module covers essential strategies and techniques for effective studying, helping you build strong learning habits for all future lessons.
+</Text>
+  </View>
+                  {/* Description below progress bar */}
+                  {(data.lessons[0] as LessonShape).subtitle && (
+                    <Text className="mx-8 mb-4 text-xs text-gray-500">{(data.lessons[0] as LessonShape).subtitle}</Text>
+                  )}
+                </>
+              )}
+
+              {/* Up Next Section */}
+              <View className="flex-row items-center px-4 mt-2 mb-2">
+                <View className="flex-1 h-px bg-gray-300" />
+                <Text className="mx-2 text-xs text-gray-500 font-semibold tracking-widest uppercase">Up Next</Text>
+                <View className="flex-1 h-px bg-gray-300" />
+              </View>
+              {data.lessons.slice(1).map((lesson, i) => (
+                <React.Fragment key={lesson.id ?? `idx-${i+1}`}>
+                  <LessonCard
+                    title={lesson.title}
+                    tags={lesson.tags}
+                    onPress={() => openLesson(lesson.id)}
+                  />
+                  {/* Progress bar with percentage */}
+                  <View className="mx-8 mb-1">
+                    <View className="flex-row items-center">
+                      <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden mr-2">
+                        <View className="h-2 bg-blue-400 rounded-full" style={{ width: '20%' }} />
+                      </View>
+                      <Text className="text-xs text-blue-500 font-semibold">20%</Text>
+                    </View>
+                  </View>
+                  {/* Description below progress bar */}
+                  {(lesson as LessonShape).subtitle && (
+                    <Text className="mx-8 mb-4 text-xs text-gray-500">{(lesson as LessonShape).subtitle}</Text>
+                  )}
+                </React.Fragment>
+              ))}
+            </>
           ) : (
             <View className="px-4 py-6">
               <Text className="text-gray-500 text-base">No lessons available.</Text>

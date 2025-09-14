@@ -4,25 +4,33 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 
 interface LessonCardProps {
   title: string;
+  subtitle?: string;
   tags?: { type: "live" | "video" | "notes"; label: string }[];
   onPress?: () => void;
 }
 
-const LessonCard: React.FC<LessonCardProps> = ({ title, tags = [], onPress }) => {
+const LessonCard: React.FC<LessonCardProps> = ({ title, subtitle, tags = [], onPress }) => {
+  // If you want to highlight the first card, pass a prop like isFirst or index from the parent.
+  // For now, check if title matches the first lesson's title ("Foundations of Effective Studying")
+  const isFirst = title.trim().toLowerCase().startsWith("foundations of effective");
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="mx-4 my-2 p-4 bg-white rounded-xl border border-gray-100"
-      activeOpacity={0.8}
+      className={`mx-4 my-2 p-4 bg-white border rounded-xl flex-row items-center ${isFirst ? "border-blue-500" : "border-gray-200"}`}
+      activeOpacity={0.85}
     >
-      <View className="flex-row justify-between items-start">
-        <View className="flex-1">
-          <Text className="text-base font-semibold text-gray-800 mb-2">{title}</Text>
-          <View className="flex-row flex-wrap">
-            {tags.map((tag, index) => (
+      <View className="flex-1">
+        <Text className="text-base font-semibold text-gray-900 mb-1">{title}</Text>
+        {subtitle && (
+          <Text className="text-xs text-gray-500 mb-1">{subtitle}</Text>
+        )}
+        <View className="flex-row flex-wrap">
+          {tags.map((tag, index) => {
+            const isVideo = tag.type === "video";
+            return (
               <View
                 key={index}
-                className="flex-row items-center mr-2 mb-2 px-2 py-1 bg-gray-100 rounded-full"
+                className={`flex-row items-center mr-2 mb-1 mt-4 px-2 py-1 bg-gray-50 border rounded-full border-gray-200`}
               >
                 <Icon
                   name={
@@ -32,22 +40,30 @@ const LessonCard: React.FC<LessonCardProps> = ({ title, tags = [], onPress }) =>
                       ? "play-circle-filled"
                       : "menu-book"
                   }
-                  size={14}
-                  color={tag.type === "live" ? "#16a34a" : "#000"}
+                  size={13}
+                  color={
+                    tag.type === "live"
+                      ? "#16a34a"
+                      : tag.type === "video" || tag.type === "notes"
+                      ? "#2563eb"
+                      : "#6b7280"
+                  }
                 />
                 <Text
-                  className={`ml-1 text-xs ${
-                    tag.type === "live" ? "text-green-600" : "text-gray-700"
+                  className={`ml-1 text-xs font-medium ${
+                    tag.type === "live"
+                      ? "text-green-700"
+                      : "text-gray-700"
                   }`}
                 >
                   {tag.label}
                 </Text>
               </View>
-            ))}
-          </View>
+            );
+          })}
         </View>
-        <Icon name="chevron-right" size={22} color="#9ca3af" />
       </View>
+      <Icon name="chevron-right" size={20} color="#9ca3af" />
     </TouchableOpacity>
   );
 };

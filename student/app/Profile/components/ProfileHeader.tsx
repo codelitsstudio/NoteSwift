@@ -1,9 +1,11 @@
 // profile/components/ProfileHeader.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../stores/authStore';
 import { useAvatarStore } from '../../../stores/avatarStore';
+import { useRouter } from 'expo-router';
 
 // Get flame color based on streak days (flame intensity progression)
 const getFlameColor = (streakDays: number): string => {
@@ -15,6 +17,7 @@ const getFlameColor = (streakDays: number): string => {
   if (streakDays >= 3) return '#b71c1c'; // 3-9 days: Dark red
   return '#ff5722'; // 1-2 days: Red (starting fire)
 };
+
 
 // Enhanced stats components
 const StreakStat = ({ value, label }: { value: string; label: string }) => {
@@ -60,8 +63,63 @@ type ProfileHeaderProps = {
 const ProfileHeader = ({ onEditPress, onAvatarPress }: ProfileHeaderProps) => {
   const { user } = useAuthStore();
   const { avatarEmoji } = useAvatarStore();
-  const [currentStreak, setCurrentStreak] = useState(2); // Test with blue flame!
-  
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const router = useRouter();
+
+  // --- LOGIN STREAK LOGIC ---
+  useEffect(() => {
+    const updateStreak = async () => {
+      if (!user) return;
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Midnight today
+
+        // Get registration date from user object (should be ISO string)
+        // Use createdAt (or created_at) from backend timestamps
+        const regDateStr = (user as any)?.createdAt || (user as any)?.created_at;
+        let regDate = regDateStr ? new Date(regDateStr) : null;
+        if (regDate) regDate.setHours(0, 0, 0, 0);
+
+        // Get last login info from AsyncStorage
+        const lastLoginStr = await AsyncStorage.getItem('profile_last_login_date');
+        const streakStr = await AsyncStorage.getItem('profile_login_streak');
+        let lastLogin = lastLoginStr ? new Date(lastLoginStr) : null;
+        if (lastLogin) lastLogin.setHours(0, 0, 0, 0);
+        let streak = streakStr ? parseInt(streakStr) : 0;
+
+        // If first login ever, start streak at 1
+        if (!lastLogin) {
+          streak = 1;
+        } else {
+          // Calculate day difference
+          const diffDays = Math.floor((today.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays === 0) {
+            // Already logged in today, streak unchanged
+          } else if (diffDays === 1) {
+            // Consecutive day, increment streak
+            streak += 1;
+          } else {
+            // Missed a day, reset streak
+            streak = 1;
+          }
+        }
+
+        // If registration date is after today, force streak to 1
+        if (regDate && regDate > today) {
+          streak = 1;
+        }
+
+        setCurrentStreak(streak);
+        await AsyncStorage.setItem('profile_last_login_date', today.toISOString());
+        await AsyncStorage.setItem('profile_login_streak', streak.toString());
+      } catch (e) {
+        // fallback: just show 1
+        setCurrentStreak(1);
+      }
+    };
+    updateStreak();
+  }, [user]);
+
   // Display logic: prioritize uploaded image, fallback to avatar URL, then default
   const getAvatarSource = () => {
     if (user?.profileImage) {
@@ -85,10 +143,13 @@ const ProfileHeader = ({ onEditPress, onAvatarPress }: ProfileHeaderProps) => {
     <View className="bg-white">
       {/* Header with back button and edit button */}
       <View className="flex-row justify-between items-center px-5 pt-4 pb-2">
-        <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
-          <MaterialIcons name="chevron-left" size={24} color="#6B7280" />
-        </TouchableOpacity>
-        
+      <TouchableOpacity
+    className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
+    onPress={() => router.back()}  // <-- fix: enable navigation
+  >
+    <MaterialIcons name="chevron-left" size={24} color="#6B7280" />
+  </TouchableOpacity>
+
         <Text className="text-2xl font-bold text-gray-900">Profile</Text>
         
         <TouchableOpacity 
@@ -131,8 +192,8 @@ const ProfileHeader = ({ onEditPress, onAvatarPress }: ProfileHeaderProps) => {
         {/* Stats Section */}
         <View className="flex-row items-center justify-between w-full mt-6">
           <StreakStat value={currentStreak.toString()} label="Day Streak" />
-          <PointsStat value="1.2K" label="Points" />
-          <RankStat value="#12" label="Rank" />
+          <PointsStat value="0" label="Points" />
+          <RankStat value="NA" label="Rank" />
         </View>
       </View>
     </View>

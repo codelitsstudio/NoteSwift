@@ -15,21 +15,11 @@ interface AuthRequest extends Request {
 // Get featured course
 export const getFeaturedCourse = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Get the specific study habits course as featured course
-    let featuredCourse = await Course.findOne({
+    // Only return the real featured course by title
+    const featuredCourse = await Course.findOne({
       title: 'Learn How To Actually Study Before It\'s Too Late',
       status: 'Published'
     });
-
-    // If study habits course doesn't exist, fall back to any published course
-    if (!featuredCourse) {
-      console.log('⚠️ Study habits course not found, falling back to any published course');
-      featuredCourse = await Course.findOne({
-        status: 'Published'
-      }).sort({ createdAt: -1 });
-    } else {
-      console.log('✅ Found study habits course as featured course');
-    }
 
     if (!featuredCourse) {
       res.status(404).json({

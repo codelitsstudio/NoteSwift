@@ -12,6 +12,7 @@ export interface Course {
   subject: string;
   tags: string[];
   status: string;
+  isFeatured?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +45,7 @@ interface CourseState extends ApiState {
   
   // Actions
   fetchFeaturedCourse: () => Promise<void>;
+  fetchAllCourses: () => Promise<void>;
   enrollInCourse: (courseId: string) => Promise<boolean>;
   isEnrolled: (courseId: string) => boolean;
   checkAndShowPopup: (userId: string) => boolean;
@@ -75,28 +77,42 @@ export const useCourseStore = create<CourseState>()(
 
       fetchFeaturedCourse: async () => {
         try {
+          console.log('🎯 Fetching featured course...');
           set({ is_loading: true, api_message: "" });
-          
           const response = await axios.get('/courses/featured');
+          console.log('🎯 Featured course API response:', response.data);
           
           if (response.data.success) {
             const course = response.data.data;
-            // Ensure id field exists
+            console.log('🎯 Featured course raw data:', course);
+            
+            // Ensure id field exists for consistency
             if (course && !course.id) {
               course.id = course._id;
+              console.log('🎯 Added id field to featured course:', course.id);
             }
+            
+            console.log('✅ Featured course processed:', {
+              id: course.id,
+              _id: course._id,
+              title: course.title,
+              isFeatured: course.isFeatured
+            });
             
             set({ 
               featuredCourse: course,
               is_loading: false 
             });
+            console.log('✅ Featured course set in store successfully');
           } else {
+            console.log('❌ Featured course API returned success: false');
             set({ 
               api_message: response.data.message || "Failed to fetch featured course",
               is_loading: false 
             });
           }
         } catch (error: any) {
+          console.log('❌ Error fetching featured course:', error.message);
           set({ 
             is_loading: false, 
             api_message: error.response?.data?.message || "Something went wrong" 
@@ -105,8 +121,25 @@ export const useCourseStore = create<CourseState>()(
         }
       },
 
+      fetchAllCourses: async () => {
+        try {
+          const response = await axios.get('/courses');
+          if (response.data.success) {
+            // Extract the courses array from the response data
+            const coursesData = response.data.data.courses || [];
+            set({ courses: coursesData });
+          } else {
+            set({ api_message: response.data.message || 'Failed to fetch courses' });
+          }
+        } catch (error: any) {
+          set({ api_message: error.response?.data?.message || 'Something went wrong' });
+          console.error('Error fetching all courses:', error);
+        }
+      },
+
       enrollInCourse: async (courseId: string) => {
         try {
+          console.log('📝 Enrolling in course:', courseId);
           set({ is_loading: true, api_message: "" });
           
           const response = await axios.post('/courses/enroll', { 
@@ -116,12 +149,25 @@ export const useCourseStore = create<CourseState>()(
           if (response.data.success) {
             // Add to local enrolled courses
             const currentEnrolled = get().enrolledCourses;
+            console.log('📝 Current enrolled courses before:', currentEnrolled);
+            
             if (!currentEnrolled.includes(courseId)) {
+              const newEnrolledCourses = [...currentEnrolled, courseId];
               set({ 
-                enrolledCourses: [...currentEnrolled, courseId],
+                enrolledCourses: newEnrolledCourses,
                 is_loading: false,
                 api_message: "Successfully enrolled in course!"
               });
+              console.log('📝 Updated enrolled courses after enrollment:', newEnrolledCourses);
+              
+              // Check if this is the featured course
+              const featuredCourse = get().featuredCourse;
+              if (featuredCourse && (featuredCourse.id === courseId || featuredCourse._id === courseId)) {
+                console.log('🎯 User enrolled in featured course!');
+              }
+            } else {
+              console.log('📝 Course already in enrolled list');
+              set({ is_loading: false });
             }
             return true;
           } else {
@@ -132,6 +178,7 @@ export const useCourseStore = create<CourseState>()(
             return false;
           }
         } catch (error: any) {
+          console.log('❌ Enrollment error:', error.response?.data || error.message);
           set({ 
             is_loading: false, 
             api_message: error.response?.data?.message || "Something went wrong" 
@@ -143,31 +190,37 @@ export const useCourseStore = create<CourseState>()(
 
       fetchUserEnrollments: async (userId: string) => {
         try {
-          console.log('Fetching enrollments for user:', userId);
+          console.log('🔄 Fetching enrollments for user:', userId);
           const response = await axios.get(`/courses/enrollments/${userId}`);
           
-          console.log('Enrollment API response:', response.data);
+          console.log('📥 Enrollment API response:', response.data);
           
           if (response.data.success) {
             const enrolledCourseIds = response.data.data.map((enrollment: any) => {
               // courseId is populated with the full course object
               const courseId = enrollment.courseId._id || enrollment.courseId.id || enrollment.courseId;
-              console.log('Extracting course ID:', courseId, 'from enrollment:', enrollment);
+              console.log('🔍 Extracting course ID from enrollment:', {
+                enrollmentId: enrollment._id,
+                courseId: courseId,
+                courseTitle: enrollment.courseId.title,
+                courseIdType: typeof courseId
+              });
               return courseId;
             });
-            console.log('User enrolled in courses:', enrolledCourseIds);
+            console.log('✅ User enrolled in courses:', enrolledCourseIds);
             set({ enrolledCourses: enrolledCourseIds });
           } else {
-            console.log('Enrollment API returned success: false');
+            console.log('❌ Enrollment API returned success: false');
+            set({ enrolledCourses: [] });
           }
         } catch (error: any) {
-          console.error('Error fetching user enrollments:', error.message);
-          console.error('Error status:', error.response?.status);
-          console.error('Error data:', error.response?.data);
+          console.error('❌ Error fetching user enrollments:', error.message);
+          console.error('❌ Error status:', error.response?.status);
+          console.error('❌ Error data:', error.response?.data);
           if (error.response?.status === 403) {
-            console.error('Access denied - authentication issue');
+            console.error('❌ Access denied - authentication issue');
           } else if (error.response?.status === 404) {
-            console.error('Enrollments endpoint not found');
+            console.error('❌ Enrollments endpoint not found');
           }
           // Set empty array on error to prevent undefined issues
           set({ enrolledCourses: [] });

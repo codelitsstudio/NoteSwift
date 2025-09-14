@@ -39,4 +39,21 @@ export const lessons: Record<string, Lesson> = {
     ],
   },
   // … add all other lessons similarly
+
+  // Sample lesson for featured course
+  "module-1": {
+    id: "module-1",
+    title: "Study Fundamentals",
+    description: "40-minute module guiding learners to create an optimal study environment and productive routine.",
+    imageUri: "https://images.unsplash.com/photo-1503676382389-4809596d5290",
+    tags: [
+      { label: "Live Class", type: "live", active: false },
+      { label: "Video", type: "video", active: true },
+      { label: "Attachments", type: "attachments", active: false },
+    ],
+    transcript: [
+      { time: "0:00 – 1:00", text: "Welcome to Study Fundamentals! In this module, you'll learn how to set up your study space and routine for maximum productivity." },
+      { time: "1:01 – 2:00", text: "Let's talk about minimizing distractions and creating a schedule that works for you." }
+    ]
+  },
 };

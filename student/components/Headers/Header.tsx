@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAvatarStore } from '../../stores/avatarStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useRouter, usePathname } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import Entypo from '@expo/vector-icons/Entypo';
 
 export default function Header() {
   const { avatarEmoji } = useAvatarStore();
@@ -51,12 +52,15 @@ export default function Header() {
 
   // Convert route path to page title
   const getPageTitle = () => {
+    const firstName = user?.full_name?.split(' ')[0] || 'User';
+    
     if (pathname === "/Home/HomePage") {
-      const firstName = user?.full_name?.split(' ')[0] || 'User';
       return `Hi, ${firstName}`;
     }
-    if (pathname === "/Learn/LearnPage") return "Learn";
-        if (pathname === "/More/MorePage") return "More";
+    if (pathname === "/Learn/LearnPage") return `Hi, ${firstName}`;
+    if (pathname === "/More/MorePage") return `Hi, ${firstName}`;
+    if (pathname === "/Test/TestPage") return `Hi, ${firstName}`;
+    if (pathname === "/Ask/AskPage") return `Hi, ${firstName}`;
     if (pathname === "/Profile/ProfilePage") return "Profile";
     if (pathname === "/Settings/SettingsPage") return "Settings";
     return "...."; // fallback
@@ -88,7 +92,15 @@ export default function Header() {
   />
 </TouchableOpacity>
 
-          <Text className={pathname === "/Home/HomePage" ? "text-lg font-semibold text-black" : "text-2xl font-bold text-black"}>
+          <Text className={
+            pathname === "/Home/HomePage" || 
+            pathname === "/Learn/LearnPage" || 
+            pathname === "/More/MorePage" || 
+            pathname === "/Test/TestPage" || 
+            pathname === "/Ask/AskPage" 
+              ? "text-lg font-semibold text-black" 
+              : "text-2xl font-bold text-black"
+          }>
             {getPageTitle()}
           </Text>
         </View>
@@ -109,11 +121,11 @@ export default function Header() {
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push('/Settings/SettingsPage')}
+            onPress={() => router.push('/AllCourses/AllCoursesPage')}
             className="ml-1"
             accessibilityLabel="Settings"
           >
-            <MaterialIcons name="settings" size={26} color="#374151" />
+            <Entypo name="open-book" size={26} color="#374151" />
           </TouchableOpacity>
         </View>
       </View>

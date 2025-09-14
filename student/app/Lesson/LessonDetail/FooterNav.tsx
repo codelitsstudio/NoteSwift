@@ -50,7 +50,7 @@ const FooterNav: React.FC<Props> = ({ onPrevious, onSave, onNext }) => {
               onPress={() => handlePress("Next")}
               style={[styles.navButton, styles.circularBox, { marginLeft: 8 }]}
             >
-              <Text style={styles.navText}>Next</Text>
+              <Text style={styles.navText}>Notes</Text>
               <MaterialIcons name="arrow-forward-ios" size={18} color="#2563eb" style={{ marginLeft: 4 }} />
             </Pressable>
           </View>

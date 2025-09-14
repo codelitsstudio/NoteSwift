@@ -1,212 +1,159 @@
-import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-// --- TYPESCRIPT TYPES ---
-type Instructor = {
-  name: string;
-  title: string;
-  avatar: string;
-};
+import { useAuthStore } from '../../../stores/authStore';
+import { useCourseStore } from '../../../stores/courseStore';
 
-type Completed = {
-  id: string;
-  title: string;
-  description: string;
-  completedDate: string;
-  grade: number;
-  instructor: Instructor;
-  icon: string;
-};
-
-type OngoingCourse = {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  lecturesLeft: number;
-  progress: number;
-  image: string;
-};
-
-
-// --- DUMMY DATA ---
-const completed: Completed[] = [
-  {
-    id: '1',
-    title: 'UX UI Design Thinking',
-    description: 'Dive deep into the world of machine learning with o...',
-    completedDate: 'May 10, 2024',
-    grade: 98,
-    instructor: {
-      name: 'Fannie DuBuque',
-      title: 'Top Rated Instructor',
-      avatar: 'https://i.pravatar.cc/100?u=a042581f4e29026704d',
-    },
-    icon: 'https://img.icons8.com/plasticine/100/trophy.png',
-  },
-  {
-    id: '2',
-    title: 'Full Stack Development',
-    description: 'Dive deep into modern web development...',
-    completedDate: 'April 22, 2024',
-    grade: 95,
-    instructor: {
-      name: 'Stan Smith',
-      title: 'Top Rated Instructor',
-      avatar: 'https://i.pravatar.cc/100?u=a042581f4e29026705d',
-    },
-    icon: 'https://img.icons8.com/plasticine/100/trophy.png',
-  },
-];
-
-const ongoingCourses: OngoingCourse[] = [
-  {
-    id: '1',
-    title: 'AR/VR (Augmented Reality/Virtual Reality)',
-    category: 'Technologies',
-    description: 'Placerat vitae commodo amet nulla. Lectus arcu.',
-    lecturesLeft: 8,
-    progress: 62,
-    image: 'https://images.unsplash.com/photo-1593508512255-86ab42a8e620?q=80&w=500',
-  },
-  {
-    id: '2',
-    title: 'Software Engineering',
-    category: 'Programming',
-    description: 'Semper enim scelerisque neque nascetur varius.',
-    lecturesLeft: 3,
-    progress: 96,
-    image: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=500',
-  },
-  {
-    id: '3',
-    title: 'Game Development',
-    category: 'Development',
-    description: 'Turpis amet montes sit massa egestas eget.',
-    lecturesLeft: 6,
-    progress: 80,
-    image: 'https://images.unsplash.com/photo-1580327344181-c1163234e5a0?q=80&w=500',
-  },
-];
-
-// --- HELPER COMPONENTS ---
-
-const CompletedCard = ({ item }: { item: Completed }) => (
-  // Fixed width to w-92 for consistent sizing
-  <TouchableOpacity className="w-92 h-48 rounded-2xl p-4 justify-between bg-white border border-gray-200 mr-4" style={{ width: 310 }}>
-    <View>
-      <View className="flex-row justify-between items-start">
-        <Image source={{ uri: item.icon }} className="w-12 h-12" />
-        <Text className="text-gray-700 font-bold">Grades <Text className="text-xl text-black">{item.grade}%</Text></Text>
-      </View>
-      <Text className="text-lg font-bold text-black mt-0" numberOfLines={1}>{item.title}</Text>
-      <Text className="text-xs text-gray-600" numberOfLines={1}>{item.description}</Text>
-      <Text className="text-xs text-gray-500 mt-">Completed: {item.completedDate}</Text>
-    </View>
-    <View className="flex-row items-center">
-      <Image source={{ uri: item.instructor.avatar }} className="w-7 h-7 rounded-full" />
-      <View className="ml-2">
-        <Text className="text-sm font-semibold text-black">{item.instructor.name}</Text>
-        <Text className="text-xs text-gray-600">{item.instructor.title}</Text>
-      </View>
-    </View>
-  </TouchableOpacity>
-);
-
-const OngoingCourseCard = ({ item }: { item: OngoingCourse }) => (
-  <TouchableOpacity className="bg-white rounded-2xl p-2 mb-4 border border-gray-200">
-    <View className="flex-row">
-      <Image source={{ uri: item.image }} className="w-32 h-34 rounded-2xl" />
-      <View className="flex-1 ml-3">
-        <View className="flex-row justify-between items-center">
-          {/* Category tag stays text */}
-          <Text className="text-xs text-customBlue bg-customBlue/10 px-2 py-1 rounded-full font-semibold">
-            {item.category}
-          </Text>
-
-          {/* Replace "Continue >" with Material icon */}
-          <View className="flex-row items-center">
-            <Text className="text-xs text-customBlue font-semibold mr-0">
-              Continue
-            </Text>
-            <MaterialIcons name="arrow-forward-ios" size={10} color="#0072d2" />
+const OngoingCourseCard = ({ item }: { item: any }) => {
+  const router = useRouter();
+  // Use special chapter key for featured course
+  let chapterParam = item.chapterKey || item.chapter || item._id || item.id;
+  if (item.title === "Learn How To Actually Study Before It’s Too Late" || item.isFeatured) {
+    chapterParam = "learn-how-to-actually-study-before-it's-too-late";
+  }
+  // Dummy progress for now if not provided
+  const progress = (item.progress !== undefined && item.progress !== null) ? item.progress : 40;
+  return (
+    <TouchableOpacity
+      className="bg-white rounded-2xl p-2 mb-4 border border-gray-200"
+      onPress={() => router.push({ pathname: '/Learn/[chapter]', params: { chapter: chapterParam } })}
+    >
+      <View className="flex-row">
+        <Image source={{ uri: item.image || 'https://i.postimg.cc/dVtJL1yd/Screenshot-2025-0wada9-15-034336.png' }} className="w-32 h-34 rounded-2xl" />
+        <View className="flex-1 ml-3">
+          <View className="flex-row justify-between items-center">
+            {(item.title === 'Learn How To Actually Study Before It\'s Too Late' || item.isFeatured) ? (
+              <View className="flex-row items-center justify-center bg-blue-100 px-2 py-1 rounded-full">
+                <MaterialIcons name="star" size={16} color="#3B82F6" style={{ marginRight: 4 }} />
+                <Text className="text-xs text-blue-600 font-semibold">Featured</Text>
+              </View>
+            ) : (
+              <Text className="text-xs text-customBlue bg-customBlue/10 px-2 py-1 rounded-full font-semibold">
+                {item.subject || item.category || 'General'}
+              </Text>
+            )}
+            <View className="flex-row items-center mr-1">
+              <Text className="text-xs text-customBlue font-semibold ">Continue</Text>
+              <MaterialIcons name="arrow-forward-ios" size={10} color="#0072d2" />
+            </View>
           </View>
-        </View>
-
-        <Text className="text-base font-bold text-black my-1">{item.title}</Text>
-        <Text className="text-xs text-gray-500">{item.description}</Text>
-        <Text className="text-xs text-gray-400 mt-2">
-          {item.lecturesLeft} lectures left
-        </Text>
-
-        <View className="flex-row items-center mt-2">
-          <View className="flex-1 h-2 bg-gray-200 rounded-full mr-2">
-            <View
-              className="h-2 bg-customBlue rounded-full"
-              style={{ width: `${item.progress}%` }}
-            />
+          <Text className="text-base font-bold text-black my-1">{item.title}</Text>
+          <Text className="text-xs text-gray-500">{item.description || item.summary || 'No description.'}</Text>
+          {/* Dummy or real progress bar */}
+          <View className="flex-row items-center mt-2 mr-2">
+            <View className="flex-1 h-2 bg-gray-200 rounded-full mr-2">
+              <View className="h-2 bg-customBlue rounded-full" style={{ width: `${progress}%` }} />
+            </View>
+            <Text className="text-xs font-semibold text-customBlue">{progress}%</Text>
           </View>
-          <Text className="text-xs font-semibold text-customBlue">
-            {item.progress}%
-          </Text>
+          {/* Show special badge for featured course */}
+          {(item.title === 'Learn How To Actually Study Before It\'s Too Late' || item.isFeatured) && (
+            <View className="flex-row items-center mt-1">
+            </View>
+          )}
         </View>
       </View>
-    </View>
-  </TouchableOpacity>
-);
-
-
-const TabItem = ({ iconName, label, active }: { iconName: keyof typeof Ionicons.glyphMap; label: string; active: boolean }) => {
-    // Define colors based on the active state
-    const color = active ? '#0072d2' : 'gray'; // Use the hex of your customBlue for the icon
-    const textClass = active ? 'text-customBlue' : 'text-gray-500';
-
-    return (
-        <TouchableOpacity className="items-center">
-            <Ionicons name={iconName} size={24} color={color} />
-            <Text className={`text-xs mt-1 ${textClass}`}>{label}</Text>
-        </TouchableOpacity>
-    );
+    </TouchableOpacity>
+  );
 };
-
-// --- MAIN COMPONENT ---
 
 const MyCourses = () => {
+  const { user } = useAuthStore();
+  const { enrolledCourses, fetchUserEnrollments, fetchAllCourses, courses, is_loading, featuredCourse, fetchFeaturedCourse } = useCourseStore();
+
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🔄 MyCourses: Initializing for user:', user.id);
+      fetchUserEnrollments(user.id);
+      fetchAllCourses();
+      fetchFeaturedCourse();
+    }
+  }, [user?.id]);
+
+  // Debug effect to monitor state changes
+  useEffect(() => {
+    console.log('📊 MyCourses State Update:', {
+      userId: user?.id,
+      enrolledCoursesCount: enrolledCourses.length,
+      enrolledCourses: enrolledCourses,
+      featuredCourseId: featuredCourse?.id || featuredCourse?._id,
+      featuredCourseTitle: featuredCourse?.title,
+      coursesCount: courses?.length || 0,
+      isLoading: is_loading
+    });
+  }, [user?.id, enrolledCourses, featuredCourse, courses, is_loading]);
+
+  // Get all enrolled course IDs
+  let allEnrolledIds = [...enrolledCourses];
+  
+  // Include featured course if user is enrolled in it
+  if (featuredCourse) {
+    const featId = featuredCourse.id || featuredCourse._id;
+    console.log('🎯 Featured course check:', {
+      featuredId: featId,
+      featuredTitle: featuredCourse.title,
+      enrolledCourses: enrolledCourses,
+      isEnrolled: enrolledCourses.includes(featId)
+    });
+    
+    if (enrolledCourses.includes(featId)) {
+      console.log('✅ User is enrolled in featured course, adding to enrolled IDs');
+      allEnrolledIds.push(featId);
+    } else {
+      console.log('❌ User not enrolled in featured course');
+    }
+  }
+
+  // Filter courses to only show enrolled ones
+  let ongoingCourses = courses && Array.isArray(courses)
+    ? courses.filter(c => {
+        const courseId = c.id || c._id;
+        const isEnrolled = allEnrolledIds.includes(courseId);
+        console.log(`📋 Course "${c.title}" (ID: ${courseId}) - Enrolled: ${isEnrolled}`);
+        return isEnrolled;
+      })
+    : [];
+
+  // If user is enrolled ONLY in the featured course, ensure it appears
+  if (featuredCourse) {
+    const featId = featuredCourse.id || featuredCourse._id;
+    const isUserEnrolledInFeatured = enrolledCourses.includes(featId);
+    const featuredAlreadyIncluded = ongoingCourses.some(c => (c.id || c._id) === featId);
+    if (isUserEnrolledInFeatured && !featuredAlreadyIncluded) {
+      ongoingCourses = [featuredCourse];
+    }
+  }
+
+  console.log('🎉 Final ongoing courses:', ongoingCourses.map(c => ({ title: c.title, id: c.id || c._id, isFeatured: c.isFeatured })));
+
   return (
     <SafeAreaView className="flex-1">
-        <ScrollView contentContainerStyle={{ paddingBottom: 5 }}>
-      
-
-      
-
-            {/* --- Ongoing Courses --- */}
-            <View className="px-0 mt-2">
-               <View className="flex-row justify-between items-center mb-6">
-                <Text className="text-[1.3rem] font-bold text-gray-900">Ongoing Courses</Text>
-
-              </View>
-              {ongoingCourses.map(item => <OngoingCourseCard key={item.id} item={item} />)}
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 5 }}
+      >
+        <View className="px-0 mt-8">
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-[1.3rem] font-bold text-gray-900">Ongoing Courses</Text>
+          </View>
+          {ongoingCourses.length === 0 ? (
+            <View className="flex-1 justify-center items-center mb-4 mt-6">
+              <Image
+                source={require('../../../assets/images/ongoing-courses.gif')}
+                style={{ width: 180, height: 180, marginBottom: 16 }}
+              />
+              <Text className="text-lg font-semibold text-gray-800">
+                No ongoing courses yet.
+              </Text>
+              <Text className="text-sm text-gray-500 mt-1 text-center px-4">
+                Please Enroll to get started!
+              </Text>
             </View>
-
-
-
-                  {/* --- Recent Completed Courses --- */}
-            <View className="mt-2">
-              <View className="flex-row justify-between items-center mt-4 mb-6">
-                <Text className="text-[1.3rem] font-bold text-gray-900">Recent Completed Courses</Text>
-
-              </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 6, paddingRight: 4 }}>
-                    {completed.map(item => <CompletedCard key={item.id} item={item} />)}
-                </ScrollView>
-            </View>
-
-
-
-        </ScrollView>
-        
- 
+          ) : (
+            ongoingCourses.map(item => <OngoingCourseCard key={item.id || item._id} item={item} />)
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };

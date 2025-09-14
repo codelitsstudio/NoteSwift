@@ -14,74 +14,70 @@ type Props = {
   title?: string;
   subtitle?: string | null;
   onPress?: (e: GestureResponderEvent) => void;
-  bottom?: number; // distance from bottom of the screen (default sits above nav)
   containerStyle?: StyleProp<ViewStyle>;
   buttonStyle?: StyleProp<ViewStyle>;
-  isSelected?: boolean; // prop to control button color
 };
 
 const FloatingEnrollButton: React.FC<Props> = ({
   title = 'Enroll Now',
-  subtitle = 'Starts 13 Sep',
+  subtitle = 'Starts instantly',
   onPress,
-  bottom = 72,
   containerStyle,
   buttonStyle,
-  isSelected = false,
 }) => {
-  const buttonBackgroundColor = isSelected ? '#10B981' : '#3B82F6'; // Green if selected, blue otherwise
-  
   return (
-    <View style={[styles.container, { bottom }, containerStyle]}>
-      <TouchableOpacity
-        activeOpacity={0.95}
-        onPress={onPress}
-        style={[styles.button, { backgroundColor: buttonBackgroundColor }, buttonStyle]}
-        accessibilityRole="button"
-        accessibilityLabel={title}
-      >
-        <Text style={styles.title}>{title}</Text>
+    <View style={[styles.wrapper, containerStyle]}>
+      <View style={styles.innerContainer}>
+        <TouchableOpacity
+          activeOpacity={0.95}
+          onPress={onPress}
+          style={[styles.button, buttonStyle]}
+        >
+          <Text style={styles.title}>{title}</Text>
+        </TouchableOpacity>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 999,
-    elevation: 20,
+  wrapper: {
+    width: '100%',
+    backgroundColor: '#ffffff', // white background around button
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  innerContainer: {
     alignItems: 'center',
   },
   button: {
     width: '100%',
-    paddingVertical: 10,   // reduced vertical padding
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#3B82F6', // blue like checkout
+    paddingVertical: 16,
+    borderRadius: 24, // rounded-3xl
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 10,
   },
   title: {
-    fontSize: 16,         // reduced title size
-    fontWeight: '700',
-    lineHeight: 22,
+    fontSize: 16,
+    fontWeight: '600',
     color: '#ffffff',
+    textAlign: 'center',
   },
   subtitle: {
     marginTop: 4,
-    fontSize: 8,         // reduced subtitle size
-    fontWeight: '600',
-    color: '#ffffff',
-    opacity: 0.85,
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#6B7280', // gray like Checkout subtitle
+    textAlign: 'center',
   },
 });
 

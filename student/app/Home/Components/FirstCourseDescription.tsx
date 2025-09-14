@@ -15,9 +15,11 @@ import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
 import PrimaryNav from '../../../components/Navigation/PrimaryNav';
 import FloatingEnrollButton from '@/components/Buttons/FloatingEnrollButton';
 import { useCourseStore } from '../../../stores/courseStore';
+import { useRouter } from 'expo-router';
 import { useNotificationStore } from '../../../stores/notificationStore';
 
 const FirstCourseDescription = () => {
+  const router = useRouter();
   const { 
     featuredCourse,
     isEnrolled,
@@ -135,15 +137,15 @@ const FirstCourseDescription = () => {
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 25 }}
+        contentContainerStyle={{ paddingBottom: 5 }}
       >
         <View className="px-4 py-4">
 
           {/* Title & Summary */}
-          <Text className="text-2xl font-bold text-gray-900 mb-2">
+          <Text className="text-xl font-bold text-gray-900 mb-2">
             Learn How To Actually Study Before It’s Too Late
           </Text>
-          <Text className="text-gray-600 mb-4">
+          <Text className="text-base text-gray-600 mb-4">
             Free, professional learning program for building effective study habits, improving knowledge retention, and mastering time management.
           </Text>
 
@@ -158,18 +160,18 @@ const FirstCourseDescription = () => {
           {/* About */}
           <View className="mb-6">
             <Text className="text-lg font-bold text-gray-900 mb-2">Course Overview</Text>
-            <Text className="text-gray-700 leading-6">
+            <Text className="text-base text-gray-700 leading-6">
               This course focuses on beginner learners, teaching actionable techniques to study smartly and efficiently. Participants will form sustainable study habits, manage time effectively, and retain knowledge with proven strategies.
             </Text>
           </View>
 
           {/* Key Features */}
           <View className="mb-8">
-            <FeatureItem icon="phone-iphone" title="Mobile Friendly" subtitle="Complete the course entirely on mobile." />
-            <FeatureItem icon="all-inclusive" title="100% Online" subtitle="Learn at your own pace with flexible access." />
-            <FeatureItem icon="update" title="Flexible Schedule" subtitle="Adapt study sessions to your routine." />
-            <FeatureItem icon="hourglass-empty" title="Duration: 40 mins+" subtitle="Start with Study Fundamentals and progress." />
-            <FeatureItem icon="bar-chart" title="Beginner-Friendly" subtitle="No prior experience required." />
+            <FeatureItem icon="phone-iphone" title="Mobile Friendly" subtitle="Complete the course entirely on mobile." textSize="base" />
+            <FeatureItem icon="all-inclusive" title="100% Online" subtitle="Learn at your own pace with flexible access." textSize="base" />
+            <FeatureItem icon="update" title="Flexible Schedule" subtitle="Adapt study sessions to your routine." textSize="base" />
+            <FeatureItem icon="hourglass-empty" title="Duration: 40 mins+" subtitle="Start with Study Fundamentals and progress." textSize="base" />
+            <FeatureItem icon="bar-chart" title="Beginner-Friendly" subtitle="No prior experience required." textSize="base" />
           </View>
 
           {/* Skills */}
@@ -189,8 +191,8 @@ const FirstCourseDescription = () => {
             <Text className="text-lg font-bold text-gray-900 mb-3">What You Will Learn</Text>
             {learningPoints.map(point => (
               <View key={point} className="flex-row items-center mb-3">
-                <MaterialIcons name="check-circle" size={20} color="#3B82F6" />
-                <Text className="text-gray-700 ml-3 flex-1">{point}</Text>
+                <MaterialIcons name="check-circle" size={18} color="#3B82F6" />
+                <Text className="text-gray-700 ml-3 flex-1 text-sm">{point}</Text>
               </View>
             ))}
           </View>
@@ -200,15 +202,15 @@ const FirstCourseDescription = () => {
             <Text className="text-lg font-bold text-gray-900 mb-3">Syllabus</Text>
             {syllabus.map((module, index) => (
               <View key={module.name} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <Text className="text-gray-500 font-semibold mb-1">Module {index + 1}</Text>
-                <Text className="text-gray-800 font-semibold">{module.name}</Text>
-                <Text className="text-gray-600 mt-1">{module.description}</Text>
+                <Text className="text-sm text-gray-500 font-semibold mb-1">Module {index + 1}</Text>
+                <Text className="text-base text-gray-800 font-semibold">{module.name}</Text>
+                <Text className="text-sm text-gray-600 mt-1">{module.description}</Text>
               </View>
             ))}
           </View>
 
           {/* FAQ */}
-          <View className="mb-24">
+          <View className="mb-1">
             <Text className="text-lg font-bold text-gray-900 mb-3">Frequently Asked Questions</Text>
             {faqsData.map(faq => (
               <TouchableOpacity
@@ -221,12 +223,12 @@ const FirstCourseDescription = () => {
                   <Text className="text-gray-800 text-base flex-1">{faq.question}</Text>
                   <MaterialIcons
                     name={expandedFaq === faq.question ? "remove" : "add"}
-                    size={24}
+                    size={20}
                     color="gray"
                   />
                 </View>
                 {expandedFaq === faq.question && (
-                  <Text className="text-gray-600 mt-2">{faq.answer}</Text>
+                  <Text className="text-sm text-gray-600 mt-2">{faq.answer}</Text>
                 )}
               </TouchableOpacity>
             ))}
@@ -234,32 +236,27 @@ const FirstCourseDescription = () => {
 
         </View>
       </ScrollView>
+{/* Enroll / Checkout Button */}
+<View style={{ width: '100%' }}>
+  <FloatingEnrollButton
+    title={alreadyEnrolled ? "Go to Learn" : "Enroll to Unlock Full Access"}
+    subtitle={alreadyEnrolled ? `Enrolled: ${enrollmentDate || 'Today'}` : "Start Learning Today"}
+    onPress={alreadyEnrolled ? () => router.push('/Learn/LearnPage') : handleEnroll}
+  />
+</View>
 
-      {/* Floating Enroll Button */}
-      <View style={styles.floatingButtonContainer} pointerEvents="box-none" >
-        <View className="px-0" style={{ width: '100%' }}>
-          <FloatingEnrollButton
-            title={alreadyEnrolled ? "Go to Learn" : "Enroll to Unlock Full Access"}
-            subtitle={alreadyEnrolled ? `Enrolled: ${enrollmentDate || 'Today'}` : "Start Learning Today"}
-            bottom={32}
-            onPress={alreadyEnrolled ? () => {} : handleEnroll}
-          />
-        </View>
-      </View>
-
-      {/* Primary Navigation */}
-      <PrimaryNav current="Home" />
+      
     </SafeAreaView>
   );
 };
 
-const FeatureItem = ({ icon, title, subtitle, className }:
-  { icon: keyof typeof MaterialIcons.glyphMap; title: string; subtitle: string; className?: string }) => (
+const FeatureItem = ({ icon, title, subtitle, className, textSize }:
+  { icon: keyof typeof MaterialIcons.glyphMap; title: string; subtitle: string; className?: string; textSize?: string }) => (
   <View className={`flex-row items-start mb-6 ${className || ''}`}>
-    <MaterialIcons name={icon} size={28} className="text-gray-700 mr-4 mt-1" />
+    <MaterialIcons name={icon} size={24} className="text-gray-700 mr-4 mt-1" />
     <View>
-      <Text className="font-semibold text-gray-800">{title}</Text>
-      <Text className="text-gray-600 mt-1">{subtitle}</Text>
+      <Text className={`font-semibold text-gray-800 ${textSize === 'base' ? 'text-base' : ''}`}>{title}</Text>
+      <Text className={`text-gray-600 mt-1 ${textSize === 'base' ? 'text-sm' : ''}`}>{subtitle}</Text>
     </View>
   </View>
 );

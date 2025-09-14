@@ -1,8 +1,8 @@
-import React from "react";
-import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StyleSheet } from "react-native";
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useMemo, useRef, useState, useEffect } from "react";
+import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StyleSheet, StatusBar, Platform } from "react-native";
+import { MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
-import FloatingEnrollButton from "../../../components/Buttons/FloatingEnrollButton";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 
 interface Package {
   id: string;
@@ -35,7 +35,20 @@ export default function PackageDetailView({
   isSelected 
 }: PackageDetailViewProps) {
   const router = useRouter();
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [selectedTrialType, setSelectedTrialType] = useState<'free' | 'paid'>('free');
+  const [paymentMethod, setPaymentMethod] = useState<string>('khalti');
+const bottomSheetRef = useRef<BottomSheetModal>(null);
+const snapPoints = useMemo(() => ['55%'], []);
 
+// Handle bottom sheet visibility
+useEffect(() => {
+  if (showCheckout && bottomSheetRef.current) {
+    bottomSheetRef.current.present();
+  } else if (!showCheckout && bottomSheetRef.current) {
+    bottomSheetRef.current.dismiss();
+  }
+}, [showCheckout]);
   // Function to get appropriate icon for each service feature
   const getServiceIcon = (moduleName: string): keyof typeof MaterialIcons.glyphMap => {
     const name = moduleName.toLowerCase();
@@ -77,7 +90,9 @@ export default function PackageDetailView({
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" style={{ paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
+      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-200">
         <TouchableOpacity onPress={onBack} className="p-2">
@@ -182,18 +197,178 @@ export default function PackageDetailView({
         <View className="h-16" />
       </ScrollView>
 
-      {/* Floating Action Button */}
-      <View style={styles.floatingButtonContainer} pointerEvents="box-none">
-        <View className="px-0" style={{ width: '100%' }}>
-          <FloatingEnrollButton
-            title={isSelected ? "Selected Package" : `Select ${pkg.name}`}
-            subtitle={isSelected ? `Package Selected ✓` : "Add to your subscription"}
-            bottom={32}
-            onPress={() => onSelect(pkg.id)}
-            isSelected={isSelected}
-          />
+      {/* Bottom Buttons */}
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4">
+        <View className="px-5">
+          <View className="flex-row justify-center">
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedTrialType('free');
+                setShowCheckout(true);
+              }}
+              className="w-40 py-4 rounded-3xl border border-blue-500 bg-white mr-4"
+            >
+              <Text className="text-center text-lg font-semibold text-blue-500">
+                Free Trial
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedTrialType('paid');
+                setShowCheckout(true);
+              }}
+              className="w-40 py-4 rounded-3xl bg-blue-500"
+            >
+              <Text className="text-center text-lg font-bold text-white">
+                Enroll Now
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text className="text-gray-400 text-center mt-2 mb-3 text-sm">
+            One-time payment – no recurring charges.
+          </Text>
         </View>
       </View>
+
+  <BottomSheetModal
+  ref={bottomSheetRef}
+  index={1}
+  snapPoints={snapPoints}
+  onDismiss={() => setShowCheckout(false)}
+  backgroundStyle={{ backgroundColor: '#fff' }}
+  handleIndicatorStyle={{ backgroundColor: '#E5E7EB' }}
+>
+  <BottomSheetView className="flex-1 px-6 pb-6">
+    <View className="flex-row justify-between items-center mb-6">
+      <Text className="text-xl font-bold text-gray-800">Checkout</Text>
+      <TouchableOpacity onPress={() => setShowCheckout(false)}>
+        <MaterialIcons name="close" size={24} color="#6B7280" />
+      </TouchableOpacity>
+    </View>
+
+
+            {/* Package Summary */}
+            <View className={`rounded-xl p-4 mb-6 ${
+              selectedTrialType === 'free' ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
+            }`}>
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="text-lg font-bold text-gray-900">{pkg.name}</Text>
+                  <Text className="text-sm text-gray-600">
+                    {selectedTrialType === 'free'
+                      ? `Try ${pkg.name.toLowerCase()} free for 7 days`
+                      : pkg.description
+                    }
+                  </Text>
+                  <Text className="mt-2">
+                    <Text className={`text-lg font-bold ${
+                      selectedTrialType === 'free' ? 'text-blue-600' : 'text-blue-600'
+                    }`}>
+                      Rs. {selectedTrialType === 'free' ? '0' : pkg.price.toLocaleString()}
+                    </Text>
+                    {selectedTrialType === 'free' ? (
+                      <Text className="text-sm text-blue-600"> (Free for 7 days)</Text>
+                    ) : (
+                      <Text className="text-sm text-gray-500"> (One-time payment)</Text>
+                    )}
+                  </Text>
+                </View>
+                {selectedTrialType === 'free' && (
+                  <View className="bg-blue-500 px-3 py-1 rounded-full">
+                    <Text className="text-xs text-white font-bold">TRIAL</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Conditional Content Based on Trial Type */}
+            {selectedTrialType === 'free' ? (
+              <>
+                {/* Free Trial Information */}
+                <Text className="text-lg font-semibold text-gray-800 mb-4">Start Your Free Trial</Text>
+                <View className="mb-6">
+                  <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <View className="flex-row items-center mb-3">
+                      <MaterialIcons name="info" size={20} color="#6B7280" />
+                      <Text className="ml-2 text-sm font-semibold text-gray-900">Trial Terms</Text>
+                    </View>
+                    <Text className="text-sm text-gray-700 leading-5 mb-3">
+                      • Your free trial lasts 7 days from activation{'\n'}
+                      • Full access to all premium features{'\n'}
+                      • Cancel anytime during the trial period{'\n'}
+                      • No payment required to start
+                    </Text>
+                    <Text className="text-xs text-gray-600">
+                      If you don't cancel before the trial ends, you'll be charged the full price automatically.
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Payment Method Selection */}
+                <Text className="text-lg font-semibold text-gray-800 mb-4">Payment Method</Text>
+                <View className="mb-6">
+                  <TouchableOpacity 
+                    className={`flex-row items-center p-4 rounded-xl border-2 mb-4 ${paymentMethod === 'khalti' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+                    onPress={() => setPaymentMethod('khalti')}
+                  >
+                    <MaterialIcons name="payment" size={24} color={paymentMethod === 'khalti' ? '#3B82F6' : '#6B7280'} />
+                    <Text className={`ml-3 font-medium ${paymentMethod === 'khalti' ? 'text-blue-900' : 'text-gray-700'}`}>Khalti</Text>
+                    {paymentMethod === 'khalti' && <View className="ml-2"><MaterialIcons name="check-circle" size={20} color="#3B82F6" /></View>}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    className={`flex-row items-center p-4 rounded-xl border-2 mb-4 ${paymentMethod === 'esewa' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+                    onPress={() => setPaymentMethod('esewa')}
+                  >
+                    <MaterialIcons name="account-balance-wallet" size={24} color={paymentMethod === 'esewa' ? '#3B82F6' : '#6B7280'} />
+                    <Text className={`ml-3 font-medium ${paymentMethod === 'esewa' ? 'text-blue-900' : 'text-gray-700'}`}>eSewa</Text>
+                    {paymentMethod === 'esewa' && <View className="ml-2"><MaterialIcons name="check-circle" size={20} color="#3B82F6" /></View>}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    className={`flex-row items-center p-4 rounded-xl border-2 ${paymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+                    onPress={() => setPaymentMethod('card')}
+                  >
+                    <MaterialIcons name="credit-card" size={24} color={paymentMethod === 'card' ? '#3B82F6' : '#6B7280'} />
+                    <Text className={`ml-3 font-medium ${paymentMethod === 'card' ? 'text-blue-900' : 'text-gray-700'}`}>Credit/Debit Card</Text>
+                    {paymentMethod === 'card' && <View className="ml-2"><MaterialIcons name="check-circle" size={20} color="#3B82F6" /></View>}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* Checkout Button */}
+            <TouchableOpacity 
+              className="bg-customBlue py-4 rounded-3xl mb-4"
+              onPress={() => {
+                if (selectedTrialType === 'free') {
+                  // Handle free trial activation
+                  console.log('Starting free trial for:', pkg.name);
+                  setShowCheckout(false);
+                  // Navigate to trial success or course access
+                } else {
+                  // Handle payment processing
+                  console.log('Processing payment with:', paymentMethod, 'for:', pkg.name);
+                  setShowCheckout(false);
+                  // Navigate to payment success
+                }
+              }}
+            >
+              <Text className="text-white text-center font-semibold text-lg">
+                {selectedTrialType === 'free' ? 'Start My Free Trial' : 'Complete Payment'}
+              </Text>
+            </TouchableOpacity>
+
+            <Text className="text-xs text-gray-500 text-center">
+              {selectedTrialType === 'free' 
+                ? 'Your trial data is secured with 256-bit SSL encryption'
+                : 'Your payment is secured with 256-bit SSL encryption'
+              }
+            </Text>
+           </BottomSheetView>
+</BottomSheetModal>
     </SafeAreaView>
   );
 }

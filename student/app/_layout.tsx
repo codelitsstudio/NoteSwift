@@ -191,7 +191,10 @@ export default function RootLayout() {
                     name="Notification/NotificationPage"
                     options={{ header: () => <HeaderThree title="Notifications" /> }}
                   />
-            
+                <Stack.Screen
+                    name="AllCourses/AllCoursesPage"
+                    options={{ header: () => <HeaderThree title="All Courses" /> }}
+                  />
 
                   {/* Dynamic Routes */}
                   <Stack.Screen name="Learn/[chapter]" options={{ headerShown: false }} />

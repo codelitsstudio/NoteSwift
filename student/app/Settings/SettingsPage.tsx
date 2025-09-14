@@ -26,7 +26,7 @@ type ListItemProps = {
 // --- Helper Components (defined within the same file) ---
 
 const SettingsHeader = ({ onClose }: { onClose: () => void }) => (
-  <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+  <View className="flex-row items-center bg-white justify-between p-4">
     <TouchableOpacity onPress={onClose} className="p-1">
       <MaterialIcons name="close" size={32} className="text-customBlue" />
     </TouchableOpacity>
@@ -90,20 +90,14 @@ const SettingsPage = () => {
   const [learningReminders, setLearningReminders] = useState(false);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F4F6' }} edges={['top', 'left', 'right']}>
-      <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+  <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <View className="flex-1 bg-[#FAFAFA]">
         <SettingsHeader onClose={() => router.back()} />
         <ScrollView>
           <SettingsSection title="Appearance" />
           <View className="rounded-xl overflow-hidden mx-4">
-            <SettingsListItem
-              icon="brightness-2"
-              label="Dark Mode"
-              type="select"
-              isSelected={appearance === 'dark'}
-              onPress={() => setAppearance('dark')}
-            />
-            <Divider />
+       
+      
             <SettingsListItem
               icon="wb-sunny"
               label="Light Mode"

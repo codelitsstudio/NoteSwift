@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "../stores/authStore";
 
-export const URI = "http://192.168.1.172:5000/api";
+export const URI = "https://noteswift-w408.onrender.com/api";
 
 const api = axios.create({
     baseURL: URI,

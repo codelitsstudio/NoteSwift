@@ -22,7 +22,7 @@ export default function ChapterPage() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-white">
       <HeaderFifth title={data.title} subtitle={data.subtitle} onBack={() => router.back()} />
 
       {/* Info Box */}

@@ -62,7 +62,7 @@ export class DatabaseSeeder {
       }
 
       // Create additional sample courses for variety
-      await this.createSampleCourses();
+      // await this.createSampleCourses();
       
     } catch (error) {
       console.error('❌ Failed to seed courses:', error);
@@ -72,34 +72,34 @@ export class DatabaseSeeder {
 
   /**
    * Creates additional sample courses for a richer experience
-   */
-  private static async createSampleCourses(): Promise<void> {
-    const sampleCourses: CourseData[] = [
-      {
-        title: 'Mathematics Fundamentals for Grade 10',
-        description: 'Complete mathematics course covering algebra, geometry, and trigonometry for Grade 10 students.',
-        subject: 'Mathematics',
-        tags: ['math', 'algebra', 'geometry', 'grade10'],
-        status: 'Published'
-      },
-      {
-        title: 'English Literature for Grade 11',
-        description: 'Explore classic and modern literature with comprehensive analysis and writing skills.',
-        subject: 'English',
-        tags: ['english', 'literature', 'writing', 'grade11'],
-        status: 'Published'
-      }
-    ];
+  //  */
+  // private static async createSampleCourses(): Promise<void> {
+  //   const sampleCourses: CourseData[] = [
+  //     {
+  //       title: 'Mathematics Fundamentals for Grade 10',
+  //       description: 'Complete mathematics course covering algebra, geometry, and trigonometry for Grade 10 students.',
+  //       subject: 'Mathematics',
+  //       tags: ['math', 'algebra', 'geometry', 'grade10'],
+  //       status: 'Published'
+  //     },
+  //     {
+  //       title: 'English Literature for Grade 11',
+  //       description: 'Explore classic and modern literature with comprehensive analysis and writing skills.',
+  //       subject: 'English',
+  //       tags: ['english', 'literature', 'writing', 'grade11'],
+  //       status: 'Published'
+  //     }
+  //   ];
 
-    for (const courseData of sampleCourses) {
-      const existingCourse = await Course.findOne({ title: courseData.title });
-      if (!existingCourse) {
-        const course = new Course(courseData);
-        await course.save();
-        console.log(`✅ Sample course created: "${course.title}"`);
-      }
-    }
-  }
+  //   for (const courseData of sampleCourses) {
+  //     const existingCourse = await Course.findOne({ title: courseData.title });
+  //     if (!existingCourse) {
+  //       const course = new Course(courseData);
+  //       await course.save();
+  //       console.log(`✅ Sample course created: "${course.title}"`);
+  //     }
+  //   }
+  // }
 
   /**
    * Creates a default enrollment for testing purposes
