@@ -11,12 +11,13 @@ type LiveVideoProps = {
   onPressPlay?: () => void;
   onTimeUpdate?: (ms: number) => void;
   onPlayPauseChange?: (isPlaying: boolean) => void;
+  onDurationUpdate?: (ms: number) => void;
 };
 
 const BLUE = "#3b82f6";
 
 const LiveVideo = forwardRef<any, LiveVideoProps>(
-  ({ videoUri = "https://codelitsstudio.com/videos/how-to-study-for-noteswift.mp4", thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange }, ref) => {
+  ({ videoUri = "https://codelitsstudio.com/videos/how-to-study-for-noteswift.mp4", thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate }, ref) => {
   const videoRef = useRef<Video | null>(null);
   
   // Combine related state to reduce re-renders
@@ -33,6 +34,8 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
   const [controlsOpacity] = useState(new Animated.Value(1));
   const prevIsLoadingRef = useRef(videoState.isLoading);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
+  const statusRef = useRef<any>({});
+  const [updateCounter, setUpdateCounter] = useState(0);
 
   // Memoized constants
   const { thumbSize, thinLineHeight } = useMemo(() => ({
@@ -209,22 +212,37 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
 
   // Optimized playback status update
   const handlePlaybackStatusUpdate = useCallback((s: any) => {
-    setVideoState(prev => {
-      const newState = {
-        ...prev,
-        status: s,
-        isLoading: !s.isLoaded,
-      };
-      if (s.isLoaded && !prev.isSliding) {
-        newState.localPosition = s.positionMillis || 0;
-      }
+    statusRef.current = s;
+    setUpdateCounter(prev => prev + 1);
+  }, []);
+
+  // Update state based on status ref
+  useEffect(() => {
+    const s = statusRef.current;
+    if (s) {
+      setVideoState(prev => {
+        const newState = {
+          ...prev,
+          status: s,
+          isLoading: !s.isLoaded,
+        };
+        if (s.isLoaded && !prev.isSliding) {
+          newState.localPosition = s.positionMillis || 0;
+        }
+        return newState;
+      });
+
       // Notify parent if play/pause state changes
       if (typeof onPlayPauseChange === 'function' && s.isLoaded && typeof s.isPlaying === 'boolean') {
         onPlayPauseChange(s.isPlaying);
       }
-      return newState;
-    });
-  }, [onPlayPauseChange]);
+
+      // Notify parent of duration when available
+      if (s.isLoaded && s.durationMillis && typeof onDurationUpdate === 'function') {
+        onDurationUpdate(s.durationMillis);
+      }
+    }
+  }, [updateCounter, onPlayPauseChange, onDurationUpdate]);
 
   // Memoized slider handlers
   const handleSliderValueChange = useCallback((val: number) => {
@@ -271,8 +289,6 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
           style={[StyleSheet.absoluteFill, { width: "100%", aspectRatio: 16 / 9 }]}
           resizeMode={ResizeMode.COVER}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          onLoadStart={() => setVideoState(prev => ({ ...prev, isLoading: true }))}
-          onReadyForDisplay={() => setVideoState(prev => ({ ...prev, isLoading: false }))}
           shouldPlay={false}
           usePoster={!!thumbnailUri}
           posterSource={thumbnailUri ? { uri: thumbnailUri } : undefined}

@@ -4,21 +4,31 @@ import { View, Pressable, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 
 interface Props {
   onPrevious?: () => void;
   onSave?: () => void;
   onNext?: () => void;
+  currentModule?: string;
+  videoCompleted?: boolean;
 }
 
-const FooterNav: React.FC<Props> = ({ onPrevious, onSave, onNext }) => {
+const FooterNav: React.FC<Props> = ({ onPrevious, onSave, onNext, currentModule = '1', videoCompleted = false }) => {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
-  const handlePress = (key: "Previous" | "Save" | "Next") => {
+  const handlePress = (key: "Previous" | "Save" | "Notes") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (key === "Previous" && onPrevious) onPrevious();
     if (key === "Save" && onSave) onSave();
-    if (key === "Next" && onNext) onNext();
+    if (key === "Notes") {
+      if (onNext) onNext();
+      router.push({
+        pathname: "/Lesson/LessonDetail/NotesAndReadable",
+        params: { module: currentModule }
+      });
+    }
   };
 
   return (
@@ -28,28 +38,31 @@ const FooterNav: React.FC<Props> = ({ onPrevious, onSave, onNext }) => {
           {/* Previous */}
           <Pressable
             onPress={() => handlePress("Previous")}
-            className="flex-row items-center justify-center py-2 px-3 bg-gray-100 rounded-md min-w-[80px] gap-1"
+            className="flex-row items-center justify-center py-2 px-3 bg-gray-100 rounded-3xl min-w-[80px] gap-1"
           >
-            <MaterialIcons name="arrow-back-ios" size={16} color="#3B82F6" />
             <Text className="text-sm font-medium text-gray-700">Previous</Text>
           </Pressable>
 
           {/* Save button */}
           <Pressable
             onPress={() => handlePress("Save")}
-            className="flex-row items-center justify-center py-2 px-3 bg-gray-100 rounded-md min-w-[80px] gap-1"
+            className="flex-row items-center justify-center py-2 px-3 bg-gray-100 rounded-3xl min-w-[80px] gap-1"
           >
-            <MaterialIcons name="save" size={16} color="#666" />
+            <MaterialIcons name="cloud" size={16} color="#666" />
             <Text className="text-sm font-medium text-gray-700">Save</Text>
           </Pressable>
 
           {/* Next */}
           <Pressable
-            onPress={() => handlePress("Next")}
-            className="flex-row items-center justify-center py-2 px-3 bg-gray-100 rounded-md min-w-[80px] gap-1"
+            onPress={() => handlePress("Notes")}
+            disabled={!videoCompleted}
+            className={`flex-row items-center justify-center py-2 px-3 rounded-3xl min-w-[80px] gap-1 ${
+              videoCompleted ? 'bg-blue-500' : 'bg-gray-300'
+            }`}
           >
-            <Text className="text-sm font-medium text-gray-700">Notes</Text>
-            <MaterialIcons name="arrow-forward-ios" size={16} color="#3B82F6" />
+            <Text className={`text-sm font-medium ${
+              videoCompleted ? 'text-white' : 'text-gray-500'
+            }`}>Notes</Text>
           </Pressable>
         </View>
       </View>

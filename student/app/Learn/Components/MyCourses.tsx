@@ -5,7 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../stores/authStore';
 import { useCourseStore } from '../../../stores/courseStore';
 
-const OngoingCourseCard = ({ item }: { item: any }) => {
+const OngoingCourseCard = ({ item, enrollment }: { item: any, enrollment?: any }) => {
   const router = useRouter();
   // Use special chapter key for featured course
   let chapterParam = item.chapterKey || item.chapter || item._id || item.id;
@@ -13,17 +13,8 @@ const OngoingCourseCard = ({ item }: { item: any }) => {
     chapterParam = "learn-how-to-actually-study-before-it's-too-late";
   }
 
-  // Calculate average progress across all chapters/lessons if available
-  let averageProgress = 0;
-  if (Array.isArray(item.chapters) && item.chapters.length > 0) {
-    // Each chapter should have a progress property (0-100)
-    const chapterProgresses = item.chapters
-      .map((ch: any) => typeof ch.progress === 'number' && !isNaN(ch.progress) ? ch.progress : 0);
-  const total = chapterProgresses.reduce((sum: number, val: number) => sum + val, 0);
-    averageProgress = Math.round(total / chapterProgresses.length);
-  } else if (typeof item.progress === 'number' && !isNaN(item.progress)) {
-    averageProgress = item.progress;
-  }
+  // Get progress from enrollment data
+  const progress = enrollment?.progress || 0;
 
   return (
     <TouchableOpacity
@@ -51,12 +42,12 @@ const OngoingCourseCard = ({ item }: { item: any }) => {
           </View>
           <Text className="text-base font-bold text-black my-1">{item.title}</Text>
           <Text className="text-xs text-gray-500">{item.description || item.summary || 'No description.'}</Text>
-          {/* Progress bar shows average progress of all chapters */}
+          {/* Progress bar shows progress from backend */}
           <View className="flex-row items-center mt-2 mr-2">
             <View className="flex-1 h-2 bg-gray-200 rounded-full mr-2">
-              <View className="h-2 bg-customBlue rounded-full" style={{ width: `${averageProgress}%` }} />
+              <View className="h-2 bg-customBlue rounded-full" style={{ width: `${progress}%` }} />
             </View>
-            <Text className="text-xs font-semibold text-customBlue">{averageProgress}%</Text>
+            <Text className="text-xs font-semibold text-customBlue">{progress}%</Text>
           </View>
           {/* Show special badge for featured course */}
           {(item.title === 'Learn How To Actually Study Before It\'s Too Late' || item.isFeatured) && (
@@ -71,7 +62,7 @@ const OngoingCourseCard = ({ item }: { item: any }) => {
 
 const MyCourses = () => {
   const { user } = useAuthStore();
-  const { enrolledCourses, fetchUserEnrollments, fetchAllCourses, courses, is_loading, featuredCourse, fetchFeaturedCourse } = useCourseStore();
+  const { enrolledCourses, enrollments, fetchUserEnrollments, fetchAllCourses, courses, is_loading, featuredCourse, fetchFeaturedCourse } = useCourseStore();
 
   useEffect(() => {
     if (user?.id) {
@@ -161,7 +152,14 @@ const MyCourses = () => {
               </Text>
             </View>
           ) : (
-            ongoingCourses.map(item => <OngoingCourseCard key={item.id || item._id} item={item} />)
+            ongoingCourses.map(item => {
+              const courseId = item.id || item._id;
+              const enrollment = enrollments.find(e => {
+                const enrollmentCourseId = typeof e.courseId === 'string' ? e.courseId : e.courseId._id || e.courseId.id;
+                return enrollmentCourseId === courseId;
+              });
+              return <OngoingCourseCard key={courseId} item={item} enrollment={enrollment} />;
+            })
           )}
         </View>
       </ScrollView>

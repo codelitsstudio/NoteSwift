@@ -118,7 +118,7 @@ const SettingsPage = () => {
 
           <SettingsSection title="Course Content" />
           <View className="rounded-xl overflow-hidden mx-4">
-            <SettingsListItem icon="file-download" label="Downloads" type="navigate" />
+            <SettingsListItem icon="file-download" label="Downloads" type="navigate" onPress={() => router.push('/QuickAccess/Downloads')} />
             <Divider />
             <SettingsListItem
               icon="wifi"
@@ -157,9 +157,7 @@ const SettingsPage = () => {
           
           <SettingsSection title="Legal" />
           <View className="rounded-xl overflow-hidden mx-4">
-            <SettingsListItem icon="description" label="Terms of Service" type="navigate" />
-            <Divider />
-            <SettingsListItem icon="privacy-tip" label="Privacy Policy" type="navigate" />
+            <SettingsListItem icon="privacy-tip" label="About App" type="navigate" onPress={() => router.push('/AppInfo/AboutApp')} />
           </View>
 
           <SettingsSection title="Account" />

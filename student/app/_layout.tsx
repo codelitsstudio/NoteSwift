@@ -22,6 +22,7 @@ import { OfflineBanner } from "../components/Container/OfflineBanner";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useNavStore, navOrder } from "../stores/navigationStore";
 import { useAuthStore } from "../stores/authStore";
+import HeaderFifth from "@/components/Headers/HeaderFifth";
 
 
 
@@ -196,6 +197,7 @@ export default function RootLayout() {
                     options={{ header: () => <HeaderThree title="All Courses" /> }}
                   />
 
+
                   {/* Dynamic Routes */}
                   <Stack.Screen name="Learn/[chapter]" options={{ headerShown: false }} />
                   <Stack.Screen name="Lesson/[lesson]" options={{ headerShown: false }} />
@@ -221,6 +223,9 @@ export default function RootLayout() {
                   <Stack.Screen name="Home/ProCheckout" options={{ headerShown: false }} />
                   <Stack.Screen name="Profile/ProfilePage" options={{ headerShown: false }} />
                   <Stack.Screen name="Settings/SettingsPage" options={{ headerShown: false }} />
+                  <Stack.Screen name="AppInfo/AboutApp" options={{ headerShown: false }} />
+                  <Stack.Screen name="QuickAccess/Downloads" options={{ headerShown: false }} />
+                  <Stack.Screen name="Lesson/LessonDetail/NotesAndReadable" options={{ headerShown: false }} />
 
                 </Stack>
 

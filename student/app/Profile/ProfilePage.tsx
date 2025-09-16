@@ -1,12 +1,13 @@
 // profile/ProfilePage.tsx
-import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, View, Text, Alert, StatusBar, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { SafeAreaView, ScrollView, View, Text, Alert, StatusBar, Platform, Share } from 'react-native';
 import ProfileHeader from './components/ProfileHeader';
 import ListItem from './components/ListItem';
 import ProgressBar from './components/ProgressBar';
 import EditBottomSheet from './components/EditBottomSheet';
 import TextInputBottomSheet from './components/TextInputBottomSheet';
 import { useAuthStore } from '../../stores/authStore';
+import { useCourseStore } from '../../stores/courseStore';
 import { updateUserProfile, UpdateUserData, uploadProfileImage } from '../../api/student/user';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
@@ -15,10 +16,27 @@ import EmailChangeBottomSheet from './components/EmailChangeBottomSheet';
 import PasswordChangeBottomSheet from './components/PasswordChangeBottomSheet';
 import NotificationPreferencesBottomSheet from './components/NotificationPreferencesBottomSheet';
 import { getNotificationPreferences, updateNotificationPreferences, NotificationPreferences } from '../../api/student/user';
+import api from '@/api/axios';
+import { Linking } from 'react-native';
 
 const ProfilePage = () => {
   const { user, updateUser, logout } = useAuthStore();
+  const { enrolledCourses } = useCourseStore();
   const router = useRouter();
+  const [downloadsCount, setDownloadsCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchDownloadsCount = async () => {
+      try {
+        const res = await api.get('/downloads');
+        setDownloadsCount(Array.isArray(res.data) ? res.data.length : 0);
+      } catch {
+        setDownloadsCount(null);
+      }
+    };
+    fetchDownloadsCount();
+  }, []);
+
   const [editMode, setEditMode] = useState({
     all: false,
     grade: false,
@@ -424,13 +442,14 @@ const ProfilePage = () => {
               <ListItem 
                 icon="library-books" 
                 label="My Enrolled Courses" 
-                value="3 active courses" 
+                value={enrolledCourses && Array.isArray(enrolledCourses) ? `${enrolledCourses.length} active courses` : 'Loading...'} 
+                onPress={() => router.push('/Learn/LearnPage')}
               />
               <View className="h-px bg-gray-100 mx-4" />
               <ListItem 
                 icon="military-tech" 
                 label="Achievements & Badges" 
-                value="12 earned, 5 new available" 
+                value="0 earned, 0 new available" 
               />
             </View>
           </View>
@@ -484,13 +503,14 @@ const ProfilePage = () => {
               <ListItem 
                 icon="book" 
                 label="My Notes & Bookmarks" 
-                value="45 saved items" 
+                value="0 saved items" 
               />
               <View className="h-px bg-gray-100 mx-5" />
               <ListItem 
-                icon="cloud-download" 
+                icon="download" 
                 label="Downloads" 
-                value="12 offline lessons" 
+                value={downloadsCount !== null ? `${downloadsCount} offline lessons` : 'Loading...'}
+                onPress={() => router.push('/QuickAccess/Downloads')}
               />
               <View className="h-px bg-gray-100 mx-5" />
               <ListItem 
@@ -527,12 +547,37 @@ const ProfilePage = () => {
                 icon="share" 
                 label="Share this App" 
                 value="Invite friends to join" 
+                onPress={async () => {
+                  try {
+                      await Share.share({
+                        message: "I'm loving NoteSwift! Download the app and join me: https://play.google.com/store/apps/details?id=com.noteswift",
+                      });
+                  } catch (error) {
+                    Alert.alert('Share Failed', 'Could not share the app link.');
+                  }
+                }}
               />
               <View className="h-px bg-gray-100 mx-5" />
               <ListItem 
                 icon="star-half" 
                 label="Rate Us" 
                 value="Help us improve" 
+                onPress={() => {
+                  // Open Play Store app's rating section
+                  const playStoreUrl = 'market://details?id=com.noteswift';
+                  const webUrl = 'https://play.google.com/store/apps/details?id=com.noteswift';
+                  try {
+                    // Try to open Play Store app
+                    if (Platform.OS === 'android') {
+                      // @ts-ignore
+                      Linking.openURL(playStoreUrl).catch(() => Linking.openURL(webUrl));
+                    } else {
+                      Linking.openURL(webUrl);
+                    }
+                  } catch {
+                    Alert.alert('Error', 'Could not open Play Store.');
+                  }
+                }}
               />
             </View>
           </View>

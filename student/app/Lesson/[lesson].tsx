@@ -1,18 +1,22 @@
 // app/lesson/[lesson].tsx
-import React from "react";
+import React, { useState } from "react";
 import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import LessonDetailCard from "./LessonDetail/LessonDetailCard";
 import { lessons } from "../../utils/lessonData";
 import FooterNav from "./LessonDetail/FooterNav";
+import { updateModuleProgress } from "../../api/lessonProgress";
+import { useAuthStore } from "../../stores/authStore";
 
 export default function LessonPage() {
   const router = useRouter();
-  const { lesson } = useLocalSearchParams(); // e.g. "lesson-1"
+  const { lesson, courseId } = useLocalSearchParams(); // e.g. "lesson-1"
+  const { user } = useAuthStore();
 
   const key = String(lesson);
   const data = lessons[key];
+  const [videoCompleted, setVideoCompleted] = useState(false);
 
   if (!data) {
     return (
@@ -37,6 +41,18 @@ export default function LessonPage() {
     tags: mappedTags,
   };
 
+  const handleVideoCompleted = async () => {
+    if (!courseId || !user?.id) return;
+    
+    try {
+      // Module 1 video completion
+      await updateModuleProgress(courseId as string, 1, true);
+      setVideoCompleted(true);
+    } catch (error) {
+      console.error('Error updating video progress:', error);
+    }
+  };
+
 return (
   <View className="flex-1 bg-gray-100"> 
     <SafeAreaView className="flex-1">
@@ -47,6 +63,7 @@ return (
         onNext={() => {
           /* navigation to next lesson */
         }}
+        onVideoCompleted={handleVideoCompleted}
       />
     </SafeAreaView>
 
@@ -54,6 +71,7 @@ return (
     <FooterNav
       onPrevious={() => router.back()}
       onNext={() => {}}
+      videoCompleted={videoCompleted}
     />
   </View>
 );

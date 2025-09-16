@@ -18,7 +18,7 @@ const HeaderFifth: React.FC<HeaderFifthProps> = ({ title, subtitle, onBack }) =>
       </TouchableOpacity>
 
       <View className="flex-1 ml-2">
-        <Text className="text-base font-bold">{title}</Text>
+        <Text className="text-lg font-bold">{title}</Text>
         {subtitle && <Text className="text-xs text-gray-600">{subtitle}</Text>}
       </View>
 

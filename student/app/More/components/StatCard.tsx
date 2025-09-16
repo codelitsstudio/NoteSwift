@@ -5,7 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const StatCard = () => {
-  const totalCoursesAvailable = 120; // example value
+  const totalCoursesAvailable = 4; // example value
   const router = useRouter();
 
   return (
@@ -25,11 +25,11 @@ const StatCard = () => {
 
           {/* Explore Button */}
           <TouchableOpacity
-            className="bg-blue-100 rounded-full px-4 py-2 flex-row items-center"
-            onPress={() => router.push('/Home/HomePage')}
+            className="bg-blue-100 rounded-full px-3 py-2 flex-row items-center"
+            onPress={() => router.push('/AllCourses/AllCoursesPage')}
           >
             <MaterialIcons name="explore" size={20} color="#2563EB" />
-            <Text className="text-blue-600 text-sm font-medium ml-2">Explore</Text>
+            <Text className="text-blue-600 text-sm font-medium ml-1">Explore</Text>
           </TouchableOpacity>
         </View>
 
@@ -39,25 +39,25 @@ const StatCard = () => {
   <View className="items-start">
     <View className="flex-row items-center mb-1">
       <MaterialIcons name="whatshot" size={16} color="#2563EB" />
-      <Text className="text-gray-500 text-xs font-medium ml-1">Top Courses</Text>
+      <Text className="text-gray-500 text-xs font-medium ml-0">Top Courses</Text>
     </View>
-    <Text className="text-gray-900 text-lg font-bold">15-20</Text>
+    <Text className="text-gray-900 text-lg font-bold">3</Text>
   </View>
 
   {/* Categories (center) */}
-  <View className="items-center">
+  <View className="items-start">
     <View className="flex-row items-center mb-1">
       <MaterialIcons name="category" size={16} color="#2563EB" />
-      <Text className="text-gray-500 text-xs font-medium ml-1">Categories</Text>
+      <Text className="text-gray-500 text-xs font-medium ml-0">Categories</Text>
     </View>
-    <Text className="text-gray-900 text-lg font-bold">12-20</Text>
+    <Text className="text-gray-900 text-lg font-bold">3</Text>
   </View>
 
   {/* Avg Rating (end/right) */}
-  <View className="items-end">
+  <View className="items-start">
     <View className="flex-row items-center mb-1">
       <MaterialIcons name="star" size={16} color="#2563EB" />
-      <Text className="text-gray-500 text-xs font-medium ml-1">Avg Rating</Text>
+      <Text className="text-gray-500 text-xs font-medium ml-0">Avg Rating</Text>
     </View>
     <Text className="text-gray-900 text-lg font-bold">4.5 ★</Text>
   </View>

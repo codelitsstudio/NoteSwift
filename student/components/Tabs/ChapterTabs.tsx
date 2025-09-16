@@ -3,6 +3,7 @@ import { View, ScrollView, TouchableOpacity, Text, ActivityIndicator } from "rea
 import { useRouter } from "expo-router";
 import TabNav, { TabKey } from "./TabNav";
 import LessonCard from "../Container/LessonCard";
+import Resources from "./Resources";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
 type LessonShape = { id?: string; title: string; subtitle?: string; tags?: any[] };
@@ -22,9 +23,12 @@ interface ChapterTabsProps {
   completedLessons: string[];
   onLessonProgress: (lessonId: string, completed: boolean) => void;
   loading?: boolean;
+  courseId?: string;
+  moduleProgress?: {[key: number]: number};
+  onRefreshProgress?: (moduleNumber?: number) => void;
 }
 
-const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLessons, onLessonProgress, loading }) => {
+const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLessons, onLessonProgress, loading, courseId, moduleProgress = {}, onRefreshProgress }) => {
   const [active, setActive] = useState<TabKey>("Dashboard");
   // Track the most recently started lesson (or first if none)
   const [currentLesson, setCurrentLesson] = useState<string | null>(completedLessons.length > 0 ? completedLessons[completedLessons.length-1] : (data.lessons?.[0]?.id ?? null));
@@ -37,15 +41,29 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
     }
     setCurrentLesson(lessonId);
     onLessonProgress(lessonId, true);
-    router.push({
-      pathname: "/Lesson/[lesson]",
-      params: { lesson: lessonId },
-    });
+
+    // Check if this is an "Up Next" lesson (not the first lesson)
+    const lessonIndex = data.lessons?.findIndex(lesson => lesson.id === lessonId) ?? -1;
+    if (lessonIndex > 0) {
+      // Navigate to NotesAndReadable with the corresponding module number
+      // Module 1 is the first lesson, Module 2 is the second lesson, etc.
+      const moduleNumber = lessonIndex + 1;
+      router.push({
+        pathname: "/Lesson/LessonDetail/NotesAndReadable",
+        params: { module: moduleNumber.toString(), courseId },
+      });
+    } else {
+      // Navigate to regular lesson detail
+      router.push({
+        pathname: "/Lesson/[lesson]",
+        params: { lesson: lessonId, courseId },
+      });
+    }
   };
 
 
   return (
-    <View className="flex-1">
+    <View className={`flex-1 ${progress === 100 ? 'border-2 border-green-500' : ''}`}>
       <TabNav active={active} onChange={(t) => setActive(t)} />
 
       {/* Dashboard */}
@@ -81,7 +99,9 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                         isActive={currentLesson === data.lessons[0].id}
                       />
                       {/* Completion percentage above progress bar */}
-                      <Text className="mx-8 text-sm mt-2 text-blue-700 font-semibold mb-1">{progress}%<Text className="mx-8 text-sm mt-2 text-gray-700 font-semibold mb-1"> of this module completed</Text></Text>
+                      <View className="mx-8 mt-2 mb-1">
+                        <Text className="text-sm text-blue-700 font-semibold">{progress}% of this module completed</Text>
+                      </View>
                       {/* Progress bar with percentage */}
                       <View className="mx-8 mb-1">
                         <View className="flex-row items-center">
@@ -115,6 +135,8 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                   {data.lessons.slice(1).map((lesson, i) => {
                     // Only show Notes tag for non-first lessons
                     const notesTag = (lesson.tags || []).find((t: any) => t.type === 'notes');
+                    const moduleNumber = i + 2; // Module 2, 3, 4, 5 for lessons 1, 2, 3, 4
+                    const lessonProgress = moduleProgress[moduleNumber] || 0;
                     return (
                       <React.Fragment key={lesson.id ?? `idx-${i+1}`}>
                         <LessonCard
@@ -124,13 +146,13 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                           onPress={() => openLesson(lesson.id)}
                           isActive={currentLesson === lesson.id}
                         />
-                      {/* Progress bar with percentage */}
+                      {/* Progress bar with real percentage */}
                       <View className="mx-8 mb-1">
                         <View className="flex-row items-center">
                           <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden mr-2">
-                            <View className="h-2 bg-blue-400 rounded-full" style={{ width: completedLessons.includes(lesson.id ?? '') ? '100%' : '20%' }} />
+                            <View className="h-2 bg-blue-400 rounded-full" style={{ width: `${lessonProgress}%` }} />
                           </View>
-                          <Text className="text-xs text-blue-500 font-semibold">{completedLessons.includes(lesson.id ?? '') ? '100%' : '20%'}</Text>
+                          <Text className="text-xs text-blue-500 font-semibold">{lessonProgress}%</Text>
                         </View>
                       </View>
                       {/* Show subtitle only for active lesson */}
@@ -191,22 +213,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
 
       {/* Resources */}
       {active === "Resources" && (
-        <ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
-          {(data.resources || []).length ? (
-            (data.resources ?? []).map((r: any, idx: number) => (
-              <TouchableOpacity
-                key={idx}
-                className="mb-3 p-5 bg-white rounded-xl shadow"
-                activeOpacity={0.85}
-              >
-                <Text className="text-base font-medium text-gray-900">{r.title}</Text>
-                {r.type ? <Text className="text-sm text-gray-500 mt-2">{r.type}</Text> : null}
-              </TouchableOpacity>
-            ))
-          ) : (
-            <Text className="text-gray-500 text-base">No extra resources yet.</Text>
-          )}
-        </ScrollView>
+        <Resources />
       )}
 
       {/* Info */}

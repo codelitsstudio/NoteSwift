@@ -24,14 +24,25 @@ type Props = {
   onPrevious?: () => void;
   onBack?: () => void;
   onNext?: () => void;
+  onVideoCompleted?: () => void;
 };
 
 type TabType = 'video' | 'attachments';
 
-const LessonDetailCard: React.FC<Props> = ({ lesson, onPrevious, onBack, onNext }) => {
+const LessonDetailCard: React.FC<Props> = ({ lesson, onPrevious, onBack, onNext, onVideoCompleted }) => {
   const [activeTab, setActiveTab] = useState<TabType>('video');
   const [currentTime, setCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoCompleted, setVideoCompleted] = useState(false);
   const videoRef = useRef(null);
+
+  // Check if video is completed
+  useEffect(() => {
+    if (videoDuration > 0 && currentTime >= videoDuration - 1 && !videoCompleted) {
+      setVideoCompleted(true);
+      onVideoCompleted?.();
+    }
+  }, [currentTime, videoDuration, videoCompleted, onVideoCompleted]);
 
   // Helper to parse "0:00 – 2:00" to seconds (start)
   const getStartSeconds = (timeRange: string) => {
@@ -90,6 +101,10 @@ const [appActive, setAppActive] = useState(true);
     const seconds = ms / 1000;
     setCurrentTime(seconds);
     currentTimeRef.current = seconds;
+  }}
+  onDurationUpdate={(ms: number) => {
+    const seconds = ms / 1000;
+    setVideoDuration(seconds);
   }}
 />
 

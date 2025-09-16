@@ -9,7 +9,7 @@ import LeaderboardPage from "../QuickAccess//LeaderboardPage";
 import CoursesPage from "../QuickAccess/CoursesPage";
 import MyRankPage from "../QuickAccess/MyRankPage";
 import BookmarksPage from "../QuickAccess/BookmarksPage";
-import DownloadsPage from "../QuickAccess/DownloadsPage";
+import DownloadsPage from "../QuickAccess/Downloads";
 
 export type QuickAccessStackParamList = {
   QuickAccessHome: undefined;

@@ -19,11 +19,17 @@ export interface Course {
 
 export interface CourseEnrollment {
   _id: string;
-  courseId: string;
+  courseId: string | Course;
   studentId: string;
   enrolledAt: string;
   progress: number;
   isActive: boolean;
+  moduleProgress?: Array<{
+    moduleNumber: number;
+    videoCompleted: boolean;
+    notesCompleted: boolean;
+    progress: number;
+  }>;
 }
 
 interface ApiState {
@@ -38,6 +44,7 @@ interface CourseState extends ApiState {
   
   // Enrollments
   enrolledCourses: string[]; // Array of enrolled course IDs
+  enrollments: CourseEnrollment[]; // Array of full enrollment objects with progress
   
   // Popup state
   hasShownPopupToday: boolean;
@@ -66,6 +73,7 @@ const initialState = {
   courses: [],
   featuredCourse: null,
   enrolledCourses: [],
+  enrollments: [],
   hasShownPopupToday: false,
   lastPopupDate: null,
 };
@@ -196,7 +204,8 @@ export const useCourseStore = create<CourseState>()(
           console.log('📥 Enrollment API response:', response.data);
           
           if (response.data.success) {
-            const enrolledCourseIds = response.data.data.map((enrollment: any) => {
+            const enrollments = response.data.data;
+            const enrolledCourseIds = enrollments.map((enrollment: any) => {
               // courseId is populated with the full course object
               const courseId = enrollment.courseId._id || enrollment.courseId.id || enrollment.courseId;
               console.log('🔍 Extracting course ID from enrollment:', {
@@ -208,10 +217,16 @@ export const useCourseStore = create<CourseState>()(
               return courseId;
             });
             console.log('✅ User enrolled in courses:', enrolledCourseIds);
-            set({ enrolledCourses: enrolledCourseIds });
+            set({ 
+              enrolledCourses: enrolledCourseIds,
+              enrollments: enrollments
+            });
           } else {
             console.log('❌ Enrollment API returned success: false');
-            set({ enrolledCourses: [] });
+            set({ 
+              enrolledCourses: [],
+              enrollments: []
+            });
           }
         } catch (error: any) {
           console.error('❌ Error fetching user enrollments:', error.message);
@@ -223,7 +238,10 @@ export const useCourseStore = create<CourseState>()(
             console.error('❌ Enrollments endpoint not found');
           }
           // Set empty array on error to prevent undefined issues
-          set({ enrolledCourses: [] });
+          set({ 
+            enrolledCourses: [],
+            enrollments: []
+          });
         }
       },
 

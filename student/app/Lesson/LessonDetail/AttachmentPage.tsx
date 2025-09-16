@@ -31,7 +31,7 @@ const AttachmentPage: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#f3f4f6', paddingTop: 24 }}>
       {/* Only subtitle at the top, smaller text */}
-      <Text style={{ fontSize: 12, color: '#6b7280', textAlign: 'left', marginBottom: 18, marginHorizontal: 24, lineHeight: 18 }}>
+      <Text style={{ fontSize: 11, color: '#6b7280', textAlign: 'left', marginBottom: 18, marginHorizontal: 24, lineHeight: 18 }}>
         Here you can download and view all lesson resources, such as PDFs, slides, and other files provided by your instructor. Tap the view button to open a file.
       </Text>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 0, paddingHorizontal: 0 }}>

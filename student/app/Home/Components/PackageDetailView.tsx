@@ -339,27 +339,15 @@ useEffect(() => {
               </>
             )}
 
-            {/* Checkout Button */}
-            <TouchableOpacity 
-              className="bg-customBlue py-4 rounded-3xl mb-4"
-              onPress={() => {
-                if (selectedTrialType === 'free') {
-                  // Handle free trial activation
-                  console.log('Starting free trial for:', pkg.name);
-                  setShowCheckout(false);
-                  // Navigate to trial success or course access
-                } else {
-                  // Handle payment processing
-                  console.log('Processing payment with:', paymentMethod, 'for:', pkg.name);
-                  setShowCheckout(false);
-                  // Navigate to payment success
-                }
-              }}
+            {/* Checkout Button - Disabled/Coming Soon */}
+            <View
+              className="bg-gray-300 py-4 rounded-3xl mb-4 opacity-70"
+              style={{ pointerEvents: 'none' }}
             >
-              <Text className="text-white text-center font-semibold text-lg">
-                {selectedTrialType === 'free' ? 'Start My Free Trial' : 'Complete Payment'}
+              <Text className="text-gray-500 text-center font-semibold text-lg">
+                Available Soon
               </Text>
-            </TouchableOpacity>
+            </View>
 
             <Text className="text-xs text-gray-500 text-center">
               {selectedTrialType === 'free' 

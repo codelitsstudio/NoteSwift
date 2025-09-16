@@ -2,9 +2,11 @@ import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
 import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import NetInfo from '@react-native-community/netinfo';
 import api from '@/api/axios';
 import { useRouter } from 'expo-router';
 
@@ -18,9 +20,10 @@ interface AttachmentViewerBottomSheetProps {
 const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = (props) => {
   const { isVisible, onClose, fileName, fileUri } = props;
   const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['75%'], []);
+  const snapPoints = useMemo(() => ['70%'], []);
   const [downloading, setDownloading] = useState(false);
   const [userHasDownload, setUserHasDownload] = useState(false);
+  const [localPdfUri, setLocalPdfUri] = useState<string | null>(null);
   const router = useRouter();
 
   // Show/hide bottom sheet only if visible and file is set
@@ -33,7 +36,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
     }
   }, [isVisible, fileName, fileUri]);
 
-  // Check if user has download record in backend
+  // Check if user has download record in backend and local storage
   const checkUserDownload = async () => {
     try {
       const res = await api.get('/downloads');
@@ -42,9 +45,14 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
     } catch {
       setUserHasDownload(false);
     }
+    // Check local storage for offline PDF
+    try {
+      const localUri = await AsyncStorage.getItem(`pdf_${fileName}`);
+      setLocalPdfUri(localUri);
+    } catch {}
   };
 
-  // Download PDF to device and save to backend
+  // Download PDF to device, save to media library, store local URI, and save to backend
   const handleDownloadPdf = async () => {
     if (!fileUri) {
       Toast.show({ type: 'error', text1: 'No PDF file to download.' });
@@ -52,14 +60,23 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
     }
     setDownloading(true);
     try {
-      // Download to device
+      // Download to app's document directory
+      const localPath = FileSystem.documentDirectory + fileName.replace(/\s+/g, '_');
+      let downloadResult;
       try {
-        await FileSystem.downloadAsync(fileUri, FileSystem.documentDirectory + fileName.replace(/\s+/g, '_'));
+        downloadResult = await FileSystem.downloadAsync(fileUri, localPath);
       } catch (fsErr) {
         console.error('FileSystem.downloadAsync error:', fsErr);
         Toast.show({ type: 'error', text1: 'Failed to download PDF to device.' });
         setDownloading(false);
         return;
+      }
+      // Save local URI in AsyncStorage
+      try {
+        await AsyncStorage.setItem(`pdf_${fileName}`, downloadResult.uri);
+        setLocalPdfUri(downloadResult.uri);
+      } catch (storageErr) {
+        console.error('AsyncStorage error:', storageErr);
       }
       // Save download record to backend
       try {
@@ -67,7 +84,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
           fileName,
           fileUri,
           size: '1.2 MB', // TODO: dynamic if available
-          pages: 12, // TODO: dynamic if available
+          pages: 10, // TODO: dynamic if available
         });
       } catch (apiErr) {
         console.error('api.post(/downloads) error:', apiErr);
@@ -87,22 +104,32 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
 
   // Go to Downloads page
   const handleGoToDownloads = () => {
-    router.push('/Downloads');
+    router.push('/QuickAccess/Downloads');
     onClose();
   };
 
-  // Open PDF in browser
+  // Open PDF in browser: use remote URI if online, local file if offline
   const handleOpenInAppBrowser = async () => {
-    if (!fileUri) {
+    let uriToOpen = fileUri;
+    if (!fileUri && !localPdfUri) {
       Alert.alert('No PDF', 'No PDF file to open.');
       return;
     }
     try {
-      const result = await WebBrowser.openBrowserAsync(fileUri, {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected || !netState.isInternetReachable) {
+        // Offline: use local file if available
+        if (localPdfUri) {
+          uriToOpen = localPdfUri;
+        } else {
+          Alert.alert('Offline', 'No local PDF available for offline viewing.');
+          return;
+        }
+      }
+      const result = await WebBrowser.openBrowserAsync(uriToOpen, {
         showInRecents: true,
         enableBarCollapsing: true,
       });
-      // Only close the sheet after browser is dismissed
       if (result.type === 'dismiss' || result.type === 'cancel') {
         onClose();
       }
@@ -131,7 +158,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
 
 
         {/* Subtitle/Description (not in a box) */}
-        <Text className="text-base text-slate-700 font-medium mb-3.5">
+        <Text className="text-sm text-slate-700 font-medium mb-3.5">
           Lesson resource file. You can view or download this PDF for offline access.
         </Text>
 
@@ -149,7 +176,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
           <View className="w-px h-[18px] bg-slate-200 mx-2" />
           <View className="flex-row items-center gap-x-1">
             <MaterialIcons name="layers" size={16} color="#64748b" />
-            <Text className="text-[13px] text-slate-500 font-medium">12 pages</Text>
+            <Text className="text-[13px] text-slate-500 font-medium">10 pages</Text>
           </View>
         </View>
 
@@ -161,10 +188,10 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
           <MaterialIcons name="visibility" size={24} color="#2563eb" style={{ marginRight: 8 }} />
           <View className="flex-1">
             <Text className="text-slate-700 font-medium text-base mb-0.5">Preview</Text>
-            <Text className="text-slate-500 text-sm">Tap to view this PDF in your browser.</Text>
+            <Text className="text-slate-500 text-sm">Tap to view this PDF.</Text>
           </View>
           <TouchableOpacity
-            className="bg-blue-600 rounded-md px-4 py-2"
+            className="bg-blue-600 rounded-3xl px-4 py-1.5"
             onPress={handleOpenInAppBrowser}
             activeOpacity={0.85}
           >
@@ -184,7 +211,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
           </View>
           {userHasDownload ? (
             <TouchableOpacity
-              className="bg-blue-600 rounded-md px-4 py-2"
+              className="bg-blue-600 rounded-3xl px-4 py-1"
               onPress={handleGoToDownloads}
               activeOpacity={0.85}
             >
@@ -192,7 +219,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              className={downloading ? "bg-blue-300 rounded-md px-4 py-2 opacity-70" : "bg-blue-600 rounded-md px-4 py-2"}
+              className={downloading ? "bg-blue-300 rounded-3xl px-4 py-1.5 opacity-70" : "bg-blue-600 rounded-3xl px-4 py-1.5"}
               onPress={handleDownloadPdf}
               activeOpacity={0.85}
               disabled={downloading}

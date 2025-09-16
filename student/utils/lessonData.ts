@@ -43,8 +43,8 @@ export const lessons: Record<string, Lesson> = {
   // Sample lesson for featured course
   "module-1": {
     id: "module-1",
-    title: "Study Fundamentals",
-    description: "40-minute module guiding learners to create an optimal study environment and productive routine.",
+    title: "Foundations of Effective Study",
+    description: "Module guiding learners to create an optimal study environment and productive routine.",
     imageUri: "https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg",
     tags: [
       { label: "Live Class", type: "live", active: false },
