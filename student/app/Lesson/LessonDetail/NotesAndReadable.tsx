@@ -54,15 +54,18 @@ export default function NotesStepper() {
   };
 
   // Save completed section to backend only (unified progress API)
+  // This is for NOTES completion only, NOT video completion
   const saveCompletedSection = async (sectionKey: string, isFinal: boolean = false) => {
     try {
       // Unified backend progress update: pass moduleNumber and sectionIndex
+      // videoCompleted is undefined (not updating video status)
+      // sectionIndex is provided (updating notes progress)
       if (courseId && user?.id) {
         const sectionIndex = currentSection;
         const moduleNumber = moduleIndex + 1;
-        console.log('Updating module progress:', { courseId, moduleNumber, sectionIndex });
+        console.log('Updating NOTES progress:', { courseId, moduleNumber, sectionIndex });
         await updateModuleProgress(courseId as string, moduleNumber, undefined, sectionIndex);
-        console.log('Module progress updated successfully');
+        console.log('Notes progress updated successfully');
         // Optionally trigger parent refresh via callback/event (implement in parent as needed)
         // Example: if (typeof onRefreshProgress === 'function') onRefreshProgress(moduleNumber);
       }
@@ -447,6 +450,7 @@ export default function NotesStepper() {
                   disabled={!typewriterDone}
                   onPress={async () => {
                     const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
+                    // This completes the NOTES for this module (not video completion)
                     await saveCompletedSection(sectionKey, true);
                     // Add a small delay to ensure backend has finished saving
                     setTimeout(() => {
@@ -457,7 +461,7 @@ export default function NotesStepper() {
                   className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-green-500'}`}
                 >
                   <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
-                    Complete
+                    Complete Notes
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -465,13 +469,14 @@ export default function NotesStepper() {
                   disabled={!typewriterDone}
                   onPress={async () => {
                     const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
+                    // Save current section completion (notes progress)
                     await saveCompletedSection(sectionKey);
                     setCurrentSection((prev) => prev + 1);
                   }}
                   className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-blue-500'}`}
                 >
                   <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
-                    Next
+                    Next Section
                   </Text>
                 </TouchableOpacity>
               )}

@@ -25,11 +25,12 @@ type Props = {
   onBack?: () => void;
   onNext?: () => void;
   onVideoCompleted?: () => void;
+  onVideoCompletionStatusChange?: (completed: boolean) => void;
 };
 
 type TabType = 'video' | 'attachments';
 
-const LessonDetailCard: React.FC<Props> = ({ lesson, onPrevious, onBack, onNext, onVideoCompleted }) => {
+const LessonDetailCard: React.FC<Props> = ({ lesson, onPrevious, onBack, onNext, onVideoCompleted, onVideoCompletionStatusChange }) => {
   const [activeTab, setActiveTab] = useState<TabType>('video');
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
@@ -106,6 +107,7 @@ const [appActive, setAppActive] = useState(true);
     const seconds = ms / 1000;
     setVideoDuration(seconds);
   }}
+  onVideoCompletionStatusChange={onVideoCompletionStatusChange}
 />
 
 

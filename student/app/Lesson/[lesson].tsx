@@ -1,12 +1,12 @@
 // app/lesson/[lesson].tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import LessonDetailCard from "./LessonDetail/LessonDetailCard";
 import { lessons } from "../../utils/lessonData";
 import FooterNav from "./LessonDetail/FooterNav";
-import { updateModuleProgress } from "../../api/lessonProgress";
+import { updateModuleProgress, getModuleProgress } from "../../api/lessonProgress";
 import { useAuthStore } from "../../stores/authStore";
 
 export default function LessonPage() {
@@ -17,6 +17,23 @@ export default function LessonPage() {
   const key = String(lesson);
   const data = lessons[key];
   const [videoCompleted, setVideoCompleted] = useState(false);
+
+  // Check backend for video completion status on mount
+  useEffect(() => {
+    const checkVideoCompletion = async () => {
+      if (courseId) {
+        try {
+          const res = await getModuleProgress(courseId as string, 1); // Module 1 for video
+          if (res.success && res.data && res.data.moduleProgress?.videoCompleted) {
+            setVideoCompleted(true);
+          }
+        } catch (error) {
+          console.error('Error checking video completion:', error);
+        }
+      }
+    };
+    checkVideoCompletion();
+  }, [courseId]);
 
   if (!data) {
     return (
@@ -45,12 +62,17 @@ export default function LessonPage() {
     if (!courseId || !user?.id) return;
     
     try {
-      // Module 1 video completion
+      // Module 1 VIDEO completion (separate from notes completion)
       await updateModuleProgress(courseId as string, 1, true);
       setVideoCompleted(true);
     } catch (error) {
       console.error('Error updating video progress:', error);
     }
+  };
+
+  const handleVideoCompletionStatusChange = (completed: boolean) => {
+    // Update local state when video completion status changes
+    setVideoCompleted(completed);
   };
 
 return (
@@ -64,6 +86,7 @@ return (
           /* navigation to next lesson */
         }}
         onVideoCompleted={handleVideoCompleted}
+        onVideoCompletionStatusChange={handleVideoCompletionStatusChange}
       />
     </SafeAreaView>
 

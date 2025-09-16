@@ -14,12 +14,13 @@ type LiveVideoProps = {
   onTimeUpdate?: (ms: number) => void;
   onPlayPauseChange?: (isPlaying: boolean) => void;
   onDurationUpdate?: (ms: number) => void;
+  onVideoCompletionStatusChange?: (completed: boolean) => void;
 };
 
 const BLUE = "#3b82f6";
 
 const LiveVideo = forwardRef<any, LiveVideoProps>(
-  ({ videoUri = "https://codelitsstudio.com/videos/how-to-study-for-noteswift.mp4", thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate }, ref) => {
+  ({ videoUri = "https://codelitsstudio.com/videos/how-to-study-for-noteswift.mp4", thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate, onVideoCompletionStatusChange }, ref) => {
     const videoRef = useRef<Video | null>(null);
     const [videoState, setVideoState] = useState({
       status: {} as any,
@@ -37,28 +38,41 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
     const moduleNumber = params.module ? parseInt(String(params.module)) : 1;
 
     useEffect(() => {
-      // On mount, check backend for video completion
+      // On mount, check backend for VIDEO completion status (separate from notes)
       if (courseId && moduleNumber) {
         const { getModuleProgress } = require("../../../api/lessonProgress");
         getModuleProgress(courseId, moduleNumber).then((res: any) => {
           if (res.success && res.data && res.data.moduleProgress?.videoCompleted) {
             setVideoAlreadyCompleted(true);
             setVideoCompleted(true);
+            // Notify parent that video is already completed
+            if (onVideoCompletionStatusChange) {
+              onVideoCompletionStatusChange(true);
+            }
+          } else {
+            // Notify parent that video is not completed
+            if (onVideoCompletionStatusChange) {
+              onVideoCompletionStatusChange(false);
+            }
           }
         });
       }
-    }, [courseId, moduleNumber]);
+    }, [courseId, moduleNumber, onVideoCompletionStatusChange]);
 
     // Listen for video completion
     useEffect(() => {
       if (videoState.status?.didJustFinish && !videoCompleted && courseId) {
         setVideoCompleted(true);
-        // Call backend to mark video as completed
+        // Call backend to mark VIDEO as completed (separate from notes completion)
         updateModuleProgress(courseId, moduleNumber, true);
+        // Notify parent that video has been completed
+        if (onVideoCompletionStatusChange) {
+          onVideoCompletionStatusChange(true);
+        }
         // Optionally trigger parent refresh via callback/event (implement in parent as needed)
         // Example: if (typeof onRefreshProgress === 'function') onRefreshProgress(moduleNumber);
       }
-    }, [videoState.status?.didJustFinish, videoCompleted, courseId, moduleNumber]);
+    }, [videoState.status?.didJustFinish, videoCompleted, courseId, moduleNumber, onVideoCompletionStatusChange]);
 
     // If video is completed, allow navigation to notes (handled by parent navigation logic)
   

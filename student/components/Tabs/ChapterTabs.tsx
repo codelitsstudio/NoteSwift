@@ -113,7 +113,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                       />
                       {/* Completion percentage above progress bar */}
                       <View className="mx-8 mt-2 mb-1">
-                        <Text className="text-sm text-blue-700 font-semibold">{progress}% of this module completed</Text>
+                        <Text className="text-sm text-blue-500 font-semibold">{progress}% <Text className="text-gray-500 text-sm font-medium">of this module completed</Text></Text>
                       </View>
                       {/* Progress bar with percentage */}
                       <View className="mx-8 mb-1">
@@ -121,7 +121,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                           <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden mr-2">
                             <View className="h-2 bg-blue-500 rounded-full" style={{ width: `${progress}%` }} />
                           </View>
-                          <Text className="text-xs text-blue-600 font-semibold">{progress}%</Text>
+                          <Text className="text-xs text-blue-500 font-semibold">{progress}%</Text>
                         </View>
                       </View>
                       {/* Show short description and subtitle only for active lesson */}

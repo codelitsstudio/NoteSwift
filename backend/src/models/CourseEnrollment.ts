@@ -251,6 +251,9 @@ courseEnrollmentSchema.methods.updateModuleProgress = async function(
     this.completedAt = new Date();
   }
 
+  // Mark the moduleProgress as modified for Mongoose to detect changes
+  this.markModified('moduleProgress');
+
   this.lastAccessedAt = new Date();
   await this.save();
   return this;
