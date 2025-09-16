@@ -71,6 +71,95 @@ export const updateLessonProgress = async (req: AuthRequest, res: Response): Pro
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+// Update module progress (video or notes completion)
+export const updateModuleProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { courseId } = req.params;
+    const { moduleNumber, videoCompleted, notesCompleted } = req.body;
+    const studentId = req.user?.id;
+
+    if (!courseId || !studentId || moduleNumber === undefined) {
+      res.status(400).json({ 
+        success: false, 
+        message: "Course ID, student ID, and module number are required" 
+      });
+      return;
+    }
+
+    if (moduleNumber < 1 || moduleNumber > 5) {
+      res.status(400).json({ 
+        success: false, 
+        message: "Module number must be between 1 and 5" 
+      });
+      return;
+    }
+
+    const enrollment = await CourseEnrollment.findOne({ courseId, studentId });
+    if (!enrollment) {
+      res.status(404).json({ success: false, message: "Enrollment not found" });
+      return;
+    }
+
+    // Update module progress
+    await enrollment.updateModuleProgress(moduleNumber, videoCompleted, notesCompleted);
+
+    res.json({
+      success: true,
+      data: {
+        progress: enrollment.progress,
+        moduleProgress: enrollment.moduleProgress,
+        overallProgress: enrollment.progress
+      },
+      message: "Module progress updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating module progress:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Get module progress for a specific module
+export const getModuleProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { courseId, moduleNumber } = req.params;
+    const studentId = req.user?.id;
+
+    if (!courseId || !studentId || !moduleNumber) {
+      res.status(400).json({ 
+        success: false, 
+        message: "Course ID, student ID, and module number are required" 
+      });
+      return;
+    }
+
+    const enrollment = await CourseEnrollment.findOne({ courseId, studentId });
+    if (!enrollment) {
+      res.status(404).json({ success: false, message: "Enrollment not found" });
+      return;
+    }
+
+    const moduleProgress = enrollment.moduleProgress.find(
+      m => m.moduleNumber === parseInt(moduleNumber)
+    );
+
+    res.json({
+      success: true,
+      data: {
+        moduleProgress: moduleProgress || {
+          moduleNumber: parseInt(moduleNumber),
+          videoCompleted: false,
+          notesCompleted: false,
+          progress: 0
+        },
+        overallProgress: enrollment.progress
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching module progress:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 // backend/controllers/courseController.ts
 import { Request, Response } from "express";
 import Course from "../models/Course.model";

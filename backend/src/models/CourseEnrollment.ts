@@ -15,6 +15,14 @@ export interface ICourseEnrollment extends Document {
     lessonId: mongoose.Types.ObjectId;
     completedAt: Date;
   }>;
+  moduleProgress: Array<{
+    moduleNumber: number;
+    videoCompleted: boolean;
+    videoCompletedAt?: Date;
+    notesCompleted: boolean;
+    notesCompletedAt?: Date;
+    progress: number; // 0-100 based on video (50%) + notes (50%)
+  }>;
   assessments: Array<{
     assessmentId: mongoose.Types.ObjectId;
     score: number;
@@ -31,6 +39,8 @@ export interface ICourseEnrollment extends Document {
   
   // Instance methods
   updateProgress(): Promise<ICourseEnrollment>;
+  calculateOverallProgress(): number;
+  updateModuleProgress(moduleNumber: number, videoCompleted?: boolean, notesCompleted?: boolean): Promise<ICourseEnrollment>;
   markComplete(): Promise<ICourseEnrollment>;
 }
 
@@ -82,6 +92,36 @@ const courseEnrollmentSchema = new Schema<ICourseEnrollment>({
       default: Date.now
     }
   }],
+  moduleProgress: [{
+    moduleNumber: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5
+    },
+    videoCompleted: {
+      type: Boolean,
+      default: false
+    },
+    videoCompletedAt: {
+      type: Date,
+      default: null
+    },
+    notesCompleted: {
+      type: Boolean,
+      default: false
+    },
+    notesCompletedAt: {
+      type: Date,
+      default: null
+    },
+    progress: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0
+    }
+  }],
   assessments: [{
     assessmentId: {
       type: Schema.Types.ObjectId,
@@ -128,6 +168,70 @@ courseEnrollmentSchema.index({ enrolledAt: -1 });
 
 // Instance methods
 courseEnrollmentSchema.methods.updateProgress = function(this: ICourseEnrollment): Promise<ICourseEnrollment> {
+  this.lastAccessedAt = new Date();
+  return this.save();
+};
+
+courseEnrollmentSchema.methods.calculateOverallProgress = function(this: ICourseEnrollment): number {
+  if (this.moduleProgress.length === 0) return 0;
+  
+  const totalProgress = this.moduleProgress.reduce((sum, module) => sum + module.progress, 0);
+  return Math.round(totalProgress / this.moduleProgress.length);
+};
+
+courseEnrollmentSchema.methods.updateModuleProgress = function(
+  this: ICourseEnrollment, 
+  moduleNumber: number, 
+  videoCompleted?: boolean, 
+  notesCompleted?: boolean
+): Promise<ICourseEnrollment> {
+  // Find or create module progress entry
+  let moduleEntry = this.moduleProgress.find(m => m.moduleNumber === moduleNumber);
+  if (!moduleEntry) {
+    moduleEntry = {
+      moduleNumber,
+      videoCompleted: false,
+      notesCompleted: false,
+      progress: 0
+    };
+    this.moduleProgress.push(moduleEntry);
+  }
+
+  // Update completion status
+  if (videoCompleted !== undefined) {
+    moduleEntry.videoCompleted = videoCompleted;
+    if (videoCompleted && !moduleEntry.videoCompletedAt) {
+      moduleEntry.videoCompletedAt = new Date();
+    }
+  }
+
+  if (notesCompleted !== undefined) {
+    moduleEntry.notesCompleted = notesCompleted;
+    if (notesCompleted && !moduleEntry.notesCompletedAt) {
+      moduleEntry.notesCompletedAt = new Date();
+    }
+  }
+
+  // Calculate module progress
+  let moduleProgress = 0;
+  if (moduleNumber === 1) {
+    // Module 1: 50% video + 50% notes
+    if (moduleEntry.videoCompleted) moduleProgress += 50;
+    if (moduleEntry.notesCompleted) moduleProgress += 50;
+  } else {
+    // Modules 2-5: 100% notes only
+    if (moduleEntry.notesCompleted) moduleProgress = 100;
+  }
+  moduleEntry.progress = moduleProgress;
+
+  // Update overall progress
+  this.progress = this.calculateOverallProgress();
+  
+  // Mark as completed if all modules are 100%
+  if (this.progress === 100 && !this.completedAt) {
+    this.completedAt = new Date();
+  }
+
   this.lastAccessedAt = new Date();
   return this.save();
 };

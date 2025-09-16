@@ -5,7 +5,9 @@ import {
   getUserEnrollments,
   getAllCourses,
   getLessonProgress,
-  updateLessonProgress
+  updateLessonProgress,
+  updateModuleProgress,
+  getModuleProgress
 } from '../controller/courseController';
 import { authenticateStudent } from '../middlewares/student.middleware';
 
@@ -38,5 +40,9 @@ router.get('/my-enrollments', authenticateStudent, (req: express.Request, res: e
 // Lesson progress endpoints (must be after router is declared)
 router.get('/progress/:courseId', authenticateStudent, getLessonProgress);
 router.post('/progress/:courseId', authenticateStudent, updateLessonProgress);
+
+// Module progress endpoints
+router.get('/progress/:courseId/module/:moduleNumber', authenticateStudent, getModuleProgress);
+router.post('/progress/:courseId/module', authenticateStudent, updateModuleProgress);
 
 export default router;
