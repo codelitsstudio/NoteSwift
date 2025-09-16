@@ -101,10 +101,10 @@ export const updateModuleProgress = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    if (moduleNumber < 1 || moduleNumber > 50) {
+    if (moduleNumber < 1 || moduleNumber > 5) {
       res.status(400).json({ 
         success: false, 
-        message: "Module number must be between 1 and 50" 
+        message: "Module number must be between 1 and 5" 
       });
       return;
     }

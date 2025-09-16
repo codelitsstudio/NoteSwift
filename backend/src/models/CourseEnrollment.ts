@@ -21,6 +21,7 @@ export interface ICourseEnrollment extends Document {
     videoCompletedAt?: Date;
     notesCompleted: boolean;
     notesCompletedAt?: Date;
+    sectionsCompleted: number[];
     progress: number; // 0-100 based on video (50%) + notes (50%)
   }>;
   assessments: Array<{
@@ -97,7 +98,7 @@ const courseEnrollmentSchema = new Schema<ICourseEnrollment>({
       type: Number,
       required: true,
       min: 1,
-      max: 50
+      max: 5
     },
     videoCompleted: {
       type: Boolean,
@@ -114,6 +115,10 @@ const courseEnrollmentSchema = new Schema<ICourseEnrollment>({
     notesCompletedAt: {
       type: Date,
       default: null
+    },
+    sectionsCompleted: {
+      type: [Number],
+      default: []
     },
     progress: {
       type: Number,
@@ -179,66 +184,75 @@ courseEnrollmentSchema.methods.calculateOverallProgress = function(this: ICourse
   return Math.round(totalProgress / this.moduleProgress.length);
 };
 
-courseEnrollmentSchema.methods.updateModuleProgress = function(
-  this: ICourseEnrollment, 
-  moduleNumber: number, 
-  videoCompleted?: boolean, 
-  notesCompleted?: boolean,
-  progress?: number
+courseEnrollmentSchema.methods.updateModuleProgress = async function(
+  this: ICourseEnrollment,
+  moduleNumber: number,
+  videoCompleted?: boolean,
+  sectionIndex?: number
 ): Promise<ICourseEnrollment> {
-  // Find or create module progress entry
+  // Section breakdowns for each module
+  const sectionCounts: Record<string, number> = { '1': 8, '2': 4, '3': 3, '4': 4, '5': 5 };
+  const sectionWeights: Record<string, number> = { '1': 6.25, '2': 25, '3': 33.33, '4': 25, '5': 20 };
+
   let moduleEntry = this.moduleProgress.find(m => m.moduleNumber === moduleNumber);
   if (!moduleEntry) {
     moduleEntry = {
       moduleNumber,
       videoCompleted: false,
       notesCompleted: false,
+      sectionsCompleted: [],
       progress: 0
     };
     this.moduleProgress.push(moduleEntry);
   }
 
-  // Update completion status
-  if (videoCompleted !== undefined) {
-    moduleEntry.videoCompleted = videoCompleted;
-    if (videoCompleted && !moduleEntry.videoCompletedAt) {
-      moduleEntry.videoCompletedAt = new Date();
-    }
+  // Video completion (Module 1 only)
+  if (moduleNumber === 1 && videoCompleted) {
+    moduleEntry.videoCompleted = true;
+    moduleEntry.videoCompletedAt = new Date();
   }
 
-  if (notesCompleted !== undefined) {
-    moduleEntry.notesCompleted = notesCompleted;
-    if (notesCompleted && !moduleEntry.notesCompletedAt) {
-      moduleEntry.notesCompletedAt = new Date();
+  // Section completion
+  if (typeof sectionIndex === 'number') {
+    if (!moduleEntry.sectionsCompleted.includes(sectionIndex)) {
+      moduleEntry.sectionsCompleted.push(sectionIndex);
     }
   }
 
   // Calculate module progress
-  if (progress !== undefined) {
-    moduleEntry.progress = progress;
-  } else {
-    let moduleProgress = 0;
-    if (moduleNumber === 1) {
-      // Module 1: 50% video + 50% notes
-      if (moduleEntry.videoCompleted) moduleProgress += 50;
-      if (moduleEntry.notesCompleted) moduleProgress += 50;
-    } else {
-      // Modules 2-5: 100% notes only
-      if (moduleEntry.notesCompleted) moduleProgress = 100;
+  let moduleProgress = 0;
+  if (moduleNumber === 1) {
+    // Video = 50%
+    if (moduleEntry.videoCompleted) moduleProgress += 50;
+    // Notes = 50% split across 8 sections
+    const notesProgress = (moduleEntry.sectionsCompleted.length * sectionWeights['1']);
+    moduleProgress += Math.min(notesProgress, 50);
+    if (moduleEntry.sectionsCompleted.length === sectionCounts['1']) {
+      moduleEntry.notesCompleted = true;
+      moduleEntry.notesCompletedAt = new Date();
     }
-    moduleEntry.progress = moduleProgress;
+  } else if (sectionCounts[String(moduleNumber)]) {
+    // Modules 2-5: notes only
+    const notesProgress = (moduleEntry.sectionsCompleted.length * sectionWeights[String(moduleNumber)]);
+    moduleProgress += Math.min(notesProgress, 100);
+    if (moduleEntry.sectionsCompleted.length === sectionCounts[String(moduleNumber)]) {
+      moduleEntry.notesCompleted = true;
+      moduleEntry.notesCompletedAt = new Date();
+    }
   }
+  moduleEntry.progress = Math.round(moduleProgress * 100) / 100;
 
   // Update overall progress
   this.progress = this.calculateOverallProgress();
-  
+
   // Mark as completed if all modules are 100%
   if (this.progress === 100 && !this.completedAt) {
     this.completedAt = new Date();
   }
 
   this.lastAccessedAt = new Date();
-  return this.save();
+  await this.save();
+  return this;
 };
 
 courseEnrollmentSchema.methods.markComplete = function(this: ICourseEnrollment): Promise<ICourseEnrollment> {

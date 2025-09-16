@@ -139,7 +139,16 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                     // Only show Notes tag for non-first lessons
                     const notesTag = (lesson.tags || []).find((t: any) => t.type === 'notes');
                     const moduleNumber = i + 2; // Module 2, 3, 4, 5 for lessons 1, 2, 3, 4
-                    const lessonProgress = moduleProgress[moduleNumber] || 0;
+                    let lessonProgress = 0;
+                    if (
+                      moduleProgress &&
+                      typeof moduleProgress[moduleNumber] === 'number' &&
+                      !isNaN(moduleProgress[moduleNumber])
+                    ) {
+                      lessonProgress = Math.round(moduleProgress[moduleNumber]);
+                    } else {
+                      lessonProgress = 0;
+                    }
                     return (
                       <React.Fragment key={lesson.id ?? `idx-${i+1}`}>
                         <LessonCard

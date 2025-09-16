@@ -41,7 +41,7 @@ export default function NotesStepper() {
     }
   };
 
-  // Save completed section to AsyncStorage and backend
+  // Save completed section to AsyncStorage and backend (unified progress API)
   const saveCompletedSection = async (sectionKey: string, isFinal: boolean = false) => {
     try {
       const newCompleted = new Set(completedSections);
@@ -49,15 +49,12 @@ export default function NotesStepper() {
       setCompletedSections(newCompleted);
       await AsyncStorage.setItem('completedSections', JSON.stringify([...newCompleted]));
 
-      // Calculate progress percentage based on module
-      const moduleSections = currentModuleData.sections.length;
-      const completedModuleSections = Array.from(newCompleted).filter(key => 
-        key.startsWith(`module${moduleIndex + 1}_section`)
-      );
+      // Unified backend progress update: pass moduleNumber and sectionIndex
       if (courseId && user?.id) {
-        console.log('Updating module progress:', { courseId, moduleNumber: moduleIndex + 1, isFinal });
-        // Let the backend calculate progress based on completion status
-        await updateModuleProgress(courseId as string, moduleIndex + 1, undefined, isFinal ? true : undefined, undefined);
+        const sectionIndex = currentSection;
+        const moduleNumber = moduleIndex + 1;
+        console.log('Updating module progress:', { courseId, moduleNumber, sectionIndex });
+  await updateModuleProgress(courseId as string, moduleNumber, undefined, sectionIndex);
         console.log('Module progress updated successfully');
       }
     } catch (error) {

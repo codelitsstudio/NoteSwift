@@ -54,7 +54,7 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
       if (videoState.status?.didJustFinish && !videoCompleted && courseId) {
         setVideoCompleted(true);
         // Call backend to mark video as completed and set progress to 50%
-        updateModuleProgress(courseId, moduleNumber, true, undefined, 50);
+  updateModuleProgress(courseId, moduleNumber, true);
         // Optionally, trigger UI update (e.g., via callback or event)
         // You may want to call a prop like onProgressUpdate(50) here
       }
