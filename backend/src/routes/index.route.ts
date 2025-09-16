@@ -4,7 +4,6 @@ import { StudentLearnRoutes } from "./student/learn.route";
 import { authenticateStudent } from "middlewares/student.middleware";
 import { StudentUserRoutes } from "./student/user.route";
 import { AdminAuthRoutes } from "./admin/auth.route";
-import courseRoutes from "./courseRoutes";
 import mongoose from "mongoose";
 
 const router = Router();
@@ -48,9 +47,6 @@ console.log('🔧 Ping route registered at /ping');
 router.use("/student/auth", StudentAuthRoute);
 router.use("/student/learn", StudentLearnRoutes);
 router.use("/student/user", authenticateStudent, StudentUserRoutes);
-
-//courses
-router.use("/courses", courseRoutes);
 
 //admin
 router.use("/admin/auth", AdminAuthRoutes);
