@@ -8,6 +8,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 
 type LessonShape = { id?: string; title: string; subtitle?: string; tags?: any[] };
 type DataShape = {
+  _id?: string;
   lessons?: LessonShape[];
   tests?: any[];
   notes?: any[];
@@ -42,6 +43,8 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
     setCurrentLesson(lessonId);
     onLessonProgress(lessonId, true);
 
+    // Always use MongoDB ObjectId for courseId
+    const mongoCourseId = (data._id) ? data._id : courseId;
     // Check if this is an "Up Next" lesson (not the first lesson)
     const lessonIndex = data.lessons?.findIndex(lesson => lesson.id === lessonId) ?? -1;
     if (lessonIndex > 0) {
@@ -50,13 +53,13 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
       const moduleNumber = lessonIndex + 1;
       router.push({
         pathname: "/Lesson/LessonDetail/NotesAndReadable",
-        params: { module: moduleNumber.toString(), courseId },
+        params: { module: moduleNumber.toString(), courseId: mongoCourseId },
       });
     } else {
       // Navigate to regular lesson detail
       router.push({
         pathname: "/Lesson/[lesson]",
-        params: { lesson: lessonId, courseId },
+        params: { lesson: lessonId, courseId: mongoCourseId },
       });
     }
   };

@@ -1,5 +1,3 @@
-//learn/[chapter].tsx
-
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text } from "react-native";
@@ -7,15 +5,17 @@ import HeaderFifth from "../../components/Headers/HeaderFifth";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { chapters } from "../../utils/chapterData";
 import ChapterTabs from "../../components/Tabs/ChapterTabs";
-import { getLessonProgress, updateLessonProgress, getModuleProgress } from "../../api/lessonProgress";
+import { getLessonProgress, updateLessonProgress, getModuleProgress, updateModuleProgress } from "../../api/lessonProgress";
 import { useAuthStore } from "../../stores/authStore";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 
 export default function ChapterPage() {
   const router = useRouter();
   const { chapter } = useLocalSearchParams(); // e.g. "chapter-1"
   const key = String(chapter).toLowerCase();
   const data = chapters[key];
+  // Use MongoDB ObjectId for backend API calls
+  const courseId: string = data?._id ?? "";
   const { user } = useAuthStore();
 
   const [progress, setProgress] = useState(0);
@@ -24,76 +24,79 @@ export default function ChapterPage() {
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      // Refresh progress when component comes back into focus
-      // This handles the case when user navigates back from notes
-      const refreshOnFocus = async () => {
-        if (!user?.id || !data) return;
-        
-        try {
-          // Quick refresh of module progress
-          const moduleProgressData: {[key: number]: number} = {};
-          if (data.lessons) {
-            for (let i = 0; i < data.lessons.length; i++) {
-              try {
-                const moduleRes = await getModuleProgress(key, i + 1);
-                if (moduleRes.success && moduleRes.data) {
-                  moduleProgressData[i + 1] = moduleRes.data.moduleProgress?.progress || 0;
-                }
-              } catch (error) {
-                moduleProgressData[i + 1] = moduleProgress[i + 1] || 0; // Keep existing value on error
+  useFocusEffect(() => {
+    // Refresh progress when component comes back into focus
+    // This handles the case when user navigates back from notes
+    const refreshOnFocus = async () => {
+      if (!user?.id || !courseId) return;
+
+      try {
+        setLoading(true);
+
+        // Get module progress for this chapter (module 1 for chapter-1, module 2 for chapter-2, etc.)
+        const chapterNumber = parseInt(key.replace('chapter-', '')) || 1;
+        const moduleRes = await getModuleProgress(courseId, chapterNumber);
+        if (moduleRes.success && moduleRes.data) {
+          setProgress(moduleRes.data.moduleProgress?.progress || 0);
+        }
+
+        // Get progress for all modules in this chapter
+        // Each chapter has its own module sequence starting from 1
+        const moduleProgressData: {[key: number]: number} = {};
+        if (data?.lessons) {
+          for (let i = 0; i < data.lessons.length; i++) {
+            // For chapter-1: modules 1, 2, 3, 4, 5
+            // For chapter-2: modules 1, 2, 3, 4, 5 (NOT 2, 3, 4, 5, 6)
+            const moduleNumber = i + 1; // Each chapter starts with module 1
+            try {
+              const res = await getModuleProgress(courseId, moduleNumber);
+              if (res.success && res.data) {
+                moduleProgressData[moduleNumber] = res.data.moduleProgress?.progress || 0;
               }
+            } catch (error) {
+              console.error(`Error fetching progress for module ${moduleNumber}:`, error);
             }
           }
-          setModuleProgress(moduleProgressData);
-
-          // Refresh overall progress
-          const res = await getLessonProgress(key);
-          if (res.success && res.data) {
-            setProgress(res.data.progress || 0);
-            setCompletedLessons((res.data.completedLessons || []).map((l: any) => l.lessonId));
-          }
-        } catch (error) {
-          console.error('Error refreshing progress on focus:', error);
-        } finally {
-          // Always set loading to false after fetch attempt
-          setLoading(false);
         }
-      };
+        setModuleProgress(moduleProgressData);
 
-      refreshOnFocus();
-    }, [user?.id, key, data])
-  );
+        // Calculate completed lessons from module progress
+        // A lesson is "completed" if its corresponding module has progress > 0
+        const calculatedCompletedLessons: string[] = [];
+        if (data?.lessons) {
+          data.lessons.forEach((lesson, index) => {
+            const moduleNumber = index + 1;
+            if (moduleProgressData[moduleNumber] && moduleProgressData[moduleNumber] > 0) {
+              calculatedCompletedLessons.push(lesson.id);
+            }
+          });
+        }
+        setCompletedLessons(calculatedCompletedLessons);
+      } catch (error) {
+        console.error('Error refreshing progress on focus:', error);
+      } finally {
+        // Always set loading to false after fetch attempt
+        setLoading(false);
+      }
+    };    refreshOnFocus();
+  });
 
-  // Handler to update progress when a lesson is started/completed
-  const handleLessonProgress = async (lessonId: string, completed: boolean) => {
+  // Handler to update progress when a lesson is started (not completed)
+  const handleLessonProgress = async (lessonId: string, started: boolean) => {
     if (!user?.id || !data) return;
     try {
-      const res = await updateLessonProgress(key, lessonId, completed, data.lessons?.length || 1);
-      if (res.success && res.data) {
-        setProgress(res.data.progress || 0);
-        setCompletedLessons((res.data.completedLessons || []).map((l: any) => l.lessonId));
-
-        // Refresh module progress after update
-        const lessonIndex = data.lessons?.findIndex(lesson => lesson.id === lessonId) ?? -1;
-        if (lessonIndex >= 0) {
-          const moduleNumber = lessonIndex + 1;
-          try {
-            const moduleRes = await getModuleProgress(key, moduleNumber);
-            if (moduleRes.success && moduleRes.data) {
-              setModuleProgress(prev => ({
-                ...prev,
-                [moduleNumber]: moduleRes.data.moduleProgress?.progress || 0
-              }));
-            }
-          } catch (error) {
-            console.error(`Error refreshing progress for module ${moduleNumber}:`, error);
-          }
+      // For now, just ensure the module exists in our progress tracking
+      // Actual completion will be handled by NotesAndReadable component
+      if (started) {
+        // Update completed lessons to include this lesson (for UI purposes)
+        const updatedCompletedLessons = [...completedLessons];
+        if (!updatedCompletedLessons.includes(lessonId)) {
+          updatedCompletedLessons.push(lessonId);
         }
+        setCompletedLessons(updatedCompletedLessons);
       }
     } catch (e) {
-      // Optionally show error
+      console.error('Error updating lesson progress:', e);
     }
   };
 
@@ -104,7 +107,7 @@ export default function ChapterPage() {
     try {
       if (moduleNumber) {
         // Refresh specific module
-        const moduleRes = await getModuleProgress(key, moduleNumber);
+        const moduleRes = await getModuleProgress(courseId, moduleNumber);
         if (moduleRes.success && moduleRes.data) {
           setModuleProgress(prev => ({
             ...prev,
@@ -112,16 +115,26 @@ export default function ChapterPage() {
           }));
         }
       } else {
-        // Trigger full refresh
-        setRefreshTrigger(prev => prev + 1);
+        // Refresh the first module for this chapter
+        const moduleRes = await getModuleProgress(courseId, 1);
+        if (moduleRes.success && moduleRes.data) {
+          setProgress(moduleRes.data.moduleProgress?.progress || 0);
+        }
       }
 
-      // Also refresh overall progress
-      const res = await getLessonProgress(key);
-      if (res.success && res.data) {
-        setProgress(res.data.progress || 0);
-        setCompletedLessons((res.data.completedLessons || []).map((l: any) => l.lessonId));
+      // Calculate completed lessons from current module progress
+      const calculatedCompletedLessons: string[] = [];
+      if (data?.lessons) {
+        data.lessons.forEach((lesson, index) => {
+          const moduleNumber = index + 1;
+          // Check if this module has progress
+          const currentModuleProgress = moduleProgress[moduleNumber] || 0;
+          if (currentModuleProgress > 0) {
+            calculatedCompletedLessons.push(lesson.id);
+          }
+        });
       }
+      setCompletedLessons(calculatedCompletedLessons);
     } catch (error) {
       console.error('Error refreshing progress:', error);
     }
@@ -156,7 +169,7 @@ export default function ChapterPage() {
         completedLessons={completedLessons}
         onLessonProgress={handleLessonProgress}
         loading={loading}
-        courseId={key}
+        courseId={courseId}
         moduleProgress={moduleProgress}
         onRefreshProgress={refreshModuleProgress}
       />

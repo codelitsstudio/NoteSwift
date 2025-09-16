@@ -40,7 +40,7 @@ export interface ICourseEnrollment extends Document {
   // Instance methods
   updateProgress(): Promise<ICourseEnrollment>;
   calculateOverallProgress(): number;
-  updateModuleProgress(moduleNumber: number, videoCompleted?: boolean, notesCompleted?: boolean): Promise<ICourseEnrollment>;
+  updateModuleProgress(moduleNumber: number, videoCompleted?: boolean, notesCompleted?: boolean, progress?: number): Promise<ICourseEnrollment>;
   markComplete(): Promise<ICourseEnrollment>;
 }
 
@@ -97,7 +97,7 @@ const courseEnrollmentSchema = new Schema<ICourseEnrollment>({
       type: Number,
       required: true,
       min: 1,
-      max: 5
+      max: 50
     },
     videoCompleted: {
       type: Boolean,
@@ -183,7 +183,8 @@ courseEnrollmentSchema.methods.updateModuleProgress = function(
   this: ICourseEnrollment, 
   moduleNumber: number, 
   videoCompleted?: boolean, 
-  notesCompleted?: boolean
+  notesCompleted?: boolean,
+  progress?: number
 ): Promise<ICourseEnrollment> {
   // Find or create module progress entry
   let moduleEntry = this.moduleProgress.find(m => m.moduleNumber === moduleNumber);
@@ -213,16 +214,20 @@ courseEnrollmentSchema.methods.updateModuleProgress = function(
   }
 
   // Calculate module progress
-  let moduleProgress = 0;
-  if (moduleNumber === 1) {
-    // Module 1: 50% video + 50% notes
-    if (moduleEntry.videoCompleted) moduleProgress += 50;
-    if (moduleEntry.notesCompleted) moduleProgress += 50;
+  if (progress !== undefined) {
+    moduleEntry.progress = progress;
   } else {
-    // Modules 2-5: 100% notes only
-    if (moduleEntry.notesCompleted) moduleProgress = 100;
+    let moduleProgress = 0;
+    if (moduleNumber === 1) {
+      // Module 1: 50% video + 50% notes
+      if (moduleEntry.videoCompleted) moduleProgress += 50;
+      if (moduleEntry.notesCompleted) moduleProgress += 50;
+    } else {
+      // Modules 2-5: 100% notes only
+      if (moduleEntry.notesCompleted) moduleProgress = 100;
+    }
+    moduleEntry.progress = moduleProgress;
   }
-  moduleEntry.progress = moduleProgress;
 
   // Update overall progress
   this.progress = this.calculateOverallProgress();

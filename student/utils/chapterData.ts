@@ -6,6 +6,7 @@ export interface Lesson {
 }
 
 export interface Chapter {
+  _id?: string;
   title: string;
   subtitle: string;
   description: string;
@@ -133,6 +134,7 @@ export const chapters: Record<string, Chapter> = {
 
   // Featured course as a chapter
   "learn-how-to-actually-study-before-it's-too-late": {
+    _id: "68c40f5dcc006eb6c030a748",
     title: "Learn How To Actually Study Before It’s Too Late",
     subtitle: "ThatGuy (US) & NoteSwift Research Team",
     description: "Free, professional learning program for building effective study habits, improving knowledge retention, and mastering time management.",

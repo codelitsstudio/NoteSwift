@@ -4,6 +4,8 @@ import { View, TouchableOpacity, Text, LayoutChangeEvent, Animated, Easing, Acti
 import Slider from "@react-native-community/slider";
 import { Video, ResizeMode, Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useLocalSearchParams } from "expo-router";
+import { updateModuleProgress } from "../../../api/lessonProgress";
 
 type LiveVideoProps = {
   videoUri?: string;
@@ -18,18 +20,47 @@ const BLUE = "#3b82f6";
 
 const LiveVideo = forwardRef<any, LiveVideoProps>(
   ({ videoUri = "https://codelitsstudio.com/videos/how-to-study-for-noteswift.mp4", thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate }, ref) => {
-  const videoRef = useRef<Video | null>(null);
-  
-  // Combine related state to reduce re-renders
-  const [videoState, setVideoState] = useState({
-    status: {} as any,
-    isLoading: true,
-    showControls: true,
-    isSliding: false,
-    isFullscreen: false,
-    localPosition: 0,
-    sliderWidth: 0,
-  });
+    const videoRef = useRef<Video | null>(null);
+    const [videoState, setVideoState] = useState({
+      status: {} as any,
+      isLoading: true,
+      showControls: true,
+      isSliding: false,
+      isFullscreen: false,
+      localPosition: 0,
+      sliderWidth: 0,
+    });
+    const [videoCompleted, setVideoCompleted] = useState(false);
+    const [videoAlreadyCompleted, setVideoAlreadyCompleted] = useState(false);
+    const params = useLocalSearchParams();
+    const courseId = params.courseId ? String(params.courseId) : "";
+    const moduleNumber = params.module ? parseInt(String(params.module)) : 1;
+
+    useEffect(() => {
+      // On mount, check backend for video completion
+      if (courseId && moduleNumber) {
+        const { getModuleProgress } = require("../../../api/lessonProgress");
+        getModuleProgress(courseId, moduleNumber).then((res: any) => {
+          if (res.success && res.data && res.data.moduleProgress?.videoCompleted) {
+            setVideoAlreadyCompleted(true);
+            setVideoCompleted(true);
+          }
+        });
+      }
+    }, [courseId, moduleNumber]);
+
+    // Listen for video completion
+    useEffect(() => {
+      if (videoState.status?.didJustFinish && !videoCompleted && courseId) {
+        setVideoCompleted(true);
+        // Call backend to mark video as completed and set progress to 50%
+        updateModuleProgress(courseId, moduleNumber, true, undefined, 50);
+        // Optionally, trigger UI update (e.g., via callback or event)
+        // You may want to call a prop like onProgressUpdate(50) here
+      }
+    }, [videoState.status?.didJustFinish, videoCompleted, courseId, moduleNumber]);
+
+    // If video is completed, allow navigation to notes (handled by parent navigation logic)
   
   const [controlsOpacity] = useState(new Animated.Value(1));
   const prevIsLoadingRef = useRef(videoState.isLoading);

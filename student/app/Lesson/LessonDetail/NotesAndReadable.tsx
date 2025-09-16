@@ -8,6 +8,8 @@ import { updateModuleProgress } from '../../../api/lessonProgress';
 import { useAuthStore } from '../../../stores/authStore';
 
 export default function NotesStepper() {
+  const { useRouter } = require('expo-router');
+  const router = useRouter();
   const { module = '1', courseId } = useLocalSearchParams();
   const { user } = useAuthStore();
   const moduleIndex = parseInt(module as string) - 1;
@@ -40,22 +42,23 @@ export default function NotesStepper() {
   };
 
   // Save completed section to AsyncStorage and backend
-  const saveCompletedSection = async (sectionKey: string) => {
+  const saveCompletedSection = async (sectionKey: string, isFinal: boolean = false) => {
     try {
       const newCompleted = new Set(completedSections);
       newCompleted.add(sectionKey);
       setCompletedSections(newCompleted);
       await AsyncStorage.setItem('completedSections', JSON.stringify([...newCompleted]));
-      
-      // Check if all sections of this module are completed
+
+      // Calculate progress percentage based on module
       const moduleSections = currentModuleData.sections.length;
       const completedModuleSections = Array.from(newCompleted).filter(key => 
         key.startsWith(`module${moduleIndex + 1}_section`)
       );
-      
-      if (completedModuleSections.length === moduleSections && courseId && user?.id) {
-        // All sections completed - mark notes as completed in backend
-        await updateModuleProgress(courseId as string, moduleIndex + 1, undefined, true);
+      if (courseId && user?.id) {
+        console.log('Updating module progress:', { courseId, moduleNumber: moduleIndex + 1, isFinal });
+        // Let the backend calculate progress based on completion status
+        await updateModuleProgress(courseId as string, moduleIndex + 1, undefined, isFinal ? true : undefined, undefined);
+        console.log('Module progress updated successfully');
       }
     } catch (error) {
       console.error('Error saving completed section:', error);
@@ -271,8 +274,8 @@ export default function NotesStepper() {
         }, 5); // Slightly slower for better readability
       };
 
-      // Start typing after a small delay
-      setTimeout(() => typeNext(), 200);
+  // Start typing after a small delay
+  setTimeout(() => typeNext(), 200);
     }
   }, [currentSection, moduleIndex, completedSections, completedSectionsLoaded]);
 
@@ -427,23 +430,39 @@ export default function NotesStepper() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            disabled={currentSection === totalSections - 1 || !typewriterDone}
-            onPress={() => setCurrentSection((prev) => prev + 1)}
-            className={`px-4 py-2 rounded-full ${
-              currentSection === totalSections - 1 || !typewriterDone ? 'bg-gray-300' : 'bg-blue-500'
-            }`}
-          >
-            <Text className={`${
-              currentSection === totalSections - 1 || !typewriterDone ? 'text-gray-400' : 'text-white'
-            } font-semibold text-[12px]`}>
-              Next
-            </Text>
-          </TouchableOpacity>
+          {currentSection === totalSections - 1 ? (
+            <TouchableOpacity
+              disabled={!typewriterDone}
+              onPress={async () => {
+                const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
+                await saveCompletedSection(sectionKey, true);
+                // Navigate back to chapter screen
+                router.back();
+              }}
+              className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-green-500'}`}
+            >
+              <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
+                Complete
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              disabled={!typewriterDone}
+              onPress={async () => {
+                const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
+                await saveCompletedSection(sectionKey);
+                setCurrentSection((prev) => prev + 1);
+              }}
+              className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-blue-500'}`}
+            >
+              <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
-        
         <Text className="text-center text-[10px] text-gray-500">
-          {typewriterDone ? 'Ready for next section' : 'Reading in progress..'}
+          {typewriterDone ? (currentSection === totalSections - 1 ? 'Ready to complete module' : 'Ready for next section') : 'Reading in progress..'}
         </Text>
       </View>
     </SafeAreaView>

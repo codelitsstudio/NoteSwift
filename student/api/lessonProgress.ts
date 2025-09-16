@@ -20,11 +20,12 @@ export const getModuleProgress = async (courseId: string, moduleNumber: number) 
   return res.data;
 };
 
-export const updateModuleProgress = async (courseId: string, moduleNumber: number, videoCompleted?: boolean, notesCompleted?: boolean) => {
+export const updateModuleProgress = async (courseId: string, moduleNumber: number, videoCompleted?: boolean, notesCompleted?: boolean, progress?: number) => {
   const res = await api.post(`/courses/progress/${courseId}/module`, {
     moduleNumber,
     videoCompleted,
     notesCompleted,
+    progress,
   });
   return res.data;
 };

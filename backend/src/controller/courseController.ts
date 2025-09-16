@@ -90,7 +90,7 @@ export const updateLessonProgress = async (req: AuthRequest, res: Response): Pro
 export const updateModuleProgress = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { courseId } = req.params;
-    const { moduleNumber, videoCompleted, notesCompleted } = req.body;
+    const { moduleNumber, videoCompleted, notesCompleted, progress } = req.body;
     const studentId = req.user?.id;
 
     if (!courseId || !studentId || moduleNumber === undefined) {
@@ -101,10 +101,10 @@ export const updateModuleProgress = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    if (moduleNumber < 1 || moduleNumber > 5) {
+    if (moduleNumber < 1 || moduleNumber > 50) {
       res.status(400).json({ 
         success: false, 
-        message: "Module number must be between 1 and 5" 
+        message: "Module number must be between 1 and 50" 
       });
       return;
     }
@@ -116,7 +116,13 @@ export const updateModuleProgress = async (req: AuthRequest, res: Response): Pro
     }
 
     // Update module progress
-    await enrollment.updateModuleProgress(moduleNumber, videoCompleted, notesCompleted);
+    if (progress !== undefined) {
+      await enrollment.updateModuleProgress(moduleNumber, videoCompleted, notesCompleted, progress);
+    } else {
+      await enrollment.updateModuleProgress(moduleNumber, videoCompleted, notesCompleted);
+    }
+    console.log(`Updated module ${moduleNumber} progress to:`, progress);
+    console.log('Enrollment moduleProgress after update:', enrollment.moduleProgress);
 
     res.json({
       success: true,
@@ -156,6 +162,7 @@ export const getModuleProgress = async (req: AuthRequest, res: Response): Promis
     const moduleProgress = enrollment.moduleProgress.find(
       m => m.moduleNumber === parseInt(moduleNumber)
     );
+    console.log(`Fetching module ${moduleNumber} progress:`, moduleProgress);
 
     res.json({
       success: true,
