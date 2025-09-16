@@ -15,13 +15,9 @@ const OngoingCourseCard = ({ item, enrollment }: { item: any, enrollment?: any }
   }
 
   // Use backend-calculated overall progress as single source of truth
-  let progress = 0;
-  if (typeof enrollment?.progress === 'number' && !isNaN(enrollment.progress)) {
-    progress = Math.round(enrollment.progress);
-  } else {
-    progress = 0;
-  }
-  console.log('Unified course progress:', progress);
+  const progress = typeof enrollment?.progress === 'number' && !isNaN(enrollment.progress)
+    ? Math.round(enrollment.progress)
+    : 0;
 
   return (
     <TouchableOpacity
@@ -49,7 +45,7 @@ const OngoingCourseCard = ({ item, enrollment }: { item: any, enrollment?: any }
           </View>
           <Text className="text-base font-bold text-black my-1">{item.title}</Text>
           <Text className="text-xs text-gray-500">{item.description || item.summary || 'No description.'}</Text>
-          {/* Progress bar shows progress from backend */}
+          {/* Progress bar shows progress from backend only */}
           <View className="flex-row items-center mt-2 mr-2">
             <View className="flex-1 h-2 bg-gray-200 rounded-full mr-2">
               <View className="h-2 bg-customBlue rounded-full" style={{ width: `${progress}%` }} />

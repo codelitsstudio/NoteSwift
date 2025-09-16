@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { View, ScrollView, TouchableOpacity, Text, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import TabNav, { TabKey } from "./TabNav";
@@ -35,6 +36,16 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
   const [currentLesson, setCurrentLesson] = useState<string | null>(completedLessons.length > 0 ? completedLessons[completedLessons.length-1] : (data.lessons?.[0]?.id ?? null));
   const router = useRouter();
 
+  // Prevent infinite refresh: only call onRefreshProgress once per focus, not on every render
+  // Only refresh progress when screen is focused, not on every render or callback change
+  useFocusEffect(
+    React.useCallback(() => {
+      if (typeof onRefreshProgress === 'function') {
+        onRefreshProgress();
+      }
+    }, []) // <-- empty array, ensures this only runs on focus
+  );
+
   const openLesson = (lessonId?: string) => {
     if (!lessonId) {
       console.warn("Lesson missing id — cannot navigate.");
@@ -49,7 +60,6 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
     const lessonIndex = data.lessons?.findIndex(lesson => lesson.id === lessonId) ?? -1;
     if (lessonIndex > 0) {
       // Navigate to NotesAndReadable with the corresponding module number
-      // Module 1 is the first lesson, Module 2 is the second lesson, etc.
       const moduleNumber = lessonIndex + 1;
       router.push({
         pathname: "/Lesson/LessonDetail/NotesAndReadable",
@@ -139,16 +149,10 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                     // Only show Notes tag for non-first lessons
                     const notesTag = (lesson.tags || []).find((t: any) => t.type === 'notes');
                     const moduleNumber = i + 2; // Module 2, 3, 4, 5 for lessons 1, 2, 3, 4
-                    let lessonProgress = 0;
-                    if (
-                      moduleProgress &&
-                      typeof moduleProgress[moduleNumber] === 'number' &&
-                      !isNaN(moduleProgress[moduleNumber])
-                    ) {
-                      lessonProgress = Math.round(moduleProgress[moduleNumber]);
-                    } else {
-                      lessonProgress = 0;
-                    }
+                    // Use backend-calculated module progress only
+                    const lessonProgress = moduleProgress && typeof moduleProgress[moduleNumber] === 'number' && !isNaN(moduleProgress[moduleNumber])
+                      ? Math.round(moduleProgress[moduleNumber])
+                      : 0;
                     return (
                       <React.Fragment key={lesson.id ?? `idx-${i+1}`}>
                         <LessonCard

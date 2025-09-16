@@ -53,10 +53,10 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
     useEffect(() => {
       if (videoState.status?.didJustFinish && !videoCompleted && courseId) {
         setVideoCompleted(true);
-        // Call backend to mark video as completed and set progress to 50%
-  updateModuleProgress(courseId, moduleNumber, true);
-        // Optionally, trigger UI update (e.g., via callback or event)
-        // You may want to call a prop like onProgressUpdate(50) here
+        // Call backend to mark video as completed
+        updateModuleProgress(courseId, moduleNumber, true);
+        // Optionally trigger parent refresh via callback/event (implement in parent as needed)
+        // Example: if (typeof onRefreshProgress === 'function') onRefreshProgress(moduleNumber);
       }
     }, [videoState.status?.didJustFinish, videoCompleted, courseId, moduleNumber]);
 

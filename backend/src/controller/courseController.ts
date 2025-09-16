@@ -32,6 +32,8 @@ export const getLessonProgress = async (req: AuthRequest, res: Response): Promis
         progress: enrollment.progress,
         completedLessons: enrollment.completedLessons,
         lastAccessedAt: enrollment.lastAccessedAt,
+        moduleProgress: enrollment.moduleProgress,
+        overallProgress: enrollment.progress
       },
     });
   } catch (error) {
@@ -64,12 +66,7 @@ export const updateLessonProgress = async (req: AuthRequest, res: Response): Pro
     if (completed === false) {
       enrollment.completedLessons = enrollment.completedLessons.filter((l: any) => l.lessonId.toString() !== lessonId);
     }
-    // Update progress percentage
-    // (Assume frontend sends totalLessons or calculate from chapter data if available)
-    // For now, just set progress = (completedLessons.length / totalLessons) * 100
-    if (req.body.totalLessons) {
-      enrollment.progress = Math.round((enrollment.completedLessons.length / req.body.totalLessons) * 100);
-    }
+    // Progress is always backend-calculated via moduleProgress
     enrollment.lastAccessedAt = new Date();
     await enrollment.save();
     res.json({
@@ -77,6 +74,8 @@ export const updateLessonProgress = async (req: AuthRequest, res: Response): Pro
       data: {
         progress: enrollment.progress,
         completedLessons: enrollment.completedLessons,
+        moduleProgress: enrollment.moduleProgress,
+        overallProgress: enrollment.progress
       },
       message: "Lesson progress updated successfully",
     });
@@ -90,7 +89,7 @@ export const updateLessonProgress = async (req: AuthRequest, res: Response): Pro
 export const updateModuleProgress = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { courseId } = req.params;
-    const { moduleNumber, videoCompleted, notesCompleted, progress } = req.body;
+  const { moduleNumber, videoCompleted, sectionIndex } = req.body;
     const studentId = req.user?.id;
 
     if (!courseId || !studentId || moduleNumber === undefined) {
@@ -115,13 +114,9 @@ export const updateModuleProgress = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    // Update module progress
-    if (progress !== undefined) {
-      await enrollment.updateModuleProgress(moduleNumber, videoCompleted, notesCompleted, progress);
-    } else {
-      await enrollment.updateModuleProgress(moduleNumber, videoCompleted, notesCompleted);
-    }
-    console.log(`Updated module ${moduleNumber} progress to:`, progress);
+    // Update module progress using backend logic only
+    await enrollment.updateModuleProgress(moduleNumber, videoCompleted, sectionIndex);
+    console.log(`Updated module ${moduleNumber} progress.`);
     console.log('Enrollment moduleProgress after update:', enrollment.moduleProgress);
 
     res.json({
@@ -171,6 +166,7 @@ export const getModuleProgress = async (req: AuthRequest, res: Response): Promis
           moduleNumber: parseInt(moduleNumber),
           videoCompleted: false,
           notesCompleted: false,
+          sectionsCompleted: [],
           progress: 0
         },
         overallProgress: enrollment.progress

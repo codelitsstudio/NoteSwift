@@ -41,7 +41,7 @@ export interface ICourseEnrollment extends Document {
   // Instance methods
   updateProgress(): Promise<ICourseEnrollment>;
   calculateOverallProgress(): number;
-  updateModuleProgress(moduleNumber: number, videoCompleted?: boolean, notesCompleted?: boolean, progress?: number): Promise<ICourseEnrollment>;
+  updateModuleProgress(moduleNumber: number, videoCompleted?: boolean, sectionIndex?: number): Promise<ICourseEnrollment>;
   markComplete(): Promise<ICourseEnrollment>;
 }
 
@@ -177,20 +177,21 @@ courseEnrollmentSchema.methods.updateProgress = function(this: ICourseEnrollment
   return this.save();
 };
 
+// Unified overall progress calculation: average of all module progresses
 courseEnrollmentSchema.methods.calculateOverallProgress = function(this: ICourseEnrollment): number {
-  if (this.moduleProgress.length === 0) return 0;
-  
-  const totalProgress = this.moduleProgress.reduce((sum, module) => sum + module.progress, 0);
+  if (!this.moduleProgress || this.moduleProgress.length === 0) return 0;
+  const totalProgress = this.moduleProgress.reduce((sum, module) => sum + (typeof module.progress === 'number' ? module.progress : 0), 0);
   return Math.round(totalProgress / this.moduleProgress.length);
 };
 
+// Unified module progress update logic
 courseEnrollmentSchema.methods.updateModuleProgress = async function(
   this: ICourseEnrollment,
   moduleNumber: number,
   videoCompleted?: boolean,
   sectionIndex?: number
 ): Promise<ICourseEnrollment> {
-  // Section breakdowns for each module
+  // Section breakdowns for each module (user spec)
   const sectionCounts: Record<string, number> = { '1': 8, '2': 4, '3': 3, '4': 4, '5': 5 };
   const sectionWeights: Record<string, number> = { '1': 6.25, '2': 25, '3': 33.33, '4': 25, '5': 20 };
 

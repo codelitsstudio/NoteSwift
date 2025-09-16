@@ -24,8 +24,20 @@ export default function NotesStepper() {
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
   const [completedSectionsLoaded, setCompletedSectionsLoaded] = useState(false);
 
-  const section = currentModuleData.sections[currentSection];
-  const totalSections = currentModuleData.sections.length;
+  // Reset currentSection when module changes
+  useEffect(() => {
+    setCurrentSection(0);
+  }, [moduleIndex]);
+
+  const section = currentModuleData?.sections?.[currentSection];
+  const totalSections = currentModuleData?.sections?.length || 0;
+
+  // Ensure currentSection is within bounds
+  useEffect(() => {
+    if (currentSection >= totalSections && totalSections > 0) {
+      setCurrentSection(totalSections - 1);
+    }
+  }, [currentSection, totalSections]);
 
   // Load completed sections from AsyncStorage
   const loadCompletedSections = async () => {
@@ -41,21 +53,18 @@ export default function NotesStepper() {
     }
   };
 
-  // Save completed section to AsyncStorage and backend (unified progress API)
+  // Save completed section to backend only (unified progress API)
   const saveCompletedSection = async (sectionKey: string, isFinal: boolean = false) => {
     try {
-      const newCompleted = new Set(completedSections);
-      newCompleted.add(sectionKey);
-      setCompletedSections(newCompleted);
-      await AsyncStorage.setItem('completedSections', JSON.stringify([...newCompleted]));
-
       // Unified backend progress update: pass moduleNumber and sectionIndex
       if (courseId && user?.id) {
         const sectionIndex = currentSection;
         const moduleNumber = moduleIndex + 1;
         console.log('Updating module progress:', { courseId, moduleNumber, sectionIndex });
-  await updateModuleProgress(courseId as string, moduleNumber, undefined, sectionIndex);
+        await updateModuleProgress(courseId as string, moduleNumber, undefined, sectionIndex);
         console.log('Module progress updated successfully');
+        // Optionally trigger parent refresh via callback/event (implement in parent as needed)
+        // Example: if (typeof onRefreshProgress === 'function') onRefreshProgress(moduleNumber);
       }
     } catch (error) {
       console.error('Error saving completed section:', error);
@@ -67,8 +76,8 @@ export default function NotesStepper() {
   }, []);
 
   useEffect(() => {
-    // Only proceed if completed sections have been loaded
-    if (!completedSectionsLoaded) return;
+    // Only proceed if completed sections have been loaded and section exists
+    if (!completedSectionsLoaded || !section) return;
 
     const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
     const isSectionCompleted = completedSections.has(sectionKey);
@@ -333,135 +342,146 @@ export default function NotesStepper() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <HeaderSixth
-        title={`Module ${parseInt(module as string)}: ${currentModuleData.module.split(':')[1]?.trim() || currentModuleData.module}`}
-        subtitle="ThatGuy (US) & NoteSwift Research Team"
-        onBack={() => {/* Handle back navigation */}}
-      />
-
-      {/* Section Title */}
-      <View className="p-6 bg-gray-50 mb-4">
-        <Text className="text-[12px] text-blue-500 mb-2">
-          Section {currentSection + 1} of {totalSections}
-        </Text>
-        <Text className="text-[16px] font-semibold text-gray-900">
-          {typedTextMap['sectionTitle'] || ''}
-        </Text>
-      </View>
-
-      {/* Content */}
-  <ScrollView className="flex-1 px-6 pb-24">
-        {/* Main Section Content */}
-        {section.content && (
-          <Text className="text-[12px] text-gray-700 leading-[18px] mb-4">
-            {typedTextMap[`content-${currentSection}`] || ''}
-          </Text>
-        )}
-
-        {/* Highlights */}
-        {(section as any).highlight && (
-          <View className={`my-3 p-4 bg-blue-100 border-l-4 border-blue-500 rounded-lg transition-opacity duration-500 ${
-            visibleElements.has('highlight-show') ? 'opacity-100' : 'opacity-0'
-          }`}>
-            <Text className="text-[12px] text-gray-700 leading-[18px]">
-              {typedTextMap[`highlight-${currentSection}`] || ''}
-            </Text>
-          </View>
-        )}
-
-        {/* Subsections */}
-        {section.subsections && section.subsections.map((sub: any, idx: number) => (
-          <View key={idx} className="mb-4">
-            {sub.title && (
-              <Text className="text-[14px] font-medium text-gray-900 mb-2">
-                {typedTextMap[`subTitle-${idx}`] || ''}
-              </Text>
-            )}
-            {sub.content && (
-              <Text className="text-[12px] text-gray-700 leading-[18px] mb-2">
-                {typedTextMap[`subContent-${idx}`] || ''}
-              </Text>
-            )}
-          </View>
-        ))}
-
-        {/* Bullet List - Show immediately but with typed content */}
-        {section.bulletList && renderBulletList(section.bulletList)}
-
-        {/* Numbered List - Show immediately but with typed content */}
-        {(section as any).numberedList && renderNumberedList((section as any).numberedList)}
-
-        {/* Tables - Show immediately but with typed content */}
-        {(section as any).table && renderTable((section as any).table)}
-
-        {/* Key Points - Show immediately but with typed content */}
-        {section.keyPoints && (
-          <View className={`my-4 p-4 bg-gray-100 rounded-lg transition-opacity duration-500 ${
-            visibleElements.has('keypoints-show') ? 'opacity-100' : 'opacity-0'
-          }`}>
-            <Text className="font-semibold mb-2 text-[12px]">Key Takeaways</Text>
-            {renderBulletList(section.keyPoints, 'key')}
-          </View>
-        )}
-
-        {/* Warnings - Show immediately but with typed content */}
-        {(section as any).warning && (
-          <View className={`my-4 p-4 bg-gray-100 border-l-4 border-gray-400 rounded-lg transition-opacity duration-500 ${
-            visibleElements.has('warning-show') ? 'opacity-100' : 'opacity-0'
-          }`}>
-            <Text className="text-[12px] text-gray-700 leading-[18px]">{typedTextMap['warn'] || ''}</Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Navigation Buttons */}
-      <View className="absolute bottom-6 left-4 right-4 rounded-3xl bg-white border border-gray-200 p-6">
-        <View className="flex-row justify-between items-center mb-3">
-          <TouchableOpacity
-            disabled={currentSection === 0}
-            onPress={() => setCurrentSection((prev) => prev - 1)}
-            className={`px-4 py-2 rounded-full ${currentSection === 0 ? 'bg-gray-300' : 'bg-blue-500'}`}
-          >
-            <Text className={`${currentSection === 0 ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
-              Previous
-            </Text>
-          </TouchableOpacity>
-
-          {currentSection === totalSections - 1 ? (
-            <TouchableOpacity
-              disabled={!typewriterDone}
-              onPress={async () => {
-                const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
-                await saveCompletedSection(sectionKey, true);
-                // Navigate back to chapter screen
-                router.back();
-              }}
-              className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-green-500'}`}
-            >
-              <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
-                Complete
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              disabled={!typewriterDone}
-              onPress={async () => {
-                const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
-                await saveCompletedSection(sectionKey);
-                setCurrentSection((prev) => prev + 1);
-              }}
-              className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-blue-500'}`}
-            >
-              <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          )}
+      {!section ? (
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-gray-500">Loading section...</Text>
         </View>
-        <Text className="text-center text-[10px] text-gray-500">
-          {typewriterDone ? (currentSection === totalSections - 1 ? 'Ready to complete module' : 'Ready for next section') : 'Reading in progress..'}
-        </Text>
-      </View>
+      ) : (
+        <>
+          <HeaderSixth
+            title={`Module ${parseInt(module as string)}: ${currentModuleData.module.split(':')[1]?.trim() || currentModuleData.module}`}
+            subtitle="ThatGuy (US) & NoteSwift Research Team"
+            onBack={() => {/* Handle back navigation */}}
+          />
+
+          {/* Section Title */}
+          <View className="p-6 bg-gray-50 mb-4">
+            <Text className="text-[12px] text-blue-500 mb-2">
+              Section {currentSection + 1} of {totalSections}
+            </Text>
+            <Text className="text-[16px] font-semibold text-gray-900">
+              {typedTextMap['sectionTitle'] || ''}
+            </Text>
+          </View>
+
+          {/* Content */}
+          <ScrollView className="flex-1 px-6 pb-24">
+            {/* Main Section Content */}
+            {section.content && (
+              <Text className="text-[12px] text-gray-700 leading-[18px] mb-4">
+                {typedTextMap[`content-${currentSection}`] || ''}
+              </Text>
+            )}
+
+            {/* Highlights */}
+            {(section as any).highlight && (
+              <View className={`my-3 p-4 bg-blue-100 border-l-4 border-blue-500 rounded-lg transition-opacity duration-500 ${
+                visibleElements.has('highlight-show') ? 'opacity-100' : 'opacity-0'
+              }`}>
+                <Text className="text-[12px] text-gray-700 leading-[18px]">
+                  {typedTextMap[`highlight-${currentSection}`] || ''}
+                </Text>
+              </View>
+            )}
+
+            {/* Subsections */}
+            {section.subsections && section.subsections.map((sub: any, idx: number) => (
+              <View key={idx} className="mb-4">
+                {sub.title && (
+                  <Text className="text-[14px] font-medium text-gray-900 mb-2">
+                    {typedTextMap[`subTitle-${idx}`] || ''}
+                  </Text>
+                )}
+                {sub.content && (
+                  <Text className="text-[12px] text-gray-700 leading-[18px] mb-2">
+                    {typedTextMap[`subContent-${idx}`] || ''}
+                  </Text>
+                )}
+              </View>
+            ))}
+
+            {/* Bullet List - Show immediately but with typed content */}
+            {section.bulletList && renderBulletList(section.bulletList)}
+
+            {/* Numbered List - Show immediately but with typed content */}
+            {(section as any).numberedList && renderNumberedList((section as any).numberedList)}
+
+            {/* Tables - Show immediately but with typed content */}
+            {(section as any).table && renderTable((section as any).table)}
+
+            {/* Key Points - Show immediately but with typed content */}
+            {section.keyPoints && (
+              <View className={`my-4 p-4 bg-gray-100 rounded-lg transition-opacity duration-500 ${
+                visibleElements.has('keypoints-show') ? 'opacity-100' : 'opacity-0'
+              }`}>
+                <Text className="font-semibold mb-2 text-[12px]">Key Takeaways</Text>
+                {renderBulletList(section.keyPoints, 'key')}
+              </View>
+            )}
+
+            {/* Warnings - Show immediately but with typed content */}
+            {(section as any).warning && (
+              <View className={`my-4 p-4 bg-gray-100 border-l-4 border-gray-400 rounded-lg transition-opacity duration-500 ${
+                visibleElements.has('warning-show') ? 'opacity-100' : 'opacity-0'
+              }`}>
+                <Text className="text-[12px] text-gray-700 leading-[18px]">{typedTextMap['warn'] || ''}</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Navigation Buttons */}
+          <View className="absolute bottom-6 left-4 right-4 rounded-3xl bg-white border border-gray-200 p-6">
+            <View className="flex-row justify-between items-center mb-3">
+              <TouchableOpacity
+                disabled={currentSection === 0}
+                onPress={() => setCurrentSection((prev) => prev - 1)}
+                className={`px-4 py-2 rounded-full ${currentSection === 0 ? 'bg-gray-300' : 'bg-blue-500'}`}
+              >
+                <Text className={`${currentSection === 0 ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
+                  Previous
+                </Text>
+              </TouchableOpacity>
+
+              {currentSection === totalSections - 1 ? (
+                <TouchableOpacity
+                  disabled={!typewriterDone}
+                  onPress={async () => {
+                    const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
+                    await saveCompletedSection(sectionKey, true);
+                    // Add a small delay to ensure backend has finished saving
+                    setTimeout(() => {
+                      // Navigate back to chapter screen
+                      router.back();
+                    }, 500);
+                  }}
+                  className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-green-500'}`}
+                >
+                  <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
+                    Complete
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  disabled={!typewriterDone}
+                  onPress={async () => {
+                    const sectionKey = `module${moduleIndex + 1}_section${currentSection}`;
+                    await saveCompletedSection(sectionKey);
+                    setCurrentSection((prev) => prev + 1);
+                  }}
+                  className={`px-4 py-2 rounded-full ${!typewriterDone ? 'bg-gray-300' : 'bg-blue-500'}`}
+                >
+                  <Text className={`${!typewriterDone ? 'text-gray-400' : 'text-white'} font-semibold text-[12px]`}>
+                    Next
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text className="text-center text-[10px] text-gray-500">
+              {typewriterDone ? (currentSection === totalSections - 1 ? 'Ready to complete module' : 'Ready for next section') : 'Reading in progress..'}
+            </Text>
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }

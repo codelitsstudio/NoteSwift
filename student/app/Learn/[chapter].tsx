@@ -26,54 +26,58 @@ export default function ChapterPage() {
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useFocusEffect(() => {
-    // Refresh progress when component comes back into focus
-    // This handles the case when user navigates back from notes
-    const refreshOnFocus = async () => {
-      if (!user?.id || !courseId) return;
+  useFocusEffect(
+    React.useCallback(() => {
+      // Refresh progress when component comes back into focus
+      const refreshOnFocus = async () => {
+        // Add a small delay to ensure backend has finished saving
+        setTimeout(async () => {
+          if (!user?.id || !courseId) return;
 
-      try {
-        setLoading(true);
+          try {
+            setLoading(true);
 
-        // Get module progress for this chapter (module 1 for chapter-1, module 2 for chapter-2, etc.)
-        const chapterNumber = parseInt(key.replace('chapter-', '')) || 1;
-        const moduleRes = await getModuleProgress(courseId, chapterNumber);
-        if (moduleRes.success && moduleRes.data && typeof moduleRes.data.moduleProgress?.progress === 'number' && !isNaN(moduleRes.data.moduleProgress.progress)) {
-          setProgress(Math.round(moduleRes.data.moduleProgress.progress));
-        } else {
-          setProgress(0);
-        }
-
-        // Get progress for all modules in this chapter
-        const moduleProgressData: {[key: number]: number} = {};
-        if (data?.lessons) {
-          for (let i = 0; i < data.lessons.length; i++) {
-            const moduleNumber = chapterNumber + i; // Module numbers start from chapter number
-            try {
-              const res = await getModuleProgress(courseId, moduleNumber);
-              if (res.success && res.data) {
-                moduleProgressData[moduleNumber] = (typeof res.data.moduleProgress?.progress === 'number' && !isNaN(res.data.moduleProgress.progress)) ? Math.round(res.data.moduleProgress.progress) : 0;
-              }
-            } catch (error) {
-              console.error(`Error fetching progress for module ${moduleNumber}:`, error);
+            // Get module progress for this chapter (module 1 for chapter-1, module 2 for chapter-2, etc.)
+            const chapterNumber = parseInt(key.replace('chapter-', '')) || 1;
+            const moduleRes = await getModuleProgress(courseId, chapterNumber);
+            if (moduleRes.success && moduleRes.data && typeof moduleRes.data.moduleProgress?.progress === 'number' && !isNaN(moduleRes.data.moduleProgress.progress)) {
+              setProgress(Math.round(moduleRes.data.moduleProgress.progress));
+            } else {
+              setProgress(0);
             }
-          }
-        }
-        setModuleProgress(moduleProgressData);
 
-        // Get completed lessons from overall progress
-        const res = await getLessonProgress(courseId);
-        if (res.success && res.data) {
-          setCompletedLessons((res.data.completedLessons || []).map((l: any) => l.lessonId));
-        }
-      } catch (error) {
-        console.error('Error refreshing progress on focus:', error);
-      } finally {
-        // Always set loading to false after fetch attempt
-        setLoading(false);
-      }
-    };    refreshOnFocus();
-  });
+            // Get progress for all modules in this chapter
+            const moduleProgressData: {[key: number]: number} = {};
+            if (data?.lessons) {
+              for (let i = 0; i < data.lessons.length; i++) {
+                const moduleNumber = chapterNumber + i; // Module numbers start from chapter number
+                try {
+                  const res = await getModuleProgress(courseId, moduleNumber);
+                  if (res.success && res.data) {
+                    moduleProgressData[moduleNumber] = (typeof res.data.moduleProgress?.progress === 'number' && !isNaN(res.data.moduleProgress.progress)) ? Math.round(res.data.moduleProgress.progress) : 0;
+                  }
+                } catch (error) {
+                  console.error(`Error fetching progress for module ${moduleNumber}:`, error);
+                }
+              }
+            }
+            setModuleProgress(moduleProgressData);
+
+            // Get completed lessons from overall progress
+            const res = await getLessonProgress(courseId);
+            if (res.success && res.data) {
+              setCompletedLessons((res.data.completedLessons || []).map((l: any) => l.lessonId));
+            }
+          } catch (error) {
+            console.error('Error refreshing progress on focus:', error);
+          } finally {
+            setLoading(false);
+          }
+        }, 1000); // 1 second delay
+      };
+      refreshOnFocus();
+    }, [])
+  );
 
   // Handler to update progress when a lesson is started/completed
   const handleLessonProgress = async (lessonId: string, completed: boolean) => {
@@ -85,7 +89,7 @@ export default function ChapterPage() {
       const moduleNumber = chapterNumber + lessonIndex; // Module numbers start from chapter number
 
       // Update module progress instead of overall lesson progress
-  const res = await updateModuleProgress(courseId, moduleNumber, undefined, lessonIndex);
+      const res = await updateModuleProgress(courseId, moduleNumber, undefined, undefined);
       if (res.success && res.data) {
         // Update the main progress if this is the first lesson (module 1 for chapter-1, etc.)
         if (lessonIndex === 0) {
