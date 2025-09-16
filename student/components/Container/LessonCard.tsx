@@ -7,16 +7,14 @@ interface LessonCardProps {
   subtitle?: string;
   tags?: { type: "live" | "video" | "notes"; label: string }[];
   onPress?: () => void;
+  isActive?: boolean;
 }
 
-const LessonCard: React.FC<LessonCardProps> = ({ title, subtitle, tags = [], onPress }) => {
-  // If you want to highlight the first card, pass a prop like isFirst or index from the parent.
-  // For now, check if title matches the first lesson's title ("Foundations of Effective Studying")
-  const isFirst = title.trim().toLowerCase().startsWith("foundations of effective");
+const LessonCard: React.FC<LessonCardProps> = ({ title, subtitle, tags = [], onPress, isActive }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`mx-4 my-2 p-4 bg-white border rounded-xl flex-row items-center ${isFirst ? "border-blue-500" : "border-gray-200"}`}
+      className={`mx-4 my-2 p-4 bg-white border rounded-xl flex-row items-center ${isActive ? "border-blue-500" : "border-gray-200"}`}
       activeOpacity={0.85}
     >
       <View className="flex-1">

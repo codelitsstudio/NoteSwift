@@ -137,7 +137,7 @@ const FirstCourseDescription = () => {
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 5 }}
+        contentContainerStyle={{ paddingBottom: 10 }}
       >
         <View className="px-4 py-4">
 

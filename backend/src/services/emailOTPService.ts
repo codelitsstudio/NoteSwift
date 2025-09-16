@@ -48,35 +48,43 @@ class EmailOTPService {
         to: [normalizedEmail],
         subject: 'Your NoteSwift Verification Code',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #2563eb; margin: 0;">NoteSwift</h1>
+        <div style="font-family: 'Inter', Arial, sans-serif; background-color: #f3f4f6; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden;">
+
+        <div style="padding: 40px 40px 20px; text-align: center;">
+            <img src="https://i.postimg.cc/Gh6L7sKL/IMG-4146.png" alt="NoteSwift Logo" style="width: 150px; height: auto; margin-bottom: 20px;" onerror="this.onerror=null;this.src='https://placehold.co/150x50/007AFF/ffffff?text=NoteSwift&font=raleway';">
+        </div>
+
+        <div style="padding: 0 40px 30px;">
+
+            <h2 style="color: #1f2937; margin-bottom: 20px; font-size: 22px; text-align: center;">Verify Your Email Address</h2>
+            
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                Welcome to NoteSwift! We're excited to have you on board. Please use the verification code below to confirm your email and activate your account.
+            </p>
+            
+            <div style="background-color: #e6f2ff; border: 2px dashed #99cfff; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;">
+                <p style="margin:0; color: #374151; font-size: 14px; margin-bottom: 10px;">Your verification code is:</p>
+                <span style="font-size: 36px; font-weight: bold; color: #007AFF; letter-spacing: 8px; font-family: 'Courier New', Courier, monospace;">${otpCode}</span>
             </div>
             
-            <h2 style="color: #1f2937; margin-bottom: 20px;">Verify Your Email Address</h2>
-            
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
-              Thank you for registering with NoteSwift! Please use the verification code below to complete your registration:
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.5; text-align: center; margin-bottom: 20px;">
+                For security reasons, this code will expire in <strong>10 minutes</strong>.
             </p>
             
-            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;">
-              <span style="font-size: 32px; font-weight: bold; color: #2563eb; letter-spacing: 4px;">${otpCode}</span>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">
-              This verification code will expire in 10 minutes for security reasons.
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.5; text-align: center;">
+                If you didn't request this, you can safely ignore this email.
             </p>
-            
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.5;">
-              If you didn't request this verification code, please ignore this email.
+        </div>
+
+        <div style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} NoteSwift. All rights reserved.<br>
+                123 Swift Street, Innovation City, 12345
             </p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-            
-            <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-              © ${new Date().getFullYear()} NoteSwift. All rights reserved.
-            </p>
-          </div>
+        </div>
+    </div>
+</div>
         `,
       });
 

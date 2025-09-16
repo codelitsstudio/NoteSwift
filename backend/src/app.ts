@@ -8,6 +8,7 @@ import { MainRoutes } from "routes/index.route";
 import userRoutes from './routes/userRoutes';
 import courseRoutes from './routes/courseRoutes';
 import adminRoutes from './routes/adminRoutes';
+import downloadsRouter from './routes/downloads';
 import { DatabaseSeeder } from './services/DatabaseSeeder';
 import { DatabaseMaintenanceService } from './services/DatabaseMaintenanceService';
 import { MaintenanceScheduler, gracefulShutdown } from './middlewares/maintenanceMiddleware';
@@ -103,6 +104,7 @@ console.log('🔧 Main routes mounted successfully');
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/downloads', downloadsRouter);
 
 async function INIT() {
     app.listen(Number(PORT), '0.0.0.0', () => {

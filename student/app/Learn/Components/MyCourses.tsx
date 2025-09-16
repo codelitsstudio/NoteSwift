@@ -12,8 +12,19 @@ const OngoingCourseCard = ({ item }: { item: any }) => {
   if (item.title === "Learn How To Actually Study Before It’s Too Late" || item.isFeatured) {
     chapterParam = "learn-how-to-actually-study-before-it's-too-late";
   }
-  // Dummy progress for now if not provided
-  const progress = (item.progress !== undefined && item.progress !== null) ? item.progress : 40;
+
+  // Calculate average progress across all chapters/lessons if available
+  let averageProgress = 0;
+  if (Array.isArray(item.chapters) && item.chapters.length > 0) {
+    // Each chapter should have a progress property (0-100)
+    const chapterProgresses = item.chapters
+      .map((ch: any) => typeof ch.progress === 'number' && !isNaN(ch.progress) ? ch.progress : 0);
+  const total = chapterProgresses.reduce((sum: number, val: number) => sum + val, 0);
+    averageProgress = Math.round(total / chapterProgresses.length);
+  } else if (typeof item.progress === 'number' && !isNaN(item.progress)) {
+    averageProgress = item.progress;
+  }
+
   return (
     <TouchableOpacity
       className="bg-white rounded-2xl p-2 mb-4 border border-gray-200"
@@ -40,12 +51,12 @@ const OngoingCourseCard = ({ item }: { item: any }) => {
           </View>
           <Text className="text-base font-bold text-black my-1">{item.title}</Text>
           <Text className="text-xs text-gray-500">{item.description || item.summary || 'No description.'}</Text>
-          {/* Dummy or real progress bar */}
+          {/* Progress bar shows average progress of all chapters */}
           <View className="flex-row items-center mt-2 mr-2">
             <View className="flex-1 h-2 bg-gray-200 rounded-full mr-2">
-              <View className="h-2 bg-customBlue rounded-full" style={{ width: `${progress}%` }} />
+              <View className="h-2 bg-customBlue rounded-full" style={{ width: `${averageProgress}%` }} />
             </View>
-            <Text className="text-xs font-semibold text-customBlue">{progress}%</Text>
+            <Text className="text-xs font-semibold text-customBlue">{averageProgress}%</Text>
           </View>
           {/* Show special badge for featured course */}
           {(item.title === 'Learn How To Actually Study Before It\'s Too Late' || item.isFeatured) && (

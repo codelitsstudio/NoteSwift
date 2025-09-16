@@ -1,3 +1,76 @@
+// Get lesson progress for a user in a course (chapter)
+export const getLessonProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user?.id;
+    if (!courseId || !studentId) {
+      res.status(400).json({ success: false, message: "Course ID and authentication required" });
+      return;
+    }
+    const enrollment = await CourseEnrollment.findOne({ courseId, studentId });
+    if (!enrollment) {
+      res.status(404).json({ success: false, message: "Enrollment not found" });
+      return;
+    }
+    res.json({
+      success: true,
+      data: {
+        progress: enrollment.progress,
+        completedLessons: enrollment.completedLessons,
+        lastAccessedAt: enrollment.lastAccessedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching lesson progress:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Update lesson progress (mark lesson as started/completed)
+export const updateLessonProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { courseId } = req.params;
+    const { lessonId, completed } = req.body;
+    const studentId = req.user?.id;
+    if (!courseId || !lessonId || !studentId) {
+      res.status(400).json({ success: false, message: "Course ID, lesson ID, and authentication required" });
+      return;
+    }
+    const enrollment = await CourseEnrollment.findOne({ courseId, studentId });
+    if (!enrollment) {
+      res.status(404).json({ success: false, message: "Enrollment not found" });
+      return;
+    }
+    // Check if lesson already in completedLessons
+    const alreadyCompleted = enrollment.completedLessons.some((l: any) => l.lessonId.toString() === lessonId);
+    if (!alreadyCompleted) {
+      enrollment.completedLessons.push({ lessonId, completedAt: new Date() });
+    }
+    // Optionally, allow marking as incomplete (remove from completedLessons)
+    if (completed === false) {
+      enrollment.completedLessons = enrollment.completedLessons.filter((l: any) => l.lessonId.toString() !== lessonId);
+    }
+    // Update progress percentage
+    // (Assume frontend sends totalLessons or calculate from chapter data if available)
+    // For now, just set progress = (completedLessons.length / totalLessons) * 100
+    if (req.body.totalLessons) {
+      enrollment.progress = Math.round((enrollment.completedLessons.length / req.body.totalLessons) * 100);
+    }
+    enrollment.lastAccessedAt = new Date();
+    await enrollment.save();
+    res.json({
+      success: true,
+      data: {
+        progress: enrollment.progress,
+        completedLessons: enrollment.completedLessons,
+      },
+      message: "Lesson progress updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating lesson progress:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 // backend/controllers/courseController.ts
 import { Request, Response } from "express";
 import Course from "../models/Course.model";

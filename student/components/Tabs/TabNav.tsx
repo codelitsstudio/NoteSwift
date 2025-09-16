@@ -2,8 +2,8 @@
 import React from "react";
 import { ScrollView, TouchableOpacity, Text, View } from "react-native";
 
-export type TabKey = "Dashboard" | "Tests" | "Notes" | "Resources" | "Info";
-const TABS: TabKey[] = ["Dashboard", "Tests", "Notes", "Resources", "Info"];
+export type TabKey = "Dashboard" | "Tests" | "Ask" | "Resources" | "Info";
+const TABS: TabKey[] = ["Dashboard", "Tests", "Ask", "Resources", "Info"];
 
 const TabNav: React.FC<{ active: TabKey; onChange: (t: TabKey) => void }> = ({
   active,
