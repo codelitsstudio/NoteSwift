@@ -20,38 +20,39 @@ type Course = {
 };
 
 const freeCourses: Course[] = [
-  {
-    id: "1",
-    title: "Introduction to Calculus",
-    provider: "NoteSwift Network",
-    type: "Guided Project",
-    rating: "4.2 (109)",
-    image: require("../../../assets/images/notes1.png"),
-  },
-  {
-    id: "2",
-    title: "Algorithms, Part I",
-    provider: "Princeton University",
-    type: "Course",
-    rating: "4.9 (11K)",
-    image: require("../../../assets/images/notes1.png"),
-  },
-  {
-    id: "3",
-    title: "Basic English, Part II",
-    provider: "NoteSwift Network",
-    type: "Guided Project",
-    rating: "4.2 (33)",
-    image: require("../../../assets/images/notes1.png"),
-  },
-  {
-    id: "4",
-    title: "Computer Science: Programming with a Purpose",
-    provider: "Princeton University",
-    type: "Course",
-    rating: "4.7 (1K)",
-    image: require("../../../assets/images/notes1.png"),
-  },
+ {
+  id: "1",
+  title: "Critical Thinking & Problem Solving",
+  provider: "NoteSwift Network",
+  type: "Guided Project",
+  rating: "4.5 (420)",
+  image: require("../../../assets/images/notes1.png"),
+},
+{
+  id: "2",
+  title: "Time Management & Productivity Mastery",
+  provider: "Global Skills Institute",
+  type: "Course",
+  rating: "4.8 (7.2K)",
+  image: require("../../../assets/images/notes1.png"),
+},
+{
+  id: "3",
+  title: "Effective Communication & Public Speaking",
+  provider: "NoteSwift Network",
+  type: "Guided Project",
+  rating: "4.6 (1.1K)",
+  image: require("../../../assets/images/notes1.png"),
+},
+{
+  id: "4",
+  title: "Introduction to Data & Digital Literacy",
+  provider: "Open Learning Academy",
+  type: "Course",
+  rating: "4.7 (3.9K)",
+  image: require("../../../assets/images/notes1.png"),
+},
+
 ];
 
 export default function FreeCoursesSection() {
@@ -87,7 +88,7 @@ export default function FreeCoursesSection() {
       {/* Header */}
       <View className="flex-row justify-between items-center mb-4 px-1">
         <Text className="text-2xl font-bold text-gray-900">
-         Get Started with The Free{'\n'}Courses
+         Upcoming list of Free{'\n'}Courses
         </Text>
         <TouchableOpacity>
           <Text className="text-sm text-blue-500 font-medium">See All</Text>

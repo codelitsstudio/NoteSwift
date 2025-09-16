@@ -5,10 +5,13 @@ import {
   Text,
   TouchableOpacity,
   Switch,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../stores/authStore';
+import Toast from 'react-native-toast-message';
 
 // --- Helper Types ---
 type ListItemProps = {
@@ -80,14 +83,41 @@ const Divider = () => <View className="h-px bg-gray-200 ml-16" />;
 const SettingsPage = () => {
 
     const router = useRouter(); // Add this
-
-
+    const { logout } = useAuthStore();
 
   // State for interactive elements
   const [appearance, setAppearance] = useState('light');
   const [wifiOnly, setWifiOnly] = useState(true);
   const [courseNotifications, setCourseNotifications] = useState(true);
   const [learningReminders, setLearningReminders] = useState(false);
+
+  const confirmLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          style: "destructive",
+          onPress: () => {
+            logout();
+            Toast.show({
+              type: 'error',
+              position: 'top',
+              text1: 'Logged out',
+              text2: 'You have successfully logged out of your account.',
+              visibilityTime: 3000,
+              autoHide: true,
+              topOffset: 50,
+            });
+            router.replace('/');
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
   <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
@@ -162,11 +192,20 @@ const SettingsPage = () => {
 
           <SettingsSection title="Account" />
           <View className="rounded-xl overflow-hidden mx-4">
-            <SettingsListItem
-              icon="delete-forever"
-              label="Delete Account"
+                 <SettingsListItem
+              icon="switch-account"
+              label="Switch Account"
               type="navigate"
+              onPress={() => Alert.alert('Coming Soon', 'Feature will be available soon')}
+            />
+            <Divider />
+       <SettingsListItem
+              icon="logout"
+              label="Log Out"
+              type="navigate"
+              onPress={confirmLogout}
               isDestructive={true}
+              description="Sign out of your account"
             />
           </View>
 

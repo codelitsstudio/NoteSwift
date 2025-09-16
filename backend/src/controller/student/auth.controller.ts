@@ -1007,3 +1007,43 @@ export const updateNotificationPreferences: Controller = async (req, res) => {
         jsonResponse.serverError("Failed to update notification preferences. Please try again.");
     }
 };
+
+export const deleteAccount: Controller = async (req, res) => {
+    const jsonResponse = new JsonResponse(res);
+    
+    try {
+        // Get authenticated student from middleware
+        const student = res.locals.student;
+        if (!student) {
+            return jsonResponse.notAuthorized("Authentication required");
+        }
+
+        const studentId = student._id.toString();
+
+        console.log(`🗑️ Deleting student account: ${studentId}`);
+        
+        // Delete the student from database
+        const deletedStudent = await Student.findByIdAndDelete(studentId);
+        
+        if (!deletedStudent) {
+            console.log(`❌ Student not found for deletion: ${studentId}`);
+            return jsonResponse.notFound("Student account not found");
+        }
+        
+        console.log(`✅ Student account deleted successfully: ${studentId}`);
+        
+        // Return success response
+        return jsonResponse.success(
+            { 
+                deleted: true, 
+                studentId: studentId,
+                email: deletedStudent.email 
+            }, 
+            "Account deleted successfully"
+        );
+        
+    } catch (error: any) {
+        console.error("❌ Account deletion error:", error);
+        return jsonResponse.serverError("Failed to delete account: " + error.message);
+    }
+};

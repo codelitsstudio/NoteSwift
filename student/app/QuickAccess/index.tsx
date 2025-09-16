@@ -1,4 +1,4 @@
-// app/QuickAccess/QuickAccess.tsx
+// app/QuickAccess/index.tsx
 import React from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";

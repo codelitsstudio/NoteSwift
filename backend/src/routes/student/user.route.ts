@@ -12,7 +12,8 @@ import {
     verifyForgotPasswordOTP,
     resetPasswordWithOTP,
     getNotificationPreferences,
-    updateNotificationPreferences
+    updateNotificationPreferences,
+    deleteAccount
 } from "controller/student/auth.controller";
 import { Router } from "express";
 
@@ -38,5 +39,8 @@ router.post("/password-change/reset-with-otp", resetPasswordWithOTP);
 // Notification preferences routes
 router.get("/notification-preferences", getNotificationPreferences);
 router.put("/notification-preferences", updateNotificationPreferences);
+
+// Account deletion route
+router.delete("/delete-account", deleteAccount);
 
 export {router as StudentUserRoutes};

@@ -4,26 +4,27 @@ import CourseMiniCard from "../../../components/Container/CourseMiniCard";
 
 const courses = [
   {
-    id: 1,
-    title: "Science Class",
-    teacher: "Niru Nirmala",
-    time: "9:00pm - 10:00pm",
-    image: require("../../../assets/images/science.png"),
-  },
-  {
-    id: 2,
-    title: "Maths Class",
-    teacher: "Raju Shrestha",
-    time: "8:00pm - 9:00pm",
-    image: require("../../../assets/images/maths.avif"),
-  },
-  {
-    id: 3,
-    title: "English Class",
-    teacher: "Anita Joshi",
-    time: "7:00pm - 8:00pm",
-    image: require("../../../assets/images/science.png"),
-  },
+  id: 1,
+  title: "Critical Thinking Workshop",
+  teacher: "Niru Nirmala",
+  time: "9:00am - 10:00am",
+  image: require("../../../assets/images/science.png"),
+},
+{
+  id: 2,
+  title: "Productivity & Time Management",
+  teacher: "Raju Shrestha",
+  time: "8:00am - 9:00am",
+  image: require("../../../assets/images/maths.avif"),
+},
+{
+  id: 3,
+  title: "Effective Communication Skills",
+  teacher: "Anita Joshi",
+  time: "7:00pm - 8:00pm",
+  image: require("../../../assets/images/science.png"),
+},
+
 ];
 
 export default function UpcomingCourses() {

@@ -5,7 +5,7 @@ import CourseMiniCard from "../../../components/Container/CourseMiniCard";
 const recommended = [
   {
     id: 1,
-    title: "Advanced Algebra",
+    title: "Advanced Learning",
     teacher: "Prakash Thapa",
     time: "Anytime",
     image: require("../../../assets/images/maths.avif"),
