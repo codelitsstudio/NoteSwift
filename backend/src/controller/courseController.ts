@@ -11,6 +11,9 @@ interface AuthRequest extends Request {
     role?: string;
   };
 }
+
+// Get lesson progress for a user in a course (chapter)
+export const getLessonProgress = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { courseId } = req.params;
     const studentId = req.user?.id;
