@@ -1,5 +1,16 @@
-// Get lesson progress for a user in a course (chapter)
-export const getLessonProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+// backend/controllers/courseController.ts
+import { Request, Response } from "express";
+import Course from "../models/Course.model";
+import CourseEnrollment from "../models/CourseEnrollment";
+import { Types } from "mongoose";
+
+// Extend Express Request to include user injected by auth middleware
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    role?: string;
+  };
+}
   try {
     const { courseId } = req.params;
     const studentId = req.user?.id;
@@ -160,20 +171,6 @@ export const getModuleProgress = async (req: AuthRequest, res: Response): Promis
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-// backend/controllers/courseController.ts
-import { Request, Response } from "express";
-import Course from "../models/Course.model";
-import CourseEnrollment from "../models/CourseEnrollment";
-import { Types } from "mongoose";
-
-// Extend Express Request to include user injected by auth middleware
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    role?: string;
-  };
-}
-
 // Get featured course
 export const getFeaturedCourse = async (req: Request, res: Response): Promise<void> => {
   try {
