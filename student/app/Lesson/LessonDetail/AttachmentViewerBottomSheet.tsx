@@ -173,18 +173,18 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
         </View>
 
         {/* Download Section Title and Subtitle */}
-        <Text className="text-gray-700 font-bold text-base mb-0.5 mt-2">Download PDF</Text>
+        <Text className="text-gray-700 font-bold text-base mb-0.5 mt-2">Save PDF</Text>
         <Text className="text-slate-500 text-sm mb-3">Save this PDF to your device for offline access.</Text>
         {/* Download Box */}
         <View className="bg-white rounded-lg p-4 mb-4 border border-slate-200 flex-row items-center gap-x-3.5">
           <MaterialIcons name="download" size={24} color="#2563eb" style={{ marginRight: 8 }} />
           <View className="flex-1">
-            <Text className="text-slate-700 font-medium text-base mb-0.5">Download to device</Text>
+            <Text className="text-slate-700 font-medium text-base mb-0.5">Save to device</Text>
             <Text className="text-slate-500 text-sm">Tap to save this PDF for offline use.</Text>
           </View>
           {userHasDownload ? (
             <TouchableOpacity
-              className="bg-green-600 rounded-md px-4 py-2"
+              className="bg-blue-600 rounded-md px-4 py-2"
               onPress={handleGoToDownloads}
               activeOpacity={0.85}
             >

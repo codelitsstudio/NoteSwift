@@ -20,7 +20,7 @@ const AttachmentPage: React.FC = () => {
   const [viewerFile, setViewerFile] = useState<{ name: string; uri: string } | null>(null);
 
   // Remote PDF URL
-  const pdfUri = "https://codelitsstudio.com/documents/comp.pdf";
+  const pdfUri = "http://noteswift.in/wp-content/uploads/2025/09/Learn-How-To-Actually-Study-Before-Its-Too-Late.pdf";
 
   // Handler to open attachment viewer
   function handleOpenAttachment(att: { name: string; type: string; size: string; note?: string }) {
