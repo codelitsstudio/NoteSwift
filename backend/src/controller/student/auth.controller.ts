@@ -9,6 +9,7 @@ import { TStudentWithNoSensitive } from "@shared/model/students/Student";
 import otpService from "../../services/otpService";
 import emailOTPService from "../../services/emailOTPService";
 import CloudinaryService from "../../services/cloudinaryService";
+import reportEmailService from "../../services/reportEmailService";
 
 const expiresIn = 60 * 60 * 24 * 14 * 1000;
 const options = { maxAge: expiresIn, httpOnly: false };
@@ -1008,42 +1009,33 @@ export const updateNotificationPreferences: Controller = async (req, res) => {
     }
 };
 
-export const deleteAccount: Controller = async (req, res) => {
+// Send report email
+export const sendReportEmail: Controller = async (req, res) => {
     const jsonResponse = new JsonResponse(res);
-    
     try {
-        // Get authenticated student from middleware
-        const student = res.locals.student;
-        if (!student) {
-            return jsonResponse.notAuthorized("Authentication required");
+        const { reportText, userEmail } = req.body;
+
+        if (!reportText || reportText.trim().length === 0) {
+            return jsonResponse.clientError("Report text is required");
         }
 
-        const studentId = student._id.toString();
-
-        console.log(`🗑️ Deleting student account: ${studentId}`);
-        
-        // Delete the student from database
-        const deletedStudent = await Student.findByIdAndDelete(studentId);
-        
-        if (!deletedStudent) {
-            console.log(`❌ Student not found for deletion: ${studentId}`);
-            return jsonResponse.notFound("Student account not found");
+        if (reportText.trim().length < 10) {
+            return jsonResponse.clientError("Report must be at least 10 characters long");
         }
-        
-        console.log(`✅ Student account deleted successfully: ${studentId}`);
-        
-        // Return success response
-        return jsonResponse.success(
-            { 
-                deleted: true, 
-                studentId: studentId,
-                email: deletedStudent.email 
-            }, 
-            "Account deleted successfully"
-        );
-        
-    } catch (error: any) {
-        console.error("❌ Account deletion error:", error);
-        return jsonResponse.serverError("Failed to delete account: " + error.message);
+
+        console.log("📧 Sending report email from:", userEmail || 'Anonymous');
+
+        // Send report email
+        const result = await reportEmailService.sendReportEmail(reportText.trim(), userEmail);
+
+        if (result.success) {
+            jsonResponse.success({ message: "Report sent successfully" });
+        } else {
+            jsonResponse.serverError(result.message);
+        }
+
+    } catch (error) {
+        console.error("Error sending report email:", error);
+        jsonResponse.serverError("Failed to send report. Please try again.");
     }
 };
