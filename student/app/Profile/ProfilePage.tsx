@@ -1,6 +1,6 @@
 // profile/ProfilePage.tsx
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, View, Text, Alert, StatusBar, Platform, Share } from 'react-native';
+import { SafeAreaView, ScrollView, View, Text, Alert, StatusBar, Platform, Share , Linking } from 'react-native';
 import ProfileHeader from './components/ProfileHeader';
 import ListItem from './components/ListItem';
 import ProgressBar from './components/ProgressBar';
@@ -8,20 +8,18 @@ import EditBottomSheet from './components/EditBottomSheet';
 import TextInputBottomSheet from './components/TextInputBottomSheet';
 import { useAuthStore } from '../../stores/authStore';
 import { useCourseStore } from '../../stores/courseStore';
-import { updateUserProfile, UpdateUserData, uploadProfileImage } from '../../api/student/user';
+import { updateUserProfile, UpdateUserData, uploadProfileImage , getNotificationPreferences, updateNotificationPreferences, NotificationPreferences } from '../../api/student/user';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 import EmailChangeBottomSheet from './components/EmailChangeBottomSheet';
 import PasswordChangeBottomSheet from './components/PasswordChangeBottomSheet';
 import NotificationPreferencesBottomSheet from './components/NotificationPreferencesBottomSheet';
-import { getNotificationPreferences, updateNotificationPreferences, NotificationPreferences } from '../../api/student/user';
 import api from '@/api/axios';
-import { Linking } from 'react-native';
 
 const ProfilePage = () => {
   const { user, updateUser, logout } = useAuthStore();
-  const { enrolledCourses } = useCourseStore();
+  const { enrolledCourses, enrollments, fetchUserEnrollments } = useCourseStore();
   const router = useRouter();
   const [downloadsCount, setDownloadsCount] = useState<number | null>(null);
 
@@ -36,6 +34,29 @@ const ProfilePage = () => {
     };
     fetchDownloadsCount();
   }, []);
+
+  // Fetch user enrollments for progress calculation (same as LearnPage)
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserEnrollments(user.id);
+    }
+  }, [user?.id, fetchUserEnrollments]);
+
+  // Calculate overall progress from enrolled courses (same as LearnPage)
+  const calculateOverallProgress = () => {
+    if (!enrollments || enrollments.length === 0) return 0;
+
+    const validProgresses = enrollments
+      .filter(enrollment => typeof enrollment.progress === 'number' && !isNaN(enrollment.progress))
+      .map(enrollment => enrollment.progress);
+
+    if (validProgresses.length === 0) return 0;
+
+    const totalProgress = validProgresses.reduce((sum, progress) => sum + progress, 0);
+    return Math.round(totalProgress / validProgresses.length);
+  };
+
+  const overallProgress = calculateOverallProgress();
 
   const [editMode, setEditMode] = useState({
     all: false,
@@ -437,7 +458,7 @@ const ProfilePage = () => {
           <View className="mb-6">
             <Text className="text-xl font-bold text-gray-900 mb-4">Learning & Progress</Text>
             <View className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <ProgressBar label="Overall Progress" progress={75} />
+              <ProgressBar label="Overall Progress" progress={overallProgress} />
               <View className="h-px bg-gray-100 mx-4" />
               <ListItem 
                 icon="library-books" 
@@ -552,7 +573,7 @@ const ProfilePage = () => {
                       await Share.share({
                         message: "I'm loving NoteSwift! Download the app and join me: https://play.google.com/store/apps/details?id=com.noteswift",
                       });
-                  } catch (error) {
+                  } catch {
                     Alert.alert('Share Failed', 'Could not share the app link.');
                   }
                 }}

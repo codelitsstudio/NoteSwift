@@ -1,6 +1,6 @@
-import React, { useRef, useMemo, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
-import BottomSheet, { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import React, { useRef, useMemo, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Toast from 'react-native-toast-message';
 import { useCourseStore } from '../../stores/courseStore';
@@ -11,7 +11,6 @@ interface CourseNotificationSheetProps {
   onClose: () => void;
 }
 
-const { width } = Dimensions.get('window');
 const customBlue = '#2563EB'; // more professional tone of blue
 
 export function CourseNotificationSheet({
@@ -51,7 +50,7 @@ export function CourseNotificationSheet({
       console.log('Dismissing bottom sheet modal');
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible, featuredCourse, isModalOpen]);
+  }, [visible, featuredCourse, isModalOpen, isEnrolled]);
 
   // Reset modal state when component unmounts
   useEffect(() => {
@@ -59,6 +58,31 @@ export function CourseNotificationSheet({
       setIsModalOpen(false);
     };
   }, []);
+
+  const handleClose = useCallback(() => {
+    console.log('handleClose called');
+    setIsModalOpen(false);
+    markPopupShown();
+    bottomSheetRef.current?.dismiss();
+    // Use setTimeout to ensure proper state management
+    setTimeout(() => {
+      onClose();
+    }, 100);
+  }, [setIsModalOpen, markPopupShown, onClose]);
+
+  // Backdrop component that handles tap to close
+  const renderBackdrop = React.useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        onPress={handleClose}
+      />
+    ),
+    [handleClose]
+  );
 
   if (!featuredCourse) {
     console.log('CourseNotificationSheet: No featured course, returning null');
@@ -110,7 +134,7 @@ export function CourseNotificationSheet({
           topOffset: 50,
         });
       }
-    } catch (error) {
+    } catch {
       Toast.show({
         type: 'error',
         position: 'top',
@@ -122,17 +146,6 @@ export function CourseNotificationSheet({
       });
     }
   };
-  
-  const handleClose = () => {
-    console.log('handleClose called');
-    setIsModalOpen(false);
-    markPopupShown();
-    bottomSheetRef.current?.dismiss();
-    // Use setTimeout to ensure proper state management
-    setTimeout(() => {
-      onClose();
-    }, 100);
-  };
 
   const handleDismiss = () => {
     console.log('handleDismiss called');
@@ -143,20 +156,6 @@ export function CourseNotificationSheet({
       onClose();
     }, 100);
   };
-
-  // Backdrop component that handles tap to close
-  const renderBackdrop = React.useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        onPress={handleClose}
-      />
-    ),
-    [handleClose]
-  );
 
   return (
     <BottomSheetModal

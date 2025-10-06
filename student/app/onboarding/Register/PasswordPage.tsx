@@ -23,15 +23,16 @@ import Toast from 'react-native-toast-message';
 export default function PasswordPage() {
   const router = useRouter();
   const signup_data = useAuthStore(state => state.signup_data);
-  const signUp = useAuthStore(state => state.signUp);
-  const clearSignupData = useAuthStore(state => state.clearSignupData);
-  const api_message = useAuthStore(state => state.api_message);
   const is_loading = useAuthStore(state => state.is_loading);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Add focus states for input fields
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [isConfirmFocused, setIsConfirmFocused] = useState(false);
 
 useEffect(() => {
   useNavStore.getState().setTab('Register');
@@ -123,8 +124,8 @@ useEffect(() => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           className="flex-1 bg-white"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 0}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 10}
         >
           <ScrollView
             contentContainerStyle={{
@@ -151,7 +152,7 @@ useEffect(() => {
               {/* Password Input */}
               <View className="mb-4 w-full">
                 <Text className="text-sm font-semibold mb-1 text-gray-600">Password</Text>
-                <View className="flex-row items-center border border-gray-300 rounded-2xl px-4">
+                <View className={`flex-row items-center border rounded-2xl px-4 ${isPasswordFocused || password.length > 0 ? 'border-blue-500' : 'border-gray-300'}`}>
                   <TextInput
                     style={{ flex: 1, height: 50, color: '#000' }}
                     placeholder="Enter password"
@@ -159,6 +160,8 @@ useEffect(() => {
                     secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={setPassword}
+                    onFocus={() => setIsPasswordFocused(true)}
+                    onBlur={() => setIsPasswordFocused(false)}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
@@ -192,7 +195,7 @@ useEffect(() => {
               {/* Confirm Password Input */}
               <View className="mb-6 w-full">
                 <Text className="text-sm font-semibold mb-1 text-gray-600">Confirm Password</Text>
-                <View className="flex-row items-center border border-gray-300 rounded-2xl px-4">
+                <View className={`flex-row items-center border rounded-2xl px-4 ${isConfirmFocused || confirmPassword.length > 0 ? 'border-blue-500' : 'border-gray-300'}`}>
                   <TextInput
                     style={{ flex: 1, height: 50, color: '#000' }}
                     placeholder="Confirm password"
@@ -200,6 +203,8 @@ useEffect(() => {
                     secureTextEntry={!showConfirm}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
+                    onFocus={() => setIsConfirmFocused(true)}
+                    onBlur={() => setIsConfirmFocused(false)}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />

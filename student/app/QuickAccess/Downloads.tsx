@@ -1,5 +1,5 @@
 // app/QuickAccess/Downloads.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -29,7 +29,7 @@ const Downloads: React.FC = () => {
     try {
       const res = await api.get('/downloads');
       setDownloads(res.data);
-    } catch (e) {
+    } catch {
       setDownloads([]);
     } finally {
       setLoading(false);
@@ -57,9 +57,9 @@ const Downloads: React.FC = () => {
         {loading ? (
           <ActivityIndicator size="large" color="#2563eb" style={{ marginTop: 40 }} />
         ) : downloads.length === 0 ? (
-          <View className="flex-1 items-center justify-center mt-5">
-            <MaterialIcons name="cloud-off" size={48} color="#cbd5e1" />
-            <Text className="text-slate-400 mt-3">No downloads yet.</Text>
+          <View className="absolute inset-0 justify-center items-center">
+            <MaterialIcons name="cloud-off" size={48} color="#555" />
+            <Text className="text-[#555] mt-3">No downloads yet.</Text>
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>

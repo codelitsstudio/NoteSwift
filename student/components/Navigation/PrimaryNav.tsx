@@ -33,8 +33,9 @@ const PrimaryNav: React.FC<Props> = ({ current }) => {
 
   const handlePress = (item: NavItem) => {
     if (current !== item.key) {
+      router.replace(item.route as any);
+      // Update tab state immediately after navigation
       setTab(item.key);
-      router.push(item.route as any);
     }
   };
 

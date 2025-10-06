@@ -14,7 +14,6 @@ import {
   StatusBar,
   TextInput,
 } from 'react-native';
-import { Svg, Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import ButtonPrimary from '@/components/Buttons/ButtonPrimary';
 import ImageHeader from '@/components/Headers/ImageHeader';
@@ -57,7 +56,7 @@ export default function EmailVerifyPage() {
         }),
       ])
     ).start();
-  }, []);
+  }, [cursorAnim]);
 
   const formatEmail = (email: string) => email || 'your email';
 

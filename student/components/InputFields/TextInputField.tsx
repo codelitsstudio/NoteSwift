@@ -40,11 +40,11 @@ export default function TextInputField({
 
   useEffect(() => {
     Animated.timing(borderAnim, {
-      toValue: isFocused ? 1 : 0,
+      toValue: isFocused || value.length > 0 ? 1 : 0,
       duration: 150, // smooth transition duration in ms
       useNativeDriver: false,
     }).start();
-  }, [isFocused]);
+  }, [isFocused, value, borderAnim]);
 
   // Interpolating border color
   const borderColor = borderAnim.interpolate({

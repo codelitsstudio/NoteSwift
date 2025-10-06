@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Keyboard,
 } from 'react-native';
-import BottomSheet, { BottomSheetFlatList, BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetFlatList, BottomSheetModal } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { setActivePicker, clearActivePicker } from './PickerManager';
 
@@ -48,7 +48,7 @@ export function BottomSheetPicker({
       duration: 300,
       useNativeDriver: false,
     }).start();
-  }, [selectedValue, isFocused]);
+  }, [selectedValue, isFocused, borderAnim]);
 
   const borderColor = borderAnim.interpolate({
     inputRange: [0, 1],
@@ -137,8 +137,8 @@ const closeSheet = () => {
       >
         <BottomSheetFlatList
           data={data}
-          keyExtractor={item => item.value}
-            style={{ paddingHorizontal: 16, paddingVertical: 8, flex: 1, paddingBottom: 32 }}
+          keyExtractor={(item: PickerItem) => item.value}
+          style={{ paddingHorizontal: 16, paddingVertical: 8, flex: 1 }}
           ListHeaderComponent={() => (
             <Text
               style={{
@@ -152,7 +152,8 @@ const closeSheet = () => {
               Choose an option
             </Text>
           )}
-          renderItem={({ item }) => (
+          ListFooterComponent={() => <View style={{ height: 40 }} />}
+          renderItem={({ item }: { item: PickerItem }) => (
             <TouchableOpacity
               onPress={() => {
                 onChange(item.value);

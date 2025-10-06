@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { View, TouchableOpacity, TextInput } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 interface OTPInputProps {
@@ -9,7 +9,7 @@ interface OTPInputProps {
 }
 
 const OTPInput: React.FC<OTPInputProps> = ({ value, onChangeText, length = 4 }) => {
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const inputRefs = useRef<(TextInput | null | undefined)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
   const handleChangeText = (text: string, index: number) => {

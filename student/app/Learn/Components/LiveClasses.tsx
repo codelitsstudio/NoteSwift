@@ -26,7 +26,7 @@ export default function LiveClasses() {
             No classes are live today
           </Text>
           <Text className="text-sm text-gray-400 mt-2 text-center px-4">
-            Don't worry! New live classes will appear here as soon as they start.
+            Don&apos;t worry! New live classes will appear here as soon as they start.
           </Text>
         </View>
       )}

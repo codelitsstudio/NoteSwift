@@ -1,10 +1,10 @@
 // student/components/Container/OfflineScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import NetInfo from '@react-native-community/netinfo';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface OfflineScreenProps {
   onRetry?: () => void;
@@ -41,9 +41,9 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
         </View>
 
         {/* Main Message */}
-        <Text style={styles.title}>You're Offline</Text>
+        <Text style={styles.title}>You&apos;re Offline</Text>
         <Text style={styles.subtitle}>
-          It looks like you're not connected to the internet.
+          It looks like you&apos;re not connected to the internet.
         </Text>
 
         {/* Instructions */}

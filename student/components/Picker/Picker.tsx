@@ -1,4 +1,4 @@
-import {Picker, PickerProps} from '@react-native-picker/picker';
+import {PickerProps} from '@react-native-picker/picker';
 import { Text, View } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
 interface Props extends PickerProps {

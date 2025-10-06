@@ -1,13 +1,11 @@
 // student/app/Home/HomePage.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform, BackHandler } from "react-native";
 import Toast from "react-native-toast-message";
-import { useRouter } from "expo-router";
-import { useSearchParams } from "expo-router/build/hooks";
 import { useFocusEffect } from '@react-navigation/native';
 
 import FeaturedClasses from "./Components/FeaturedDemoClasses";
-import QuickAccess from "../../components/Container/QuickAccess";
+import QuickAccess from "../QuickAccess/QuickAccess";
 import UpcomingCourses from "./Components/UpcomingCourses";
 import TopicsSection from "../../components/Container/TopicSection";
 import NoteswiftProCard from "../../components/Container/NoteswiftProCard";
@@ -21,15 +19,91 @@ import { useCourseStore } from '../../stores/courseStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import SearchBar from '../../components/InputFields/SearchBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Skeleton from '../../components/Container/Skeleton';
+
+// HomePage Skeleton Component
+const HomePageSkeleton: React.FC = () => {
+  return (
+    <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
+      {/* SearchBar Skeleton */}
+      <Skeleton width="100%" height={50} borderRadius={25} style={{ marginBottom: 20 }} />
+
+      {/* TopicsSection Skeleton - Horizontal list */}
+      <View className="mb-6">
+        <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
+        <View className="flex-row space-x-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} width={80} height={80} borderRadius={12} />
+          ))}
+        </View>
+      </View>
+
+      {/* NoteswiftProCard Skeleton */}
+      <Skeleton width="100%" height={120} borderRadius={12} style={{ marginBottom: 20 }} />
+
+      {/* FeaturedClasses Skeleton */}
+      <View className="mb-6">
+        <Skeleton width={150} height={24} borderRadius={4} style={{ marginBottom: 12 }} />
+        <View className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} width="100%" height={100} borderRadius={12} />
+          ))}
+        </View>
+      </View>
+
+      {/* Quick Access Title Skeleton */}
+      <Skeleton width={120} height={28} borderRadius={4} style={{ marginBottom: 12 }} />
+
+      {/* QuickAccess Skeleton - Grid */}
+      <View className="mb-6">
+        <View className="flex-row flex-wrap justify-between">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} width="48%" height={80} borderRadius={12} style={{ marginBottom: 12 }} />
+          ))}
+        </View>
+      </View>
+
+      {/* RecommendationClasses Skeleton */}
+      <View className="mb-6">
+        <Skeleton width={180} height={24} borderRadius={4} style={{ marginBottom: 12 }} />
+        <View className="space-y-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} width="100%" height={100} borderRadius={12} />
+          ))}
+        </View>
+      </View>
+
+      {/* FreeCourses Skeleton */}
+      <View className="mb-6">
+        <Skeleton width={120} height={24} borderRadius={4} style={{ marginBottom: 12 }} />
+        <View className="space-y-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} width="100%" height={100} borderRadius={12} />
+          ))}
+        </View>
+      </View>
+
+      {/* UpcomingCourses Skeleton */}
+      <View className="mb-6">
+        <Skeleton width={140} height={24} borderRadius={4} style={{ marginBottom: 12 }} />
+        <View className="space-y-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} width="100%" height={100} borderRadius={12} />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+};
 
 export default function HomePage() {
   // Network status monitoring
   const isOnline = useNetworkStatus();
-  
-  const router = useRouter();
-  const params = useSearchParams();
+
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
   const [searchQuery, setSearchQuery] = useState("");
 
   const { user, isLoggedIn } = useAuthStore();
@@ -38,40 +112,50 @@ export default function HomePage() {
     fetchFeaturedCourse, 
     fetchUserEnrollments, 
     checkAndShowPopup,
-    enrollInCourse,
-    isEnrolled
   } = useCourseStore();
 
-  // Handle login success toast
+  // Check if permissions have been requested before
   useEffect(() => {
-    if (params.get("loggedIn") === "true") {
-      Toast.show({
-        type: "success",
-        position: "top",
-        text1: "Success",
-        text2: "Logged in successfully!",
-        visibilityTime: 3000,
-        autoHide: true,
-        topOffset: 50,
-      });
-
-      setTimeout(() => {
-        router.replace({ pathname: "/Home/HomePage", params: {} });
-      }, 700);
-    }
-  }, [params, router]);
-
-  // Initialize data when screen focuses or user logs in
-  useFocusEffect(
-    React.useCallback(() => {
-      if (isLoggedIn && user && !isInitialized) {
-        initializeHomePage();
+    const checkPermissionsRequested = async () => {
+      try {
+        const permissionsRequested = await AsyncStorage.getItem('permissions_requested');
+        if (!permissionsRequested && isLoggedIn && user) {
+          // Request permissions directly without custom modal
+          requestPermissions();
+        }
+      } catch (error) {
+        console.error('Error checking permissions state:', error);
       }
-    }, [isLoggedIn, user, isInitialized])
-  );
+    };
+
+    if (isLoggedIn && user && isInitialized) {
+      checkPermissionsRequested();
+    }
+  }, [isLoggedIn, user, isInitialized]);
+
+  // Function to request permissions directly
+  const requestPermissions = async () => {
+    try {
+      // Request permissions sequentially - native dialogs will appear
+      const ImagePicker = await import('expo-image-picker');
+      const MediaLibrary = await import('expo-media-library');
+      const { Audio } = await import('expo-av');
+
+      await ImagePicker.requestCameraPermissionsAsync();
+      await Audio.requestPermissionsAsync();
+      await MediaLibrary.requestPermissionsAsync();
+
+      // Mark permissions as requested
+      await AsyncStorage.setItem('permissions_requested', 'true');
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+      // Still mark as requested even if there's an error
+      await AsyncStorage.setItem('permissions_requested', 'true');
+    }
+  };
 
   // Initialize homepage data and check popup visibility
-  const initializeHomePage = async () => {
+  const initializeHomePage = useCallback(async () => {
     if (!user || isInitialized) return;
 
     try {
@@ -106,9 +190,11 @@ export default function HomePage() {
       }
 
       setIsInitialized(true);
+      setIsLoading(false); // Hide loading state when initialization completes
     } catch (error) {
       console.error('Error initializing HomePage:', error);
       setIsInitialized(true); // Mark as initialized even on error to prevent retry loops
+      setIsLoading(false); // Hide loading state even on error
       Toast.show({
         type: "error",
         position: "top",
@@ -119,7 +205,27 @@ export default function HomePage() {
         topOffset: 50,
       });
     }
-  };
+  }, [user, isInitialized, fetchFeaturedCourse, fetchUserEnrollments, checkAndShowPopup]);
+
+  // Initialize data when screen focuses or user logs in
+  useFocusEffect(
+    React.useCallback(() => {
+      // Show loading immediately for instant navigation
+      setIsLoading(true);
+
+      if (isLoggedIn && user) {
+        // Start initialization but don't wait for it
+        initializeHomePage();
+
+        // Set loading to false immediately for ultra-fast skeleton
+        setIsLoading(false);
+      } else {
+        setIsLoading(false);
+      }
+    }, [isLoggedIn, user, initializeHomePage])
+  );
+
+  // Handle course enrollment (legacy support)
 
   // Handle course enrollment (legacy support)
   // Handle popup close
@@ -169,18 +275,22 @@ export default function HomePage() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
-          <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+        {isLoading ? (
+          <HomePageSkeleton />
+        ) : (
+          <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
-          <TopicsSection />
-          <NoteswiftProCard />
-          <FeaturedClasses />
-          <Text className="text-2xl font-bold mb-3 text-gray-900">Quick Access</Text>
-          <QuickAccess />
-          <RecommendationClasses />
-          <FreeCourses />
-          <UpcomingCourses />
-        </View>
+            <TopicsSection />
+            <NoteswiftProCard />
+            <FeaturedClasses />
+            <Text className="text-2xl font-bold mb-3 text-gray-900">Quick Access</Text>
+            <QuickAccess />
+            <RecommendationClasses />
+            <FreeCourses />
+            <UpcomingCourses />
+          </View>
+        )}
       </ScrollView>
 
       <PrimaryNav current="Home" />

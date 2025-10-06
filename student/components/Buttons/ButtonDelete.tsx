@@ -33,7 +33,7 @@ export default function ButtonSecondary({
         setLoading(true);
         await result;
       }
-    } catch (err) {
+    } catch {
       // optional: console.warn(err);
     } finally {
       setLoading(false);

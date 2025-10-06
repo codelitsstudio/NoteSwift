@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -119,6 +120,23 @@ const SettingsPage = () => {
     );
   };
 
+  const handleContactUs = () => {
+    const phoneNumber = '9779767464242'; // WhatsApp business number without +
+    const whatsappUrl = `whatsapp://send?phone=${phoneNumber}`;
+    
+    Linking.canOpenURL(whatsappUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(whatsappUrl);
+      } else {
+        // Fallback to web WhatsApp if app is not installed
+        const webWhatsappUrl = `https://wa.me/${phoneNumber}`;
+        Linking.openURL(webWhatsappUrl);
+      }
+    }).catch(err => {
+      Alert.alert('Error', 'Could not open WhatsApp. Please make sure WhatsApp is installed on your device.');
+    });
+  };
+
   return (
   <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
       <View className="flex-1 bg-[#FAFAFA]">
@@ -180,7 +198,7 @@ const SettingsPage = () => {
 
           <SettingsSection title="Support" />
           <View className="rounded-xl overflow-hidden mx-4">
-            <SettingsListItem icon="help-outline" label="Learner Help Center" type="navigate" />
+            <SettingsListItem icon="help-outline" label="Learner Help Center" type="navigate" onPress={handleContactUs} />
             <Divider />
             <SettingsListItem icon="feedback" label="Report an Issue" type="navigate" onPress={() => router.push('./ReportIssue')} />
           </View>

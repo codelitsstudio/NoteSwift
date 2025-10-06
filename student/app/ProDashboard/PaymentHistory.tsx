@@ -1,11 +1,9 @@
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from "expo-router";
 import DashboardLayout from "./components/DashboardLayout";
 
 export default function PaymentHistory() {
-  const router = useRouter();
 
   const mockPayments = [
     {
