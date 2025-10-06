@@ -1,0 +1,104 @@
+{
+  "provinces": [
+    { "label": "Koshi Province", "value": "koshi" },
+    { "label": "Madhesh Province", "value": "madhesh" },
+    { "label": "Bagmati Province", "value": "bagmati" },
+    { "label": "Gandaki Province", "value": "gandaki" },
+    { "label": "Lumbini Province", "value": "lumbini" },
+    { "label": "Karnali Province", "value": "karnali" },
+    { "label": "Sudurpashchim Province", "value": "sudurpashchim" }
+  ],
+  "districts": {
+    "koshi": [
+      { "label": "Bhojpur", "value": "bhojpur" },
+      { "label": "Dhankuta", "value": "dhankuta" },
+      { "label": "Ilam", "value": "ilam" },
+      { "label": "Jhapa", "value": "jhapa" },
+      { "label": "Khotang", "value": "khotang" },
+      { "label": "Morang", "value": "morang" },
+      { "label": "Okhaldhunga", "value": "okhaldhunga" },
+      { "label": "Panchthar", "value": "panchthar" },
+      { "label": "Sankhuwasabha", "value": "sankhuwasabha" },
+      { "label": "Solukhumbu", "value": "solukhumbu" },
+      { "label": "Sunsari", "value": "sunsari" },
+      { "label": "Taplejung", "value": "taplejung" },
+      { "label": "Terhathum", "value": "terhathum" },
+      { "label": "Udayapur", "value": "udayapur" }
+    ],
+    "madhesh": [
+      { "label": "Parsa", "value": "parsa" },
+      { "label": "Bara", "value": "bara" },
+      { "label": "Rautahat", "value": "rautahat" },
+      { "label": "Sarlahi", "value": "sarlahi" },
+      { "label": "Dhanusha", "value": "dhanusha" },
+      { "label": "Siraha", "value": "siraha" },
+      { "label": "Mahottari", "value": "mahottari" },
+      { "label": "Saptari", "value": "saptari" }
+    ],
+    "bagmati": [
+      { "label": "Sindhuli", "value": "sindhuli" },
+      { "label": "Ramechhap", "value": "ramechhap" },
+      { "label": "Dolakha", "value": "dolakha" },
+      { "label": "Bhaktapur", "value": "bhaktapur" },
+      { "label": "Dhading", "value": "dhading" },
+      { "label": "Kathmandu", "value": "kathmandu" },
+      { "label": "Kavrepalanchok", "value": "kavrepalanchok" },
+      { "label": "Lalitpur", "value": "lalitpur" },
+      { "label": "Nuwakot", "value": "nuwakot" },
+      { "label": "Rasuwa", "value": "rasuwa" },
+      { "label": "Sindhupalchok", "value": "sindhupalchok" },
+      { "label": "Chitwan", "value": "chitwan" },
+      { "label": "Makwanpur", "value": "makwanpur" }
+    ],
+    "gandaki": [
+      { "label": "Baglung", "value": "baglung" },
+      { "label": "Gorkha", "value": "gorkha" },
+      { "label": "Kaski", "value": "kaski" },
+      { "label": "Lamjung", "value": "lamjung" },
+      { "label": "Manang", "value": "manang" },
+      { "label": "Mustang", "value": "mustang" },
+      { "label": "Myagdi", "value": "myagdi" },
+      { "label": "Nawalpur", "value": "nawalpur" },
+      { "label": "Parbat", "value": "parbat" },
+      { "label": "Syangja", "value": "syangja" },
+      { "label": "Tanahun", "value": "tanahun" }
+    ],
+    "lumbini": [
+      { "label": "Kapilvastu", "value": "kapilvastu" },
+      { "label": "Parasi", "value": "parasi" },
+      { "label": "Rupandehi", "value": "rupandehi" },
+      { "label": "Arghakhanchi", "value": "arghakhanchi" },
+      { "label": "Gulmi", "value": "gulmi" },
+      { "label": "Palpa", "value": "palpa" },
+      { "label": "Dang", "value": "dang" },
+      { "label": "Pyuthan", "value": "pyuthan" },
+      { "label": "Rolpa", "value": "rolpa" },
+      { "label": "Eastern Rukum", "value": "eastern_rukum" },
+      { "label": "Banke", "value": "banke" },
+      { "label": "Bardiya", "value": "bardiya" }
+    ],
+    "karnali": [
+      { "label": "Western Rukum", "value": "western_rukum" },
+      { "label": "Salyan", "value": "salyan" },
+      { "label": "Dolpa", "value": "dolpa" },
+      { "label": "Humla", "value": "humla" },
+      { "label": "Jumla", "value": "jumla" },
+      { "label": "Kalikot", "value": "kalikot" },
+      { "label": "Mugu", "value": "mugu" },
+      { "label": "Surkhet", "value": "surkhet" },
+      { "label": "Dailekh", "value": "dailekh" },
+      { "label": "Jajarkot", "value": "jajarkot" }
+    ],
+    "sudurpashchim": [
+      { "label": "Kailali", "value": "kailali" },
+      { "label": "Achham", "value": "achham" },
+      { "label": "Doti", "value": "doti" },
+      { "label": "Bajhang", "value": "bajhang" },
+      { "label": "Bajura", "value": "bajura" },
+      { "label": "Kanchanpur", "value": "kanchanpur" },
+      { "label": "Dadeldhura", "value": "dadeldhura" },
+      { "label": "Baitadi", "value": "baitadi" },
+      { "label": "Darchula", "value": "darchula" }
+    ]
+  }
+}
