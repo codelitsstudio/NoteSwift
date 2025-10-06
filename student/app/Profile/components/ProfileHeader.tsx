@@ -112,7 +112,7 @@ const ProfileHeader = ({ onEditPress, onAvatarPress }: ProfileHeaderProps) => {
         setCurrentStreak(streak);
         await AsyncStorage.setItem('profile_last_login_date', today.toISOString());
         await AsyncStorage.setItem('profile_login_streak', streak.toString());
-      } catch (e) {
+      } catch {
         // fallback: just show 1
         setCurrentStreak(1);
       }

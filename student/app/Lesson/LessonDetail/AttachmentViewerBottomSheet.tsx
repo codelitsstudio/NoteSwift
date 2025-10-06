@@ -1,7 +1,7 @@
-import React, { useRef, useMemo, useEffect, useState } from 'react';
+import React, { useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
-import * as FileSystem from 'expo-file-system';
+import FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -26,18 +26,8 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
   const [localPdfUri, setLocalPdfUri] = useState<string | null>(null);
   const router = useRouter();
 
-  // Show/hide bottom sheet only if visible and file is set
-  useEffect(() => {
-    if (isVisible && fileName && fileUri) {
-      bottomSheetRef.current?.present();
-      checkUserDownload();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [isVisible, fileName, fileUri]);
-
   // Check if user has download record in backend and local storage
-  const checkUserDownload = async () => {
+  const checkUserDownload = useCallback(async () => {
     try {
       const res = await api.get('/downloads');
       const found = res.data.some((d: any) => d.fileName === fileName);
@@ -50,7 +40,17 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
       const localUri = await AsyncStorage.getItem(`pdf_${fileName}`);
       setLocalPdfUri(localUri);
     } catch {}
-  };
+  }, [fileName]);
+
+  // Show/hide bottom sheet only if visible and file is set
+  useEffect(() => {
+    if (isVisible && fileName && fileUri) {
+      bottomSheetRef.current?.present();
+      checkUserDownload();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [isVisible, fileName, fileUri, checkUserDownload]);
 
   // Download PDF to device, save to media library, store local URI, and save to backend
   const handleDownloadPdf = async () => {
@@ -61,7 +61,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
     setDownloading(true);
     try {
       // Download to app's document directory
-      const localPath = FileSystem.documentDirectory + fileName.replace(/\s+/g, '_');
+      const localPath = (FileSystem as any).documentDirectory + fileName.replace(/\s+/g, '_');
       let downloadResult;
       try {
         downloadResult = await FileSystem.downloadAsync(fileUri, localPath);
@@ -133,7 +133,7 @@ const AttachmentViewerBottomSheet: React.FC<AttachmentViewerBottomSheetProps> = 
       if (result.type === 'dismiss' || result.type === 'cancel') {
         onClose();
       }
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Failed to open PDF.');
     }
   };

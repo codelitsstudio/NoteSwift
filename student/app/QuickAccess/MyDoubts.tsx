@@ -1,14 +1,27 @@
 // app/QuickAccess/MyDoubts.tsx
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const MyDoubts: React.FC = () => {
+  const router = useRouter();
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-lg font-bold">My Doubts</Text>
-        <Text className="text-gray-500 mt-2">This feature is coming soon!</Text>
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <View className="flex-1 bg-slate-50">
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 18, paddingBottom: 18, paddingHorizontal: 18, backgroundColor: '#fff'}}>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+            <MaterialIcons name="arrow-back-ios" size={20} color="#222" />
+          </TouchableOpacity>
+          <Text style={{ fontSize: 17, color: '#222', flex: 1, textAlign: 'center', marginRight: 32 }} className="font-bold">My Doubts</Text>
+        </View>
+        {/* Empty State */}
+        <View className="absolute inset-0 justify-center items-center">
+          <MaterialIcons name="help-outline" size={48} color="#555" />
+          <Text className="text-[#666] mt-3">No doubts yet.</Text>
+        </View>
       </View>
     </SafeAreaView>
   );

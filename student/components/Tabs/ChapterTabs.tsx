@@ -43,7 +43,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
       if (typeof onRefreshProgress === 'function') {
         onRefreshProgress();
       }
-    }, []) // <-- empty array, ensures this only runs on focus
+    }, [onRefreshProgress]) // <-- empty array, ensures this only runs on focus
   );
 
   const openLesson = (lessonId?: string) => {

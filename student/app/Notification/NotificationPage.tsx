@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, Image, ScrollView, FlatList } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, Image, FlatList } from 'react-native';
 import { useNotificationStore } from '../../stores/notificationStore';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
@@ -11,7 +11,7 @@ const NotificationPage = () => {
     if (unreadCount > 0) {
       markAllAsRead();
     }
-  }, []);
+  }, [markAllAsRead, unreadCount]);
 
   const formatTimestamp = (timestamp: number) => {
     const now = Date.now();
@@ -109,7 +109,7 @@ const NotificationPage = () => {
 
           {/* Sub Text */}
           <Text className="text-base text-gray-500 mt-2 text-center px-10">
-            Your notifications will appear here once you've received them.
+            Your notifications will appear here once you&apos;ve received them.
           </Text>
 
           {/* Link to Historical Notifications */}

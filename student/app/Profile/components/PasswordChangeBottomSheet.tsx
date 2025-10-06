@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, Alert, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, Alert, TouchableOpacity } from 'react-native';
 import BottomSheet, { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { MaterialIcons } from '@expo/vector-icons';
 import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
@@ -449,7 +449,7 @@ const PasswordChangeBottomSheet: React.FC<PasswordChangeBottomSheetProps> = ({
                 Secure Password Update
               </Text>
               <Text className="text-sm text-gray-700 leading-5">
-                Change your password to keep your account secure. We'll verify your identity before allowing any changes to ensure your account protection.
+                Change your password to keep your account secure. We&apos;ll verify your identity before allowing any changes to ensure your account protection.
               </Text>
             </View>
           </View>

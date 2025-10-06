@@ -3,8 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
-  Alert,
   Platform,
   SafeAreaView,
   KeyboardAvoidingView,
@@ -37,8 +35,6 @@ export default function Register() {
     label: `Grade ${i + 1}`,
     value: (i + 1).toString(),
   }));
-
-  const isValidName = (name: string) => name.trim().length > 0;
 
   const getNameValidationMessage = (name: string) => {
     if (!name || name.trim().length === 0) {
@@ -110,8 +106,8 @@ export default function Register() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           className="flex-1 bg-white"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 0}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 10}
         >
           <ScrollView
             contentContainerStyle={{

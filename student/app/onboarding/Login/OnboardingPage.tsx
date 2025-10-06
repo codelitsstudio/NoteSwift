@@ -130,7 +130,7 @@ const handleGetStarted = async () => {
         router.replace('/Home/HomePage');
       }, 2000);
       
-    } catch (error) {
+    } catch {
       Toast.show({
         type: "error",
         position: "top",
@@ -165,7 +165,7 @@ const handleSkip = () => {
   return (
     <SafeAreaView className="flex-1 bg-white">
       {/* Skip Button */}
-      <View className="flex-row justify-end pt-4 pr-6 pb-2">
+      <View className="flex-row justify-end pt-14 pr-6 pb-2">
         <TouchableOpacity onPress={handleSkip} className="py-1 px-2">
           <Text className="text-blue-500 text-lg font-medium">Skip</Text>
         </TouchableOpacity>
@@ -184,80 +184,83 @@ const handleSkip = () => {
       >
         {slides.map((slide) => (
           <View key={slide.id} style={{ width }} className="flex-1 px-6">
-           <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,                 // allows the content to expand
-          justifyContent: 'center',    // centers content vertically on tall screens
-          paddingHorizontal: 24,
-          paddingBottom: 40,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-              {/* Image */}
-              <View
-                className="items-center"
-                style={{
-                  justifyContent: 'flex-start', // Move image to top
-                  height: isSmallDevice ? height * 0.33 : height * 0.42, // Slightly smaller height
-                  marginBottom: height * 0.005, // Reduce bottom spacing
+            <SafeAreaView style={{ flex: 1 }}>
+              <ScrollView
+                contentContainerStyle={{
+                  flexGrow: 1,                 // allows the content to expand
+                  justifyContent: 'center',    // centers content vertically on tall screens
+                  paddingHorizontal: 24,
+                  paddingBottom: 40,
                 }}
+                showsVerticalScrollIndicator={false}
               >
-                <Image
-                  source={slide.image}
+                {/* Image */}
+                <View
+                  className="items-center"
                   style={{
-                    width: isSmallDevice ? width * 0.8 : width * 0.9,
-                    height: isSmallDevice ? height * 0.35 : height * 0.42, // Reduce height a bit
+                    justifyContent: 'flex-start', // Move image to top
+                    height: isSmallDevice ? height * 0.33 : height * 0.42, // Slightly smaller height
+                    marginBottom: height * 0.005, // Reduce bottom spacing
                   }}
-                  resizeMode="contain"
-                />
-              </View>
-
-              {/* Dots */}
-              <View className="flex-row justify-center items-center mb-2" style={{ gap: width * 0.02 }}>
-                {slides.map((_, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => goToSlide(index)}
-                    className={`${index === currentSlide ? 'bg-blue-500' : 'bg-gray-300'} rounded-full`}
+                >
+                  <Image
+                    source={slide.image}
                     style={{
-                      width: index === currentSlide ? width * 0.08 : 8,
-                      height: 8,
+                      width: isSmallDevice ? width * 0.8 : width * 0.9,
+                      height: isSmallDevice ? height * 0.35 : height * 0.42, // Reduce height a bit
                     }}
+                    resizeMode="contain"
                   />
-                ))}
-              </View>
+                </View>
 
-              {/* Text */}
-              <View className="items-center px-4" style={{ marginTop: isSmallDevice ? height * 0.01 : height * 0.02, marginBottom: height * 0.03 }}>
-                <Text className="text-center text-gray-900 font-bold" style={{ fontSize: width * 0.065, lineHeight: width * 0.08, marginBottom: height * 0.015 }}>
-                  <Text>{slide.title}</Text> <Text className="text-blue-500">{slide.titleHighlight}</Text>
-                </Text>
-                <Text className="text-center text-gray-500" style={{ fontSize: width * 0.04, lineHeight: width * 0.055 }}>
-                  {slide.description}
-                </Text>
-              </View>
+                {/* Dots */}
+                <View className="flex-row justify-center items-center mb-2" style={{ gap: width * 0.02 }}>
+                  {slides.map((_, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => goToSlide(index)}
+                      className={`${index === currentSlide ? 'bg-blue-500' : 'bg-gray-300'} rounded-full`}
+                      style={{
+                        width: index === currentSlide ? width * 0.08 : 8,
+                        height: 8,
+                      }}
+                    />
+                  ))}
+                </View>
 
-              {/* Navigation Buttons */}
-              <ButtonOnboard
-                onNext={nextSlide}
-                onBack={prevSlide}
-                onGetStarted={handleGetStarted}
-                currentSlide={currentSlide}
-                totalSlides={slides.length}
-                isLastSlide={isLastSlide}
-                isFirstSlide={isFirstSlide}
-              />
+                {/* Text */}
+                <View className="items-center px-4" style={{ marginTop: isSmallDevice ? height * 0.01 : height * 0.02, marginBottom: height * 0.03 }}>
+                  <Text className="text-center text-gray-900 font-bold" style={{ fontSize: width * 0.065, lineHeight: width * 0.08, marginBottom: height * 0.015 }}>
+                    <Text>{slide.title}</Text> <Text className="text-blue-500">{slide.titleHighlight}</Text>
+                  </Text>
+                  <Text className="text-center text-gray-500" style={{ fontSize: width * 0.04, lineHeight: width * 0.055 }}>
+                    {slide.description}
+                  </Text>
+                </View>
 
-              {/* Help */}
-              <View className="flex-row items-center justify-center mt-14" style={{ gap: width * 0.02 }}>
-                <Text className="text-gray-500 font-semibold text-base">Any Troubles?</Text>
-              <TouchableOpacity
-  onPress={() => Linking.openURL('https://noteswift.in/')}
->
-  <Text className="text-blue-500 font-semibold text-base">Help</Text>
-</TouchableOpacity>
-              </View>
-            </ScrollView>
+                {/* Navigation Buttons */}
+                <ButtonOnboard
+                  onNext={nextSlide}
+                  onBack={prevSlide}
+                  onGetStarted={handleGetStarted}
+                  currentSlide={currentSlide}
+                  totalSlides={slides.length}
+                  isLastSlide={isLastSlide}
+                  isFirstSlide={isFirstSlide}
+                  loading={is_loading}
+                />
+
+                {/* Help */}
+                <View className="flex-row items-center justify-center mt-14" style={{ gap: width * 0.02 }}>
+                  <Text className="text-gray-500 font-semibold text-base">Any Troubles?</Text>
+                <TouchableOpacity
+    onPress={() => Linking.openURL('https://noteswift.in/')}
+  >
+    <Text className="text-blue-500 font-semibold text-base">Help</Text>
+  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </SafeAreaView>
           </View>
         ))}
       </ScrollView>

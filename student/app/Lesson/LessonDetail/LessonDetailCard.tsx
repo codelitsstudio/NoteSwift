@@ -1,6 +1,5 @@
 // components/LessonDetail/LessonDetailCard.tsx
-import React, { useRef, useState, useEffect } from "react";
-import { AppState } from "react-native";
+import React, { useRef, useState } from "react";
 import { View, Text, ScrollView, FlatList } from "react-native";
 
 import LiveVideo from "./LiveVideo";
@@ -26,30 +25,16 @@ type Props = {
   onNext?: () => void;
   onVideoCompleted?: () => void;
   onVideoCompletionStatusChange?: (completed: boolean) => void;
+  videoCompleted?: boolean;
 };
 
 type TabType = 'video' | 'attachments';
 
-const LessonDetailCard: React.FC<Props> = ({ lesson, onPrevious, onBack, onNext, onVideoCompleted, onVideoCompletionStatusChange }) => {
+const LessonDetailCard: React.FC<Props> = ({ lesson, onPrevious, onBack, onNext, onVideoCompleted, onVideoCompletionStatusChange, videoCompleted = false }) => {
   const [activeTab, setActiveTab] = useState<TabType>('video');
   const [currentTime, setCurrentTime] = useState(0);
-  const [videoDuration, setVideoDuration] = useState(0);
-  const [videoCompleted, setVideoCompleted] = useState(false);
   const videoRef = useRef(null);
 
-  // Check if video is completed
-  useEffect(() => {
-    if (videoDuration > 0 && currentTime >= videoDuration - 1 && !videoCompleted) {
-      setVideoCompleted(true);
-      onVideoCompleted?.();
-    }
-  }, [currentTime, videoDuration, videoCompleted, onVideoCompleted]);
-
-  // Helper to parse "0:00 – 2:00" to seconds (start)
-  const getStartSeconds = (timeRange: string) => {
-    const parts = timeRange.split("–");
-    return parseTime(parts[0]);
-  };
   // Helper to parse "0:00" to seconds
   const parseTime = (str: string) => {
     const [min, sec] = str.trim().split(":").map(Number);
@@ -58,7 +43,6 @@ const LessonDetailCard: React.FC<Props> = ({ lesson, onPrevious, onBack, onNext,
 
   // FlatList ref for transcript
 const transcriptListRef = useRef<FlatList>(null);
-const lastHighlightedIdx = useRef(-1);
 
 // Find the currently highlighted transcript index
 const highlightedIdx = (lesson.transcript || []).findIndex((item) => {
@@ -74,10 +58,6 @@ const currentTimeRef = useRef(currentTime);
 currentTimeRef.current = currentTime;
 
 const scrollOffset = useRef(0);
-const lastTimeRef = useRef(0);
-const isScrollingRef = useRef(false);
-const [isPlaying, setIsPlaying] = useState(false);
-const [appActive, setAppActive] = useState(true);
 
   // Auto-scroll feature removed as requested
 
@@ -96,18 +76,15 @@ const [appActive, setAppActive] = useState(true);
     }
   }}
   onPlayPauseChange={(playing) => {
-    setIsPlaying(playing);
+    // setIsPlaying(playing);
   }}
   onTimeUpdate={(ms: number) => {
     const seconds = ms / 1000;
     setCurrentTime(seconds);
     currentTimeRef.current = seconds;
   }}
-  onDurationUpdate={(ms: number) => {
-    const seconds = ms / 1000;
-    setVideoDuration(seconds);
-  }}
   onVideoCompletionStatusChange={onVideoCompletionStatusChange}
+  videoCompleted={videoCompleted}
 />
 
 

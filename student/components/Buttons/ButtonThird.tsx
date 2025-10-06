@@ -44,15 +44,13 @@ export default function ButtonThird({
       if (result && typeof (result as any).then === 'function') {
         await result;
       }
-    } catch (err) {
-      // swallow or rethrow
+    } catch {
+      // optional: console.warn(err);
     } finally {
-      // Cancel the timer if it hasn't fired yet
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      // Only hide the spinner if it was shown
       setLoading(false);
     }
   };

@@ -24,7 +24,6 @@ const LessonCard: React.FC<LessonCardProps> = ({ title, subtitle, tags = [], onP
         )}
         <View className="flex-row flex-wrap">
           {tags.map((tag, index) => {
-            const isVideo = tag.type === "video";
             return (
               <View
                 key={index}

@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetPicker } from '../../../components/Picker/BottomSheetPicker';
 import { MaterialIcons } from '@expo/vector-icons';

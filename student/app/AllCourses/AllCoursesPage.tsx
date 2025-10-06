@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, Pressable, Platform, StatusBar } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, Pressable } from "react-native";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import SearchBar from "./components/SearchBar";

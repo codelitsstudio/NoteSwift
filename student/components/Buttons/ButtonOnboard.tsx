@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 interface ButtonOnboardProps {
   onNext: () => void;
@@ -9,6 +9,7 @@ interface ButtonOnboardProps {
   totalSlides: number;
   isLastSlide: boolean;
   isFirstSlide: boolean;
+  loading?: boolean;
 }
 
 const ButtonOnboard: React.FC<ButtonOnboardProps> = ({
@@ -18,7 +19,8 @@ const ButtonOnboard: React.FC<ButtonOnboardProps> = ({
   currentSlide,
   totalSlides,
   isLastSlide,
-  isFirstSlide
+  isFirstSlide,
+  loading = false
 }) => {
   return (
     <View style={styles.container}>
@@ -53,9 +55,17 @@ const ButtonOnboard: React.FC<ButtonOnboardProps> = ({
         /* Get Started Button */
         <TouchableOpacity
           onPress={onGetStarted}
-          style={styles.getStartedButton}
+          disabled={loading}
+          style={[
+            styles.getStartedButton,
+            loading && styles.disabledButton
+          ]}
         >
-          <Text style={styles.getStartedButtonText}>Get Started</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.getStartedButtonText}>Get Started</Text>
+          )}
         </TouchableOpacity>
       )}
     </View>

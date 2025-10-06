@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import {
   View,
   Text,
-  Alert,
   SafeAreaView,
   KeyboardAvoidingView,
   ScrollView,
@@ -14,9 +13,7 @@ import {
   TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import TextInputField from '../../../components/InputFields/TextInputField';
 import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
-import ButtonSecondary from '../../../components/Buttons/ButtonSecondary';
 import ImageHeader from '../../../components/Headers/ImageHeader';
 import { useAuthStore } from '../../../stores/authStore';
 import { useRouter } from 'expo-router';
@@ -47,13 +44,11 @@ export default function RegisterEmail() {
 
   const emailInput = signup_data.email || '';
 
+  // Add focus state for email input
+  const [isEmailFocused, setIsEmailFocused] = React.useState(false);
+
   // Memoize style calculations
   const titleTextStyle = width < 360 ? 'text-2xl' : 'text-3xl';
-
-  const isValidEmail = (value: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(value.trim());
-  };
 
   const getEmailValidationMessage = (email: string) => {
     if (!email || email.trim().length === 0) {
@@ -78,10 +73,6 @@ export default function RegisterEmail() {
       return "Please enter a valid email format (e.g., user@example.com)";
     }
     return null;
-  };
-
-  const handleGoBack = () => {
-    router.push('/onboarding/Login/login');
   };
 
   const handleNext = async () => {
@@ -190,8 +181,8 @@ export default function RegisterEmail() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           className="flex-1 bg-white"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 0}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 10}
         >
           <ScrollView
             contentContainerStyle={scrollContainerStyle}
@@ -214,7 +205,7 @@ export default function RegisterEmail() {
               <View className="mb-1 space-y-4">
                 <View>
                   <Text className="text-sm font-medium text-gray-700 mb-2">Email Address</Text>
-                  <View className="flex-row items-center bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3">
+                  <View className={`flex-row items-center bg-gray-50 border rounded-2xl px-4 py-3 ${isEmailFocused ? 'border-blue-500' : 'border-gray-300'}`}>
                     <MaterialIcons name="email" size={24} color="#3B82F6" />
                     <View className="w-px h-6 bg-gray-300 mx-3" />
                     <TextInput
@@ -225,6 +216,8 @@ export default function RegisterEmail() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       value={emailInput}
+                      onFocus={() => setIsEmailFocused(true)}
+                      onBlur={() => setIsEmailFocused(false)}
                       onChangeText={(val: string) =>
                         setSignupData({
                           ...signup_data,
