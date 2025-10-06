@@ -51,8 +51,13 @@ export class CloudinaryService {
         height: result.height,
         bytes: result.bytes,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Cloudinary upload failed:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        http_code: error?.http_code,
+        error: error?.error
+      });
       throw new Error('Failed to upload image to Cloudinary');
     }
   }

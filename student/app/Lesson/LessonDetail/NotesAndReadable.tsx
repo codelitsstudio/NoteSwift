@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notesData } from './NotesData';
@@ -344,7 +345,7 @@ export default function NotesStepper() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right', 'bottom']}>
       {!section ? (
         <View className="flex-1 items-center justify-center">
           <Text className="text-gray-500">Loading section...</Text>
@@ -358,7 +359,7 @@ export default function NotesStepper() {
           />
 
           {/* Section Title */}
-          <View className="p-6 bg-gray-50 mb-4">
+          <View className="px-6 py-4 bg-gray-50 border-b border-gray-200">
             <Text className="text-[12px] text-blue-500 mb-2">
               Section {currentSection + 1} of {totalSections}
             </Text>
@@ -368,7 +369,11 @@ export default function NotesStepper() {
           </View>
 
           {/* Content */}
-          <ScrollView className="flex-1 px-6 pb-24">
+          <ScrollView
+            className="flex-1 px-6"
+            contentContainerStyle={{ paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Main Section Content */}
             {section.content && (
               <Text className="text-[12px] text-gray-700 leading-[18px] mb-4">

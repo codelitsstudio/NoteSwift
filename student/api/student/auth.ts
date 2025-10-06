@@ -59,3 +59,14 @@ export const verifyEmailRegistrationOTP = async(email: string, otp_code: string)
     return response;
 }
 
+export const sendReport = async(reportText: string, userEmail?: string) => {
+    const res = await api.post("/student/auth/send-report", { reportText, userEmail });
+    const response = res.data;
+    
+    // Check if the response contains an error
+    if (response.error) {
+        throw new Error(response.message || 'Failed to send report');
+    }
+    
+    return response;
+}

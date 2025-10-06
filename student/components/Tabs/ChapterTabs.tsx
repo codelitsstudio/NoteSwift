@@ -142,7 +142,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                   {/* Up Next Section */}
                   <View className="flex-row items-center px-4 mt-2 mb-2">
                     <View className="flex-1 h-px bg-gray-300" />
-                    <Text className="mx-2 text-xs text-gray-500 font-semibold tracking-widest uppercase">Up Next</Text>
+                    <Text className="mx-2 text-xs text-gray-500 font-semibold tracking-widest uppercase">Essentials</Text>
                     <View className="flex-1 h-px bg-gray-300" />
                   </View>
                   {data.lessons.slice(1).map((lesson, i) => {

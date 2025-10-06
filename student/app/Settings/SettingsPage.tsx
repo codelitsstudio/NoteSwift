@@ -182,7 +182,7 @@ const SettingsPage = () => {
           <View className="rounded-xl overflow-hidden mx-4">
             <SettingsListItem icon="help-outline" label="Learner Help Center" type="navigate" />
             <Divider />
-            <SettingsListItem icon="feedback" label="Report an Issue" type="navigate" />
+            <SettingsListItem icon="feedback" label="Report an Issue" type="navigate" onPress={() => router.push('./ReportIssue')} />
           </View>
           
           <SettingsSection title="Legal" />

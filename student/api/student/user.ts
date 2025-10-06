@@ -252,28 +252,15 @@ export const updateNotificationPreferences = async (preferences: NotificationPre
     console.log('📱 Updating notification preferences...', preferences);
     const response = await api.put('/student/user/notification-preferences', preferences);
     console.log('✅ Notification preferences updated:', response.data);
-
+    
     // Check if the response indicates an error
     if (response.data.error === true) {
       throw new Error(response.data.message || 'Failed to update notification preferences');
     }
-
+    
     return response.data;
   } catch (error: any) {
     console.error('❌ Update notification preferences error:', error.response?.data || error.message);
     throw new Error(error.response?.data?.message || error.message || 'Failed to update notification preferences');
-  }
-};
-
-// Account Deletion API
-export const deleteAccount = async () => {
-  try {
-    console.log('🗑️ Deleting account...');
-    const response = await api.delete('/student/user/delete-account');
-    console.log('✅ Account deleted successfully:', response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error('❌ Account deletion error:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || 'Failed to delete account');
   }
 };
