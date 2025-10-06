@@ -10,7 +10,6 @@ web-build/
 expo-env.d.ts
 
 credentials/
-credentials.json
 
 # Native
 .kotlin/
@@ -40,4 +39,3 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
-./history
