@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Note Swift",
+    "name": "NoteSwift",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,47 +11,49 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "This app needs access to the camera to take profile pictures and record lessons.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to use photos and videos within the app.",
-        "NSMicrophoneUsageDescription": "This app needs access to the microphone to record audio for lessons and notes.",
-        "ITSAppUsesNonExemptEncryption": false
-      },
-      "bundleIdentifier": "com.noteswift"
+        "NSCameraUsageDescription": "This app needs access to the camera to take profile pictures.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to the photo library to select profile pictures."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.noteswift"
+      "package": "com.codelitsstudio.noteswifttest",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+  "splash": {
+  "image": null,
+  "resizeMode": "contain",
+  "backgroundColor": "#ffffff",
+  "showText": false
+},
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
       "expo-web-browser",
       [
         "expo-image-picker",
         {
           "photosPermission": "The app accesses your photos to let you share them.",
           "cameraPermission": "The app accesses your camera to let you take photos."
-        }
-      ],
-      [
-        "expo-av",
-        {
-          "microphonePermission": "The app needs access to your microphone to record audio for lessons and notes."
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "The app accesses your photo gallery to allow you to use photos and videos within the app.",
-          "isAccessMediaLocationEnabled": false
         }
       ]
     ],
@@ -61,9 +63,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8504b9ec-8371-4aad-8619-b1cbf9b6f75b"
+        "projectId": "c0260c5f-1b18-46f9-96d1-eb2ef2b99ea0"
       }
     },
-    "owner": "codelitsstudiodev2"
+    "owner": "sujan0629"
   }
 }

@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StatusBar, Platform } from "react-native";
-import { MaterialIcons } from '@expo/vector-icons';
+import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StyleSheet, StatusBar, Platform } from "react-native";
+import { MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import { useRouter } from "expo-router";
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 
 interface Package {
@@ -33,6 +34,7 @@ export default function PackageDetailView({
   onSelect, 
   isSelected 
 }: PackageDetailViewProps) {
+  const router = useRouter();
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedTrialType, setSelectedTrialType] = useState<'free' | 'paid'>('free');
   const [paymentMethod, setPaymentMethod] = useState<string>('khalti');
@@ -144,7 +146,7 @@ useEffect(() => {
         {pkg.learningPoints && pkg.learningPoints.length > 0 && (
           <View className="px-6 py-6 bg-gray-50">
             <Text className="text-xl font-bold text-gray-900 mb-4">
-              What&apos;s Included
+              What's Included
             </Text>
             {pkg.learningPoints.map((point, index) => (
               <View key={index} className="flex-row items-start mb-3">
@@ -297,7 +299,7 @@ useEffect(() => {
                       • No payment required to start
                     </Text>
                     <Text className="text-xs text-gray-600">
-                      If you don&apos;t cancel before the trial ends, you&apos;ll be charged the full price automatically.
+                      If you don't cancel before the trial ends, you'll be charged the full price automatically.
                     </Text>
                   </View>
                 </View>
@@ -358,3 +360,14 @@ useEffect(() => {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  floatingButtonContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 12,
+    zIndex: 50,
+    elevation: 50,
+  },
+});

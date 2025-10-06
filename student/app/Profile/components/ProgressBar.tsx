@@ -23,7 +23,7 @@ const ProgressBar = ({ label, progress }: ProgressBarProps) => {
       </View>
       
       <Text className="text-xs text-gray-500 mt-2">
-        Keep going! You&apos;re doing great.
+        Keep going! You're doing great.
       </Text>
     </View>
   );

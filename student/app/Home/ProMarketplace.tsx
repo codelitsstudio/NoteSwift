@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StatusBar, Platform } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, Pressable, StatusBar, Platform } from "react-native";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from "expo-router";
 import PackageDetailView from "./Components/PackageDetailView";
@@ -23,7 +23,8 @@ interface Package {
 
 export default function ProMarketplace() {
   const router = useRouter();
-  const { trialType, courseId, directView } = useLocalSearchParams();
+  const { trialType, courseId, courseName, courseType, packageType, directView } = useLocalSearchParams();
+  const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
   const [viewingPackage, setViewingPackage] = useState<Package | null>(null);
   const [expandedSections, setExpandedSections] = useState<string[]>(['see', 'plus2']);
 
@@ -170,14 +171,6 @@ export default function ProMarketplace() {
     }
   }, [courseId, availablePackages]);
 
-  const toggleSection = useCallback((sectionId: string) => {
-    setExpandedSections(prev => 
-      prev.includes(sectionId)
-        ? prev.filter(id => id !== sectionId)
-        : [...prev, sectionId]
-    );
-  }, []);
-
   // If directView is true, show PackageDetailView immediately
   if (directView === 'true' && (viewingPackage || courseId)) {
     const packageToShow = viewingPackage || (courseId ? availablePackages.find(pkg => pkg.id === courseId) : null);
@@ -209,6 +202,19 @@ export default function ProMarketplace() {
     }
   ];
 
+  const handleSelectPackage = useCallback((packageId: string) => {
+    // Simple selection toggle for package details
+    setSelectedPackages([packageId]);
+  }, []);
+
+  const toggleSection = useCallback((sectionId: string) => {
+    setExpandedSections(prev => 
+      prev.includes(sectionId)
+        ? prev.filter(id => id !== sectionId)
+        : [...prev, sectionId]
+    );
+  }, []);
+
   const handleBack = () => {
     router.back();
   };
@@ -220,7 +226,7 @@ export default function ProMarketplace() {
         <PackageDetailView
           package={viewingPackage}
           onBack={() => setViewingPackage(null)}
-          onSelect={() => {}}
+          onSelect={handleSelectPackage}
           isSelected={false}
         />
       )}
@@ -305,6 +311,7 @@ export default function ProMarketplace() {
                   <View className="ml-4">
                     {section.packages.map((pkg) => {
                       const isDisabled = false;
+                      const isAutoSelected = false;
                       
                       return (
                         <TouchableOpacity

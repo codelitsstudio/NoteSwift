@@ -35,7 +35,7 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
     ]).start(() => {
       onFinish();
     });
-  }, [onFinish, opacityAnim, scaleAnim]);
+  }, []);
 
   return (
     <View style={styles.container}>

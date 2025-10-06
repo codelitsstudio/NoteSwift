@@ -1,12 +1,15 @@
-import React, { useState } from "react";
-import { useLocalSearchParams, useRouter , useFocusEffect } from "expo-router";
+//learn/[chapter].tsx
+
+import React, { useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text } from "react-native";
 import HeaderFifth from "../../components/Headers/HeaderFifth";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { chapters } from "../../utils/chapterData";
 import ChapterTabs from "../../components/Tabs/ChapterTabs";
-import { getLessonProgress, getModuleProgress, updateModuleProgress } from "../../api/lessonProgress";
+import { getLessonProgress, updateLessonProgress, getModuleProgress, updateModuleProgress } from "../../api/lessonProgress";
 import { useAuthStore } from "../../stores/authStore";
+import { useFocusEffect } from "expo-router";
 
 export default function ChapterPage() {
   const router = useRouter();
@@ -21,6 +24,7 @@ export default function ChapterPage() {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [moduleProgress, setModuleProgress] = useState<{[key: number]: number}>({});
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -72,7 +76,7 @@ export default function ChapterPage() {
         }, 1000); // 1 second delay
       };
       refreshOnFocus();
-    }, [courseId, data?.lessons, key, user?.id])
+    }, [])
   );
 
   // Handler to update progress when a lesson is started/completed

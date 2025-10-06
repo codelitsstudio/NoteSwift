@@ -1,9 +1,11 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { Card } from "react-native-paper";
 
 export default function RenewSubscription() {
+  const router = useRouter();
 
   const bankCards = [
     {

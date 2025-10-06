@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Modal } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Modal, Dimensions } from 'react-native';
 // import LottieView from 'lottie-react-native';
 // import ConfettiCannon from 'react-native-confetti-cannon';
 // import * as Haptics from 'expo-haptics';
@@ -12,6 +12,8 @@ import { View, Modal } from 'react-native';
 //   withSpring,
 //   Easing,
 // } from 'react-native-reanimated';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // // Get the appropriate Lottie animation based on streak days
 // const getStreakLottie = (streakDays: number) => {

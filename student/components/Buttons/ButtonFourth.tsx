@@ -38,8 +38,8 @@ export default function ButtonFourth({
       if (result && typeof (result as any).then === 'function') {
         await result;
       }
-    } catch {
-      // optional: console.warn(err);
+    } catch (err) {
+      // swallow errors
     } finally {
       if (timerRef.current) {
         clearTimeout(timerRef.current);

@@ -13,7 +13,9 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import TextInputField from '../../../components/InputFields/TextInputField';
 import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
+import ButtonSecondary from '../../../components/Buttons/ButtonSecondary';
 import ImageHeader from '../../../components/Headers/ImageHeader';
 import { useAuthStore } from '../../../stores/authStore';
 import { useRouter } from 'expo-router';
@@ -29,6 +31,7 @@ export default function RegisterNumber() {
 
   const signup_data = useAuthStore(state => state.signup_data);
   const setSignupData = useAuthStore(state => state.setSignupData);
+  const clearSignupData = useAuthStore(state => state.clearSignupData);
   const sendEmailRegistrationOTP = useAuthStore(state => state.sendEmailRegistrationOTP);
   const is_loading = useAuthStore(state => state.is_loading);
   const api_message = useAuthStore(state => state.api_message);
@@ -40,6 +43,10 @@ export default function RegisterNumber() {
   const isValidEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(value.trim());
+  };
+
+  const handleGoBack = () => {
+    router.push('/onboarding/Register/address');
   };
 
   const handleNext = async () => {
@@ -74,8 +81,8 @@ export default function RegisterNumber() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           className="flex-1 bg-white"
-          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 10}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 1 : 0}
         >
           <ScrollView
             contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40 }}

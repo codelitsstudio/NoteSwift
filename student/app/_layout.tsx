@@ -12,6 +12,7 @@ import Toast from "react-native-toast-message";
 import { toastConfig } from './ToastConfig';
 import "react-native-reanimated";
 import "../global.css";
+import * as SplashScreenExpo from 'expo-splash-screen';
 
 import Header from "../components/Headers/Header";
 import HeaderTwo from "../components/Headers/HeaderTwo";
@@ -19,8 +20,9 @@ import HeaderThree from "@/components/Headers/HeaderThree";
 import SplashScreen from "../components/Splash/SplashScreen";
 import { OfflineBanner } from "../components/Container/OfflineBanner";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
-import { useNavStore } from "../stores/navigationStore";
+import { useNavStore, navOrder } from "../stores/navigationStore";
 import { useAuthStore } from "../stores/authStore";
+import HeaderFifth from "@/components/Headers/HeaderFifth";
 
 
 
@@ -48,6 +50,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!loaded || showSplash) return;
 
+    const currentPath = segments.join('/');
     const isOnboardingRoute = segments[0] === 'onboarding';
     const isMainApp = ['Home', 'Learn', 'Test', 'Ask', 'More', 'Notification', 'Screens', 'Lesson'].includes(segments[0]);
 
@@ -70,8 +73,13 @@ export default function RootLayout() {
 
 
   useEffect(() => {
+    SplashScreenExpo.preventAutoHideAsync().catch(console.warn);
+  }, []);
+
+  useEffect(() => {
     const prepare = async () => {
       try {
+        await SplashScreenExpo.preventAutoHideAsync();
         if (!loaded) return;
         await new Promise(res => setTimeout(res, 500));
         Animated.timing(fadeAnim, {
@@ -79,6 +87,7 @@ export default function RootLayout() {
           duration: 400,
           useNativeDriver: true,
         }).start(async () => {
+          await SplashScreenExpo.hideAsync();
           setShowSplash(false);
         });
       } catch (e) {
@@ -86,7 +95,7 @@ export default function RootLayout() {
       }
     };
     prepare();
-  }, [loaded, fadeAnim]);
+  }, [loaded]);
 
   const { prevTab, currentTab, isBackNavigation } = useNavStore();
 
@@ -216,16 +225,8 @@ export default function RootLayout() {
                   <Stack.Screen name="Settings/SettingsPage" options={{ headerShown: false }} />
                   <Stack.Screen name="AppInfo/AboutApp" options={{ headerShown: false }} />
                   <Stack.Screen name="QuickAccess/Downloads" options={{ headerShown: false }} />
-                  <Stack.Screen name="QuickAccess/MyHistory" options={{ headerShown: false }} />
-                  <Stack.Screen name="QuickAccess/MyDoubts" options={{ headerShown: false }} />
-                  <Stack.Screen name="QuickAccess/MyBatch" options={{ headerShown: false }} />
-                  <Stack.Screen name="QuickAccess/Leaderboard" options={{ headerShown: false }} />
-                  <Stack.Screen name="QuickAccess/MyRank" options={{ headerShown: false }} />
-                  <Stack.Screen name="QuickAccess/Bookmarks" options={{ headerShown: false }} />
-
-
                   <Stack.Screen name="Lesson/LessonDetail/NotesAndReadable" options={{ headerShown: false }} />
-                  <Stack.Screen name="Settings/ReportIssue" options={{ headerShown: false }} />
+
                 </Stack>
 
                 {/* Offline Banner */}

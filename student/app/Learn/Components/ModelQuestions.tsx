@@ -8,6 +8,7 @@ type Props = {
 };
 
 export default function ModelQuestions({ searchQuery }: Props) {
+  const filteredCourses: any[] = []; // empty for now
 
   return (
     <View className="flex-1 justify-center items-center mt-6">

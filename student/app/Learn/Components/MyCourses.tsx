@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView } from 'react-native';
+﻿import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -74,7 +74,7 @@ const MyCourses = () => {
       fetchAllCourses();
       fetchFeaturedCourse();
     }
-  }, [user?.id, fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse]);
+  }, [user?.id]);
 
   // Refresh enrollments when screen comes into focus
   useFocusEffect(
@@ -82,7 +82,7 @@ const MyCourses = () => {
       if (user?.id) {
         fetchUserEnrollments(user.id);
       }
-    }, [user?.id, fetchUserEnrollments])
+    }, [user?.id])
   );
 
   // Debug effect to monitor state changes

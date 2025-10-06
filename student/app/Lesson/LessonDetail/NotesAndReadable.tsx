@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notesData } from './NotesData';
 import HeaderSixth from '../../../components/Headers/HeaderSixth';
@@ -9,6 +9,7 @@ import { updateModuleProgress } from '../../../api/lessonProgress';
 import { useAuthStore } from '../../../stores/authStore';
 
 export default function NotesStepper() {
+  const { useRouter } = require('expo-router');
   const router = useRouter();
   const { module = '1', courseId } = useLocalSearchParams();
   const { user } = useAuthStore();
@@ -55,7 +56,7 @@ export default function NotesStepper() {
 
   // Save completed section to backend only (unified progress API)
   // This is for NOTES completion only, NOT video completion
-  const saveCompletedSection = useCallback(async (sectionKey: string, isFinal: boolean = false) => {
+  const saveCompletedSection = async (sectionKey: string, isFinal: boolean = false) => {
     try {
       // Unified backend progress update: pass moduleNumber and sectionIndex
       // videoCompleted is undefined (not updating video status)
@@ -72,7 +73,7 @@ export default function NotesStepper() {
     } catch (error) {
       console.error('Error saving completed section:', error);
     }
-  }, [courseId, user?.id, currentSection, moduleIndex]);
+  };
 
   useEffect(() => {
     loadCompletedSections();
@@ -286,7 +287,7 @@ export default function NotesStepper() {
   // Start typing after a small delay
   setTimeout(() => typeNext(), 200);
     }
-  }, [currentSection, moduleIndex, completedSections, completedSectionsLoaded, saveCompletedSection, section]);
+  }, [currentSection, moduleIndex, completedSections, completedSectionsLoaded]);
 
   // Render functions with proper fallback handling
   const renderBulletList = (items: string[], prefix = 'bullet') => (

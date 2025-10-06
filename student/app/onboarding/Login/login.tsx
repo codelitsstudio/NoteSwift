@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  Alert,
   Platform,
   KeyboardAvoidingView,
   SafeAreaView,
@@ -35,12 +36,17 @@ export default function Login() {
       return () => {
         clearLoginData();
       };
-    }, [clearLoginData])
+    }, [])
   );
 
   useEffect(() => {
     useNavStore.getState().setTab("RegisterAddress");
   }, []);
+
+  const isValidEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value.trim());
+  };
 
   const getEmailValidationMessage = (email: string) => {
     if (!email || email.trim().length === 0) {
@@ -207,8 +213,8 @@ export default function Login() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           className="flex-1 bg-white"
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 1 : 10}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 1 : 0}
         >
           <ScrollView
             contentContainerStyle={{

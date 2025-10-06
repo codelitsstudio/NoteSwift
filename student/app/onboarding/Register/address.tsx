@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import {
   View,
   Text,
+  Alert,
   SafeAreaView,
   KeyboardAvoidingView,
   ScrollView,
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 import TextInputField from "../../../components/InputFields/TextInputField";
 import ButtonPrimary from "../../../components/Buttons/ButtonPrimary";
+import ButtonSecondary from "../../../components/Buttons/ButtonSecondary";
 import ImageHeader from "../../../components/Headers/ImageHeader";
 import { useAuthStore } from "../../../stores/authStore";
 import { useRouter } from "expo-router";
@@ -71,6 +73,11 @@ export default function LocationSelector() {
         institution,
       },
     });
+  };
+
+  const handleGoBack = () => {
+    useNavStore.getState().setTab("Register");
+    router.back();
   };
 
   const getInstitutionValidationMessage = (institution: string) => {
@@ -138,8 +145,8 @@ export default function LocationSelector() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           className="flex-1 bg-white"
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 1 : 10}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 1 : 0}
         >
           <ScrollView
             className="flex-1 bg-white"

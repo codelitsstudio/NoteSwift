@@ -25,7 +25,7 @@ export default function HeaderTwo() {
           default: { message: urlToShare },
         }) as any
       );
-    } catch {
+    } catch (err) {
       Linking.openURL(urlToShare).catch(() =>
         console.warn("Cannot open URL:", urlToShare)
       );

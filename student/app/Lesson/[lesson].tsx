@@ -1,5 +1,5 @@
 // app/lesson/[lesson].tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -35,23 +35,6 @@ export default function LessonPage() {
     checkVideoCompletion();
   }, [courseId]);
 
-  const handleVideoCompleted = useCallback(async () => {
-    if (!courseId || !user?.id) return;
-    
-    try {
-      // Module 1 VIDEO completion (separate from notes completion)
-      await updateModuleProgress(courseId as string, 1, true);
-      setVideoCompleted(true);
-    } catch (error) {
-      console.error('Error updating video progress:', error);
-    }
-  }, [courseId, user?.id]);
-
-  const handleVideoCompletionStatusChange = useCallback((completed: boolean) => {
-    // Update local state when video completion status changes
-    setVideoCompleted(completed);
-  }, []);
-
   if (!data) {
     return (
       <SafeAreaView className="flex-1 bg-white">
@@ -75,6 +58,23 @@ export default function LessonPage() {
     tags: mappedTags,
   };
 
+  const handleVideoCompleted = async () => {
+    if (!courseId || !user?.id) return;
+    
+    try {
+      // Module 1 VIDEO completion (separate from notes completion)
+      await updateModuleProgress(courseId as string, 1, true);
+      setVideoCompleted(true);
+    } catch (error) {
+      console.error('Error updating video progress:', error);
+    }
+  };
+
+  const handleVideoCompletionStatusChange = (completed: boolean) => {
+    // Update local state when video completion status changes
+    setVideoCompleted(completed);
+  };
+
 return (
   <View className="flex-1 bg-gray-100"> 
     <SafeAreaView className="flex-1">
@@ -87,7 +87,6 @@ return (
         }}
         onVideoCompleted={handleVideoCompleted}
         onVideoCompletionStatusChange={handleVideoCompletionStatusChange}
-        videoCompleted={videoCompleted}
       />
     </SafeAreaView>
 

@@ -112,7 +112,7 @@ export default function ProCheckout() {
                 <Text className="text-lg font-bold text-blue-800 ml-2">Free Trial Selected</Text>
               </View>
               <Text className="text-sm text-blue-700">
-                You&apos;ve selected a 7-day free trial. No payment required now.
+                You've selected a 7-day free trial. No payment required now.
               </Text>
             </View>
           ) : (
@@ -122,7 +122,7 @@ export default function ProCheckout() {
                 <Text className="text-lg font-bold text-blue-800 ml-2">Pro Subscription</Text>
               </View>
               <Text className="text-sm text-blue-700">
-                You&apos;ve selected paid packages. Payment required to proceed.
+                You've selected paid packages. Payment required to proceed.
               </Text>
             </View>
           )}

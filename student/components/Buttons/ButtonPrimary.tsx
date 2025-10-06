@@ -32,8 +32,9 @@ export default function ButtonPrimary({
         setLoading(true);
         await result;
       }
-    } catch {
-      // optional: console.warn(err);
+    } catch (err) {
+      // you might choose to surface the error here,
+      // or just swallow it and let the caller Alert.alert
     } finally {
       setLoading(false);
     }

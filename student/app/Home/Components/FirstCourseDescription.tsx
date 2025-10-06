@@ -3,12 +3,16 @@ import {
   View,
   Text,
   ScrollView,
+  Image,
   TouchableOpacity,
   SafeAreaView,
   GestureResponderEvent,
+  StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
+import PrimaryNav from '../../../components/Navigation/PrimaryNav';
 import FloatingEnrollButton from '@/components/Buttons/FloatingEnrollButton';
 import { useCourseStore } from '../../../stores/courseStore';
 import { useRouter } from 'expo-router';
@@ -20,6 +24,7 @@ const FirstCourseDescription = () => {
     featuredCourse,
     isEnrolled,
     enrollInCourse,
+    is_loading,
   } = useCourseStore();
   
   const { addNotification } = useNotificationStore();
@@ -255,5 +260,16 @@ const FeatureItem = ({ icon, title, subtitle, className, textSize }:
     </View>
   </View>
 );
+
+const styles = StyleSheet.create({
+  floatingButtonContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 72,
+    zIndex: 50,
+    elevation: 50,
+  },
+});
 
 export default FirstCourseDescription;

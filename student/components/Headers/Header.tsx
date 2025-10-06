@@ -6,14 +6,32 @@ import { useAvatarStore } from '../../stores/avatarStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useRouter, usePathname } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import Entypo from '@expo/vector-icons/Entypo';
 
 export default function Header() {
   const { avatarEmoji } = useAvatarStore();
-  const { user } = useAuthStore();
+  const { logout, user } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const router = useRouter();
   const pathname = usePathname();
+  const [menuVisible, setMenuVisible] = React.useState(false);
+
+  const handleLogout = () => {
+    logout();
+    setMenuVisible(false);
+    Toast.show({
+      type: 'error',
+      position: 'top',
+      text1: 'Signed out',
+      text2: 'You have signed out successfully.',
+      visibilityTime: 3000,
+      autoHide: true,
+      topOffset: 50,
+    });
+    // Force navigation to login screen and replace the entire stack
+    router.replace('/onboarding/Login/login');
+  };
 
   // Get avatar source with same priority logic as ProfileHeader
   const getAvatarSource = () => {

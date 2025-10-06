@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, Alert, TouchableOpacity } from 'react-native';
-import BottomSheet, { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View, Text, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView } from 'react-native';
+import BottomSheet, { BottomSheetView, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MaterialIcons } from '@expo/vector-icons';
 import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
+import ButtonSecondary from '../../../components/Buttons/ButtonSecondary';
 import Toast from 'react-native-toast-message';
 import OTPInput from './OTPInput';
 import { 
@@ -62,7 +63,7 @@ const EmailChangeBottomSheet: React.FC<EmailChangeBottomSheetProps> = ({
   const handleSendCurrentVerification = async () => {
     setIsLoading(true);
     try {
-      await sendCurrentEmailVerification();
+      const response = await sendCurrentEmailVerification();
       Toast.show({
         type: 'success',
         text1: 'Verification Code Sent',
@@ -157,7 +158,7 @@ const EmailChangeBottomSheet: React.FC<EmailChangeBottomSheetProps> = ({
 
     setIsLoading(true);
     try {
-      await verifyNewEmailAndUpdate(newEmail, newOtpCode);
+      const response = await verifyNewEmailAndUpdate(newEmail, newOtpCode);
       Toast.show({
         type: 'success',
         text1: 'Email Updated Successfully!',
@@ -342,7 +343,7 @@ const EmailChangeBottomSheet: React.FC<EmailChangeBottomSheetProps> = ({
                 Secure Email Update
               </Text>
               <Text className="text-sm text-gray-700 leading-5">
-                Change your email address with our secure 2-step verification process. We&apos;ll verify both your current and new email addresses to ensure account security and prevent unauthorized changes.
+                Change your email address with our secure 2-step verification process. We'll verify both your current and new email addresses to ensure account security and prevent unauthorized changes.
               </Text>
             </View>
           </View>

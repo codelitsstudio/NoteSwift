@@ -5,11 +5,11 @@ node_modules/
 
 # Expo
 .expo/
-
 dist/
 web-build/
 expo-env.d.ts
 
+credentials/
 credentials.json
 
 # Native
@@ -40,7 +40,3 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
-
-/android
-
-.history
