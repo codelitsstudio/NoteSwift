@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StatusBar, Platform } from "react-native";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from "expo-router";
+import axios from '../../api/axios';
 
 interface Package {
   id: string;
@@ -20,150 +21,61 @@ interface Package {
     duration?: string;
   }[];
   features?: string[];
+  program?: string;
+  subjects?: {
+    name: string;
+    description?: string;
+    modules?: {
+      name: string;
+      description: string;
+      duration?: string;
+    }[];
+  }[];
 }
 
 export default function ProMarketplace() {
   const router = useRouter();
   const { trialType, courseId, directView } = useLocalSearchParams();
   const [expandedSections, setExpandedSections] = useState<string[]>(['see', 'plus2']);
+  const [courses, setCourses] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Available packages in marketplace
-  const availablePackages: Package[] = useMemo(() => [
-    {
-      id: "grade10",
-      name: "Grade 10 Package",
-      price: 2999,
-      description: "Complete study materials and practice tests for Grade 10",
-      icon: "menu-book",
-      type: 'pro',
-      isFeatured: false,
-      teacherName: "Expert Faculty Team",
-      skills: ['Live Learning', 'Interactive Sessions', 'Comprehensive Study', 'Expert Guidance'],
-      learningPoints: [
-        'Attend live classes with certified instructors',
-        'Access high-quality recorded video lectures',
-        'Download comprehensive study materials and notes',
-        'Take unlimited practice tests and quizzes',
-        'Get personalized assignments and feedback'
-      ],
-      modules: [
-        {
-          name: 'Live Classes',
-          description: 'Weekly live sessions with expert instructors for all subjects',
-          duration: trialType === 'free' ? 'Limited access' : '3 hours/week'
-        },
-        {
-          name: 'Recorded Video Library',
-          description: 'Access to high-quality recorded lectures',
-          duration: trialType === 'free' ? '7-day access' : 'Lifetime access'
-        },
-        {
-          name: 'Study Materials',
-          description: 'Downloadable PDFs, notes, and reference materials',
-          duration: trialType === 'free' ? 'Sample materials' : 'Unlimited downloads'
-        },
-        {
-          name: 'Practice Tests',
-          description: 'Mock tests, quizzes, and practice questions',
-          duration: trialType === 'free' ? 'Limited attempts' : 'Unlimited attempts'
-        }
-      ],
-      features: trialType === 'free' 
-        ? ['7-day trial access', 'Sample live classes', 'Limited video lectures', 'Basic study materials', 'Few practice tests']
-        : ['Live classes with instructors', 'Recorded video lectures', 'Downloadable study materials', 'Digital notes and PDFs', 'Unlimited assignments', 'Practice tests & quizzes', 'Progress tracking', 'Doubt clearing sessions']
-    },
-    {
-      id: "grade11",
-      name: "Grade 11 Package", 
-      price: 2999,
-      description: "Complete study materials and practice tests for Grade 11",
-      icon: "auto-stories",
-      type: 'pro',
-      isFeatured: true,
-      teacherName: "Advanced Learning Experts",
-      skills: ['Advanced Learning', 'Live Instruction', 'Comprehensive Materials', 'Expert Support'],
-      learningPoints: [
-        'Join interactive live classes with subject experts',
-        'Access premium recorded video content',
-        'Download advanced study materials and reference books',
-        'Complete challenging assignments with expert feedback',
-        'Take comprehensive tests and competitive exam practice'
-      ],
-      modules: [
-        {
-          name: 'Live Interactive Classes',
-          description: 'Daily live sessions with subject specialists and Q&A',
-          duration: trialType === 'free' ? 'Limited access' : '4 hours/week'
-        },
-        {
-          name: 'Premium Video Content',
-          description: 'Access to recorded lectures by top educators',
-          duration: trialType === 'free' ? '7-day access' : 'Lifetime access'
-        },
-        {
-          name: 'Advanced Study Materials',
-          description: 'Comprehensive textbooks, reference guides, and study notes',
-          duration: trialType === 'free' ? 'Sample materials' : 'Unlimited downloads'
-        },
-        {
-          name: 'Competitive Exam Prep',
-          description: 'Special tests and materials for JEE, NEET preparation',
-          duration: trialType === 'free' ? 'Sample tests' : 'Full year access'
-        }
-      ],
-      features: trialType === 'free'
-        ? ['7-day trial access', 'Sample live classes', 'Limited premium videos', 'Basic study materials', 'Few competitive tests']
-        : ['Daily live classes', 'Premium recorded videos', 'Advanced study materials', 'Digital textbooks & guides', 'Challenging assignments', 'Competitive exam tests', 'One-on-one doubt sessions', 'Progress analytics']
-    },
-    {
-      id: "grade12",
-      name: "Grade 12 Package",
-      price: 2999,
-      description: "Board exam preparation and advanced materials for Grade 12",
-      icon: "school",
-      type: 'pro',
-      isFeatured: false,
-      teacherName: "Board Exam Specialists",
-      skills: ['Board Exam Focus', 'Live Coaching', 'Premium Content', 'Career Guidance'],
-      learningPoints: [
-        'Attend intensive live coaching sessions for board exams',
-        'Access premium recorded lectures by top educators',
-        'Get comprehensive study materials and previous year papers',
-        'Receive personalized assignments and mock tests',
-        'Get career guidance and college admission support'
-      ],
-      modules: [
-        {
-          name: 'Board Exam Coaching',
-          description: 'Intensive live classes focused on board exam patterns',
-          duration: trialType === 'free' ? 'Limited access' : '5 hours/week'
-        },
-        {
-          name: 'Premium Video Lectures',
-          description: 'Access to recorded content by expert teachers',
-          duration: trialType === 'free' ? '7-day access' : 'Lifetime access'
-        },
-        {
-          name: 'Exam Materials',
-          description: 'Previous year papers, sample papers, and study guides',
-          duration: trialType === 'free' ? 'Sample papers' : 'Unlimited access'
-        },
-        {
-          name: 'Career Counseling',
-          description: 'One-on-one sessions for college and career planning',
-          duration: trialType === 'free' ? 'Not available' : '2 sessions/month'
-        }
-      ],
-      features: trialType === 'free'
-        ? ['7-day trial access', 'Sample coaching sessions', 'Limited video lectures', 'Few previous year papers', 'Basic study guides']
-        : ['Intensive live coaching', 'Premium recorded lectures', 'Previous year papers', 'Sample papers & guides', 'Personalized assignments', 'Board exam mock tests', 'Career counseling', 'College admission support']
-    },
-  ], [trialType]);
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const fetchCourses = async () => {
+    try {
+      const response = await axios.get('/courses');
+      if (response.data.success) {
+        const proCourses = response.data.data.courses
+          .filter((course: any) => course.type === 'pro')
+          .map((course: any) => ({
+            ...course,
+            id: course._id,
+            name: course.title,
+            price: course.price || 0,
+            icon: course.icon || 'school',
+            type: course.type === 'pro' ? 'pro' : 'paid',
+            teacherName: course.offeredBy || 'Expert Faculty',
+            skills: course.skills || [],
+            learningPoints: course.learningPoints || [],
+            features: course.features || [],
+            subjects: course.subjects || []
+          }));
+        setCourses(proCourses);
+      }
+    } catch (error) {
+      console.error('Failed to fetch courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle course selection from AllCourses or direct navigation
   useEffect(() => {
-    if (courseId && availablePackages.length > 0 && directView !== 'true') {
-      const selectedPackage = availablePackages.find(pkg => pkg.id === courseId);
+    if (courseId && courses.length > 0 && directView !== 'true') {
+      const selectedPackage = courses.find(pkg => pkg.id === courseId);
       if (selectedPackage) {
         router.replace({
           pathname: '/Home/Components/PackageDetails',
@@ -171,7 +83,7 @@ export default function ProMarketplace() {
         });
       }
     }
-  }, [courseId, availablePackages, directView, router]);
+  }, [courseId, courses, directView, router]);
 
   const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections(prev => 
@@ -183,7 +95,7 @@ export default function ProMarketplace() {
 
   // If directView is true, navigate to PackageDetails immediately
   if (directView === 'true' && courseId) {
-    const packageToShow = availablePackages.find(pkg => pkg.id === courseId as string);
+    const packageToShow = courses.find(pkg => pkg.id === courseId as string);
     if (packageToShow) {
       router.replace({
         pathname: '/Home/Components/PackageDetails',
@@ -199,15 +111,42 @@ export default function ProMarketplace() {
       id: 'see',
       title: 'SEE (Secondary Level)',
       description: 'Grade 10 - Secondary Education Examination',
-      packages: availablePackages.filter(pkg => pkg.id === 'grade10')
+      packages: courses.filter(pkg => pkg.program === 'SEE' || pkg.name?.toLowerCase().includes('grade 10') || pkg.name?.toLowerCase().includes('10'))
     },
     {
       id: 'plus2',
       title: '+2 (High School)',
       description: 'Grades 11 & 12 - Higher Secondary Education',
-      packages: availablePackages.filter(pkg => pkg.id === 'grade11' || pkg.id === 'grade12')
+      packages: courses.filter(pkg => pkg.program === '+2' || pkg.name?.toLowerCase().includes('grade 11') || pkg.name?.toLowerCase().includes('grade 12') || pkg.name?.toLowerCase().includes('11') || pkg.name?.toLowerCase().includes('12'))
     }
   ];
+
+  // Add default modules and features if not present
+  const enhancePackageData = (pkg: Package) => {
+    return {
+      ...pkg,
+      modules: pkg.modules || [
+        {
+          name: 'Live Classes',
+          description: 'Interactive live sessions with expert instructors',
+          duration: trialType === 'free' ? 'Limited access' : 'Regular sessions'
+        },
+        {
+          name: 'Study Materials',
+          description: 'Comprehensive study materials and resources',
+          duration: trialType === 'free' ? 'Sample materials' : 'Full access'
+        },
+        {
+          name: 'Practice Tests',
+          description: 'Mock tests and practice questions',
+          duration: trialType === 'free' ? 'Limited attempts' : 'Unlimited attempts'
+        }
+      ],
+      features: pkg.features || (trialType === 'free'
+        ? ['7-day trial access', 'Sample materials', 'Limited practice tests']
+        : ['Live classes', 'Full study materials', 'Unlimited practice tests', 'Progress tracking'])
+    };
+  };
 
   const handleBack = () => {
     router.back();
@@ -252,14 +191,18 @@ export default function ProMarketplace() {
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-
-          <Text className="text-base text-gray-800 mb-4 px-5">
-            {trialType === 'free' 
-              ? 'Choose one grade package you want to try free for 7 days'
-              : 'Select at least one paid package to continue'
-            }
-          </Text>
+        {loading ? (
+          <View className="flex-1 justify-center items-center py-20">
+            <Text className="text-gray-600">Loading packages...</Text>
+          </View>
+        ) : (
+          <View>
+            <Text className="text-base text-gray-800 mb-4 px-5">
+              {trialType === 'free' 
+                ? 'Choose one grade package you want to try free for 7 days'
+                : 'Select at least one paid package to continue'
+              }
+            </Text>
 
           <View className="px-5">
             {packageSections.map((section) => (
@@ -291,6 +234,7 @@ export default function ProMarketplace() {
                 {expandedSections.includes(section.id) && (
                   <View className="ml-4">
                     {section.packages.map((pkg) => {
+                      const enhancedPkg = enhancePackageData(pkg);
                       const isDisabled = false;
                       
                       return (
@@ -298,7 +242,7 @@ export default function ProMarketplace() {
                           key={pkg.id}
                           onPress={() => router.push({
                             pathname: '/Home/Components/PackageDetails',
-                            params: { packageData: JSON.stringify(pkg) }
+                            params: { packageData: JSON.stringify(enhancedPkg) }
                           })}
                           disabled={isDisabled}
                           className={`border rounded-xl p-4 mb-3 ${
@@ -344,17 +288,6 @@ export default function ProMarketplace() {
                                   </>
                                 )}
                               </Text>
-
-                              {/* View More Button */}
-                              <TouchableOpacity 
-                                onPress={() => router.push({
-                                  pathname: '/Home/Components/PackageDetails',
-                                  params: { packageData: JSON.stringify(pkg) }
-                                })}
-                                className="mt-3 flex-row items-center"
-                              >
-                                <Text className="text-gray-500 text-sm font-medium">View Details</Text>
-                              </TouchableOpacity>
                             </View>
                           </View>
                         </TouchableOpacity>
@@ -365,7 +298,8 @@ export default function ProMarketplace() {
               </View>
             ))}
           </View>
-        </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

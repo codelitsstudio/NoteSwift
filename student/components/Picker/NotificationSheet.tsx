@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useEffect, useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +30,7 @@ export function NotificationSheet({
   notificationData,
 }: NotificationSheetProps) {
   const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['65%'], []);
+  const snapPoints = useMemo(() => [Platform.OS === 'android' ? '85%' : '85%'], []);
 
   // Track if the modal is currently open to prevent duplicate presentations
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -87,10 +87,10 @@ export function NotificationSheet({
         disappearsOnIndex={-1}
         appearsOnIndex={0}
         opacity={0.5}
-        onPress={() => handleClose(false)}
+        onPress={() => handleClose(dontShowAgain)}
       />
     ),
-    [handleClose]
+    [handleClose, dontShowAgain]
   );
 
   if (!notificationData) {
@@ -100,7 +100,7 @@ export function NotificationSheet({
 
   const handleButtonPress = () => {
     // For now, just close the sheet. In the future, this could trigger different actions
-    handleClose(false);
+    handleClose(dontShowAgain);
   };
 
   const handleDontShowAgain = () => {
@@ -121,7 +121,7 @@ export function NotificationSheet({
         elevation: 4,
       }}
       handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}
-      onDismiss={() => handleClose(false)}
+      onDismiss={() => handleClose(dontShowAgain)}
       enablePanDownToClose
       enableDismissOnClose
       enableContentPanningGesture={false}
@@ -143,7 +143,7 @@ export function NotificationSheet({
               <Text style={styles.badgeText}>{notificationData.badge}</Text>
             </View>
           )}
-          <TouchableOpacity onPress={() => handleClose(false)} style={styles.closeButton}>
+          <TouchableOpacity onPress={() => handleClose(dontShowAgain)} style={styles.closeButton}>
             <MaterialIcons name="close" size={22} color="#6B7280" />
           </TouchableOpacity>
         </View>

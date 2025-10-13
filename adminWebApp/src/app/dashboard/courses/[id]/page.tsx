@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Eye, Save, X, Star, BookOpen, PlayCircle, Award, Upload } from 'lucide-react';
 import { createCourse, updateCourse, getCourse } from '@/lib/api/adminCourses';
 import { toast } from '@/hooks/use-toast';
+import { v2 as cloudinary } from 'cloudinary';
 
 interface Module {
   name: string;
@@ -68,6 +69,16 @@ export default function CourseEditorPage() {
   const searchParams = useSearchParams();
   const courseId = params.id as string;
 
+  // Debug environment variables
+  useEffect(() => {
+    console.log('Environment check:', {
+      cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+      uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
+      hasCloudName: !!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+      hasUploadPreset: !!process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+    });
+  }, []);
+
   const [formData, setFormData] = useState<Course>(() => {
     const typeParam = searchParams?.get('type') as 'featured' | 'pro' | 'free' | 'recommended' | 'upcoming' | null;
     return {
@@ -100,6 +111,7 @@ export default function CourseEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Load existing course data if editing
   useEffect(() => {
@@ -159,6 +171,141 @@ export default function CourseEditorPage() {
       ...prev,
       [field]: (prev[field] as any[]).map((item, i) => i === index ? value : item)
     }));
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+
+    // Check environment variables
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName) {
+      toast({
+        title: "Configuration Error",
+        description: "Cloudinary cloud name is not configured",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!uploadPreset) {
+      toast({
+        title: "Configuration Error",
+        description: "Cloudinary upload preset is not configured. Please create 'noteswift_courses' preset in Cloudinary dashboard or update .env to use existing 'ml_default' preset.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file (PNG, JPG, JPEG, GIF, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      console.log('Starting image upload...', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        cloudName,
+        uploadPreset
+      });
+
+      // Upload to Cloudinary using direct API
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('upload_preset', uploadPreset);
+      formDataUpload.append('folder', 'noteswift/course-thumbnails');
+
+      console.log('Sending request to Cloudinary...');
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formDataUpload,
+        }
+      );
+
+      // Try the configured preset first, fallback to ml_default if it fails
+      let currentPreset = uploadPreset;
+      let uploadResponse = response;
+
+      if (!response.ok && uploadPreset === 'noteswift_courses') {
+        console.log('Primary preset failed, trying fallback preset: ml_default');
+        formDataUpload.set('upload_preset', 'ml_default');
+        currentPreset = 'ml_default';
+
+        uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          {
+            method: 'POST',
+            body: formDataUpload,
+          }
+        );
+      }
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('Cloudinary upload failed:', {
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          responseBody: errorText,
+          cloudName,
+          uploadPreset: currentPreset
+        });
+
+        let errorMessage = `Upload failed (${uploadResponse.status}): ${uploadResponse.statusText}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error?.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch (e) {
+          // If not JSON, use the raw text
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = await uploadResponse.json();
+      updateFormData('thumbnail', data.secure_url);
+
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully!",
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSaveCourse = async () => {
@@ -489,13 +636,54 @@ export default function CourseEditorPage() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="thumbnail">Thumbnail Image URL</Label>
-                    <Input
-                      id="thumbnail"
-                      value={formData.thumbnail}
-                      onChange={(e) => updateFormData('thumbnail', e.target.value)}
-                      placeholder="Enter thumbnail image URL"
-                    />
+                    <Label htmlFor="thumbnail">Course Thumbnail</Label>
+                    <div className="space-y-3">
+                      {/* Current Image Preview */}
+                      {formData.thumbnail && (
+                        <div className="relative">
+                          <img
+                            src={formData.thumbnail}
+                            alt="Course thumbnail"
+                            className="w-full max-w-xs h-32 object-cover rounded-lg border"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2"
+                            onClick={() => updateFormData('thumbnail', '')}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* File Upload */}
+                      <div className="flex items-center gap-3">
+                        <Input
+                          id="thumbnail"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleImageUpload(file);
+                            }
+                          }}
+                          disabled={isUploading}
+                          className="flex-1"
+                        />
+                        {isUploading && (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            <span className="text-sm text-gray-600">Uploading...</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500">
+                        Upload a high-quality image (max 5MB). Recommended size: 1200x675px
+                      </p>
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="isFeatured">Featured</Label>

@@ -6,12 +6,12 @@ import Course from '@/lib/models/Course';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
-    const userId = params.id;
+    const { id: userId } = await params;
     const url = new URL(req.url);
     const userType = url.searchParams.get('type'); // 'student' or 'teacher'
 

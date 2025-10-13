@@ -4,11 +4,12 @@ import Course from '@/lib/models/Course';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
-    const course = await Course.findById(params.id).select('-__v').lean();
+    const { id } = await params;
+    const course = await Course.findById(id).select('-__v').lean();
 
     if (!course) {
       return new Response(JSON.stringify({ success: false, error: 'Course not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
@@ -23,10 +24,11 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    const { id } = await params;
     const body = await req.json();
 
     // Set isFeatured based on type
@@ -35,7 +37,7 @@ export async function PUT(
     }
 
     const course = await Course.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true, runValidators: true }
     ).select('-__v');
@@ -53,11 +55,12 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
-    const course = await Course.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const course = await Course.findByIdAndDelete(id);
 
     if (!course) {
       return new Response(JSON.stringify({ success: false, error: 'Course not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });

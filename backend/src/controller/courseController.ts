@@ -626,15 +626,7 @@ export const getHomepageUpcomingCourses = async (req: Request, res: Response): P
         .limit(10);
     }
 
-    // If still no draft courses, fall back to any published courses
-    if (courses.length === 0) {
-      courses = await Course.find({
-        status: 'Published'
-      })
-        .sort({ createdAt: -1 })
-        .limit(10);
-    }
-
+    // If no draft courses at all, return empty array (don't show published courses)
     res.json({
       success: true,
       data: {

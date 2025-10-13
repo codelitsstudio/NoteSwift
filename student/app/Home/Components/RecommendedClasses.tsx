@@ -51,7 +51,7 @@ export default function RecommendationClasses() {
     return (
       <View className="mb-6">
         <View className="flex-row justify-between items-center mt-4 mb-4">
-          <Text className="text-2xl font-bold text-gray-900">Recommended For You</Text>
+          <Text className="text-2xl font-bold text-gray-900">Recommended Picks</Text>
         </View>
         <View className="rounded-lg p-6 items-center justify-center">
           <Image
@@ -70,7 +70,7 @@ export default function RecommendationClasses() {
     return (
       <View className="mb-6">
         <View className="flex-row justify-between items-center mt-4 mb-4">
-          <Text className="text-2xl font-bold text-gray-900">Recommended For You</Text>
+          <Text className="text-2xl font-bold text-gray-900">Recommended Picks</Text>
         </View>
         <View className="rounded-lg p-6 items-center justify-center">
           <Image
@@ -91,8 +91,8 @@ export default function RecommendationClasses() {
   return (
     <View className="mb-6">
       <View className="flex-row justify-between items-center mt-4 mb-4">
-        <Text className="text-2xl font-bold text-gray-900">Recommended For You</Text>
-        <Text className="text-sm text-gray-500">AI-powered • Grade {user?.grade || '10'}</Text>
+        <Text className="text-2xl font-bold text-gray-900">Recommended Picks</Text>
+        <Text className="text-xs text-gray-500">AI-powered • Grade {user?.grade || '10'}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {recommendations.map((course) => (
@@ -101,7 +101,7 @@ export default function RecommendationClasses() {
             title={course.title}
             teacher={course.recommendationData?.targetAudience || "AI Recommended"}
             time={course.recommendationData?.difficultyLevel || "Adaptive"}
-            image={course.thumbnail ? { uri: course.thumbnail } : require("../../../assets/images/course-1-thumbnail.jpg")}
+            image={course.thumbnail ? { uri: course.thumbnail } : require("../../../assets/images/login.gif")}
             onPress={() => {
               router.push({
                 pathname: '/Home/Components/PackageDetails',
