@@ -174,14 +174,22 @@ export const getPersonalizedRecommendations = async (req: AuthRequest, res: Resp
       return;
     }
 
-    // For now, return featured courses as recommendations
-    // In the future, this can be enhanced with AI-based recommendations
-    const recommendations = await Course.find({
+    // First try to get featured courses
+    let recommendations = await Course.find({
       status: 'Published',
       isFeatured: true
     })
       .sort({ createdAt: -1 })
       .limit(5);
+
+    // If no featured courses, get any published courses
+    if (recommendations.length === 0) {
+      recommendations = await Course.find({
+        status: 'Published'
+      })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    }
 
     // Add recommendation metadata
     const recommendationsWithData = recommendations.map(course => ({
@@ -586,12 +594,32 @@ export const updateHomepageSettings = async (req: Request, res: Response): Promi
 // Get upcoming courses for student homepage
 export const getHomepageUpcomingCourses = async (req: Request, res: Response): Promise<void> => {
   try {
-    const courses = await Course.find({
+    // First try to get courses with future start dates
+    let courses = await Course.find({
       status: 'Published',
       startDate: { $gte: new Date() }
     })
       .sort({ startDate: 1 })
       .limit(10);
+
+    // If no courses with future start dates, get published courses that are not featured
+    if (courses.length === 0) {
+      courses = await Course.find({
+        status: 'Published',
+        isFeatured: { $ne: true }
+      })
+        .sort({ createdAt: -1 })
+        .limit(10);
+    }
+
+    // If still no courses, get any published courses
+    if (courses.length === 0) {
+      courses = await Course.find({
+        status: 'Published'
+      })
+        .sort({ createdAt: -1 })
+        .limit(10);
+    }
 
     res.json({
       success: true,
