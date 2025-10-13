@@ -174,15 +174,30 @@ export const getPersonalizedRecommendations = async (req: AuthRequest, res: Resp
       return;
     }
 
-    // First try to get featured courses
+    // Get homepage settings to see which featured courses are selected for display
+    const homepageSettings = await HomepageSettings.findOne();
+    const selectedFeaturedCourses = homepageSettings?.selectedFeaturedCourses || [];
+
+    // Get featured courses that are selected for homepage display
     let recommendations = await Course.find({
-      status: 'Published',
-      isFeatured: true
+      _id: { $in: selectedFeaturedCourses },
+      type: 'featured',
+      status: 'Published'
     })
       .sort({ createdAt: -1 })
       .limit(5);
 
-    // If no featured courses, get any published courses
+    // If no selected featured courses, fall back to any featured courses
+    if (recommendations.length === 0) {
+      recommendations = await Course.find({
+        type: 'featured',
+        status: 'Published'
+      })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    }
+
+    // If still no featured courses, fall back to any published courses
     if (recommendations.length === 0) {
       recommendations = await Course.find({
         status: 'Published'
@@ -594,25 +609,24 @@ export const updateHomepageSettings = async (req: Request, res: Response): Promi
 // Get upcoming courses for student homepage
 export const getHomepageUpcomingCourses = async (req: Request, res: Response): Promise<void> => {
   try {
-    // First try to get courses with future start dates
+    // Get draft courses that are marked as upcoming (have 'upcoming' tag)
     let courses = await Course.find({
-      status: 'Published',
-      startDate: { $gte: new Date() }
+      status: 'Draft',
+      tags: { $in: ['upcoming'] }
     })
-      .sort({ startDate: 1 })
+      .sort({ createdAt: -1 })
       .limit(10);
 
-    // If no courses with future start dates, get published courses that are not featured
+    // If no courses with upcoming tag, fall back to any draft courses
     if (courses.length === 0) {
       courses = await Course.find({
-        status: 'Published',
-        isFeatured: { $ne: true }
+        status: 'Draft'
       })
         .sort({ createdAt: -1 })
         .limit(10);
     }
 
-    // If still no courses, get any published courses
+    // If still no draft courses, fall back to any published courses
     if (courses.length === 0) {
       courses = await Course.find({
         status: 'Published'
