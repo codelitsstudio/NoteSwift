@@ -109,5 +109,5 @@ async function getData() {
 export default async function ResourcesPage() {
   const data = await getData();
   
-  return <ResourcesClient {...data} />;
+  return <ResourcesClient {...data} resources={data.resources as any} />;
 }

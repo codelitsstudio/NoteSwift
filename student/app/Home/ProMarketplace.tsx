@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StatusBar, Platform } from "react-native";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from "expo-router";
-import PackageDetailView from "./Components/PackageDetailView";
 
 interface Package {
   id: string;
@@ -10,9 +9,11 @@ interface Package {
   price: number;
   description: string;
   icon: string;
-  type: 'free' | 'paid';
+  type: 'free' | 'pro' | 'paid';
+  isFeatured?: boolean;
   skills?: string[];
   learningPoints?: string[];
+  teacherName?: string;
   modules?: {
     name: string;
     description: string;
@@ -24,7 +25,6 @@ interface Package {
 export default function ProMarketplace() {
   const router = useRouter();
   const { trialType, courseId, directView } = useLocalSearchParams();
-  const [viewingPackage, setViewingPackage] = useState<Package | null>(null);
   const [expandedSections, setExpandedSections] = useState<string[]>(['see', 'plus2']);
 
   // Available packages in marketplace
@@ -32,12 +32,12 @@ export default function ProMarketplace() {
     {
       id: "grade10",
       name: "Grade 10 Package",
-      price: trialType === 'free' ? 0 : 2499,
-      description: trialType === 'free' 
-        ? "Try Grade 10 materials free for 7 days" 
-        : "Complete study materials and practice tests for Grade 10",
+      price: 2999,
+      description: "Complete study materials and practice tests for Grade 10",
       icon: "menu-book",
-      type: trialType === 'free' ? 'free' : 'paid',
+      type: 'pro',
+      isFeatured: false,
+      teacherName: "Expert Faculty Team",
       skills: ['Live Learning', 'Interactive Sessions', 'Comprehensive Study', 'Expert Guidance'],
       learningPoints: [
         'Attend live classes with certified instructors',
@@ -75,12 +75,12 @@ export default function ProMarketplace() {
     {
       id: "grade11",
       name: "Grade 11 Package", 
-      price: trialType === 'free' ? 0 : 2499,
-      description: trialType === 'free'
-        ? "Try Grade 11 materials free for 7 days"
-        : "Comprehensive resources for Grade 11 curriculum",
+      price: 2999,
+      description: "Complete study materials and practice tests for Grade 11",
       icon: "auto-stories",
-      type: trialType === 'free' ? 'free' : 'paid',
+      type: 'pro',
+      isFeatured: true,
+      teacherName: "Advanced Learning Experts",
       skills: ['Advanced Learning', 'Live Instruction', 'Comprehensive Materials', 'Expert Support'],
       learningPoints: [
         'Join interactive live classes with subject experts',
@@ -118,12 +118,12 @@ export default function ProMarketplace() {
     {
       id: "grade12",
       name: "Grade 12 Package",
-      price: trialType === 'free' ? 0 : 2499,
-      description: trialType === 'free'
-        ? "Try Grade 12 board exam preparation free for 7 days"
-        : "Board exam preparation and advanced materials for Grade 12",
+      price: 2999,
+      description: "Board exam preparation and advanced materials for Grade 12",
       icon: "school",
-      type: trialType === 'free' ? 'free' : 'paid',
+      type: 'pro',
+      isFeatured: false,
+      teacherName: "Board Exam Specialists",
       skills: ['Board Exam Focus', 'Live Coaching', 'Premium Content', 'Career Guidance'],
       learningPoints: [
         'Attend intensive live coaching sessions for board exams',
@@ -162,13 +162,16 @@ export default function ProMarketplace() {
 
   // Handle course selection from AllCourses or direct navigation
   useEffect(() => {
-    if (courseId && availablePackages.length > 0) {
+    if (courseId && availablePackages.length > 0 && directView !== 'true') {
       const selectedPackage = availablePackages.find(pkg => pkg.id === courseId);
       if (selectedPackage) {
-        setViewingPackage(selectedPackage);
+        router.replace({
+          pathname: '/Home/Components/PackageDetails',
+          params: { packageData: JSON.stringify(selectedPackage) }
+        });
       }
     }
-  }, [courseId, availablePackages]);
+  }, [courseId, availablePackages, directView, router]);
 
   const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections(prev => 
@@ -178,18 +181,15 @@ export default function ProMarketplace() {
     );
   }, []);
 
-  // If directView is true, show PackageDetailView immediately
-  if (directView === 'true' && (viewingPackage || courseId)) {
-    const packageToShow = viewingPackage || (courseId ? availablePackages.find(pkg => pkg.id === courseId) : null);
+  // If directView is true, navigate to PackageDetails immediately
+  if (directView === 'true' && courseId) {
+    const packageToShow = availablePackages.find(pkg => pkg.id === courseId as string);
     if (packageToShow) {
-      return (
-        <PackageDetailView
-          package={packageToShow}
-          onBack={() => router.back()}
-          onSelect={() => {}}
-          isSelected={false}
-        />
-      );
+      router.replace({
+        pathname: '/Home/Components/PackageDetails',
+        params: { packageData: JSON.stringify(packageToShow) }
+      });
+      return null; // Prevent rendering
     }
   }
 
@@ -214,20 +214,7 @@ export default function ProMarketplace() {
   };
 
   return (
-    <>
-      {/* Package Detail View */}
-      {viewingPackage && (
-        <PackageDetailView
-          package={viewingPackage}
-          onBack={() => setViewingPackage(null)}
-          onSelect={() => {}}
-          isSelected={false}
-        />
-      )}
-
-      {/* Main Marketplace View */}
-      {!viewingPackage && (
-        <SafeAreaView className="flex-1 bg-white" style={{ paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
+    <SafeAreaView className="flex-1 bg-white">
           <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
           
       {/* Header */}
@@ -262,7 +249,7 @@ export default function ProMarketplace() {
       {/* Scrollable Content */}
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
         <View>
@@ -309,7 +296,10 @@ export default function ProMarketplace() {
                       return (
                         <TouchableOpacity
                           key={pkg.id}
-                          onPress={() => setViewingPackage(pkg)}
+                          onPress={() => router.push({
+                            pathname: '/Home/Components/PackageDetails',
+                            params: { packageData: JSON.stringify(pkg) }
+                          })}
                           disabled={isDisabled}
                           className={`border rounded-xl p-4 mb-3 ${
                             isDisabled 
@@ -325,6 +315,11 @@ export default function ProMarketplace() {
                                 }`}>
                                   {pkg.name}
                                 </Text>
+                                {pkg.isFeatured && (
+                                  <View className="ml-2 px-2 py-1 bg-blue-100 rounded-full">
+                                    <Text className="text-xs text-blue-600 font-semibold">Featured</Text>
+                                  </View>
+                                )}
                                 {pkg.type === 'paid' && (
                                   <View className="ml-2 px-2 py-1 bg-blue-100 rounded-full">
                                     <Text className="text-xs text-blue-600 font-semibold">PRO</Text>
@@ -352,7 +347,10 @@ export default function ProMarketplace() {
 
                               {/* View More Button */}
                               <TouchableOpacity 
-                                onPress={() => setViewingPackage(pkg)}
+                                onPress={() => router.push({
+                                  pathname: '/Home/Components/PackageDetails',
+                                  params: { packageData: JSON.stringify(pkg) }
+                                })}
                                 className="mt-3 flex-row items-center"
                               >
                                 <Text className="text-gray-500 text-sm font-medium">View Details</Text>
@@ -369,23 +367,6 @@ export default function ProMarketplace() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Bottom Button */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4">
-        <View className="px-5">
-          <TouchableOpacity
-            onPress={handleBack}
-            className="border border-gray-300 py-3 rounded-3xl"
-          >
-            <Text className="text-gray-700 text-center text-lg font-semibold">Back</Text>
-          </TouchableOpacity>
-          <Text className="text-gray-400 text-center mt-2 mb-3 text-sm">
-            One-time payment – no recurring charges.
-          </Text>
-        </View>
-      </View>
     </SafeAreaView>
-      )}
-    </>
   );
 }

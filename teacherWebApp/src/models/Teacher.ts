@@ -1,39 +1,120 @@
-import mongoose, { Schema, models, Model } from 'mongoose';
+import mongoose, { Schema, models, Model, Document } from 'mongoose';
 
 export interface IAssignedCourse {
-  courseId: mongoose.Types.ObjectId;
+  courseId: string;
   courseName: string;
   subject: string;
   assignedAt: Date;
 }
 
-export interface ITeacher extends mongoose.Document {
+export interface VerificationFile {
   name: string;
-  email: string;
-  assignedCourses: IAssignedCourse[]; // Courses/subjects assigned by admin
-  bio?: string;
-  qualifications?: string;
-  photoUrl?: string;
-  earnings?: number;
-  createdAt: Date;
-  updatedAt: Date;
+  mimeType: string;
+  size: number;
+  url: string;
+  publicId?: string;
+  uploadedAt: Date;
 }
 
+export interface ITeacher extends Document {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  dateOfBirth?: Date;
+  gender?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zipCode?: string;
+  };
+  institution?: {
+    name?: string;
+    type?: string;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zipCode?: string;
+    };
+  };
+  subjects?: any[];
+  qualifications?: any[];
+  experience?: any;
+  bio?: string;
+  verificationDocuments?: Record<string, VerificationFile[]>;
+  agreementAccepted?: boolean;
+  onboardingComplete?: boolean;
+  onboardingStep?: string;
+  status?: string;
+  approvalStatus?: string;
+  approvedAt?: Date;
+  rejectedAt?: Date;
+}
+
+const verificationFileSchema = new Schema<VerificationFile>({
+  name: String,
+  mimeType: String,
+  size: Number,
+  url: String,
+  publicId: String,
+  uploadedAt: Date,
+}, { _id: false });
+
 const teacherSchema = new Schema<ITeacher>({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  assignedCourses: [{
-    courseId: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
-    courseName: { type: String, required: true },
-    subject: { type: String, required: true },
-    assignedAt: { type: Date, default: Date.now }
-  }],
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  phoneNumber: { type: String },
+  dateOfBirth: { type: Date },
+  gender: { type: String },
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    country: String,
+    zipCode: String,
+  },
+  institution: {
+    name: String,
+    type: String,
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      country: String,
+      zipCode: String,
+    },
+  },
+  subjects: { type: Array, default: [] },
+  qualifications: { type: Array, default: [] },
+  experience: { type: Schema.Types.Mixed },
   bio: { type: String },
-  qualifications: { type: String },
-  photoUrl: { type: String },
-  earnings: { type: Number, default: 0 },
+  verificationDocuments: { type: Schema.Types.Mixed, default: {} },
+  agreementAccepted: { type: Boolean, default: false },
+  onboardingComplete: { type: Boolean, default: false },
+  onboardingStep: { type: String, default: 'personal_info' },
+  status: { type: String, default: 'pending_approval' },
+  approvalStatus: { type: String, default: 'pending' },
+  approvedAt: Date,
+  rejectedAt: Date,
 }, { timestamps: true });
 
-const Teacher: Model<ITeacher> = models.Teacher || mongoose.model<ITeacher>('Teacher', teacherSchema);
+teacherSchema.methods.comparePassword = async function(candidatePassword: string) {
+  const crypto = require('crypto');
+  const hashed = crypto.createHash('sha256').update(candidatePassword).digest('hex');
+  return hashed === this.password;
+};
+
+teacherSchema.methods.updateLastLogin = function() {
+  return this.updateOne({ lastLogin: new Date() });
+};
+
+const Teacher: Model<ITeacher> = (models.Teacher as any) || mongoose.model<ITeacher>('Teacher', teacherSchema);
 
 export default Teacher;

@@ -9,6 +9,20 @@ import {
   ImageSourcePropType,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useCourseStore } from "../../../stores/courseStore";
+
+interface Package {
+  id: string;
+  title: string;
+  description: string;
+  type: 'free' | 'pro';
+  isFeatured: boolean;
+  price?: number;
+  skills: string[];
+  learningPoints: string[];
+  features: string[];
+}
 
 type Course = {
   id: string;
@@ -17,90 +31,128 @@ type Course = {
   type: string;
   rating: string;
   image: ImageSourcePropType;
+  package: Package;
 };
 
-const freeCourses: Course[] = [
- {
-  id: "1",
-  title: "Critical Thinking & Problem Solving",
-  provider: "NoteSwift Network",
-  type: "Guided Project",
-  rating: "4.5 (420)",
-  image: require("../../../assets/images/notes1.png"),
-},
-{
-  id: "2",
-  title: "Time Management & Productivity Mastery",
-  provider: "Global Skills Institute",
-  type: "Course",
-  rating: "4.8 (7.2K)",
-  image: require("../../../assets/images/notes1.png"),
-},
-{
-  id: "3",
-  title: "Effective Communication & Public Speaking",
-  provider: "NoteSwift Network",
-  type: "Guided Project",
-  rating: "4.6 (1.1K)",
-  image: require("../../../assets/images/notes1.png"),
-},
-{
-  id: "4",
-  title: "Introduction to Data & Digital Literacy",
-  provider: "Open Learning Academy",
-  type: "Course",
-  rating: "4.7 (3.9K)",
-  image: require("../../../assets/images/notes1.png"),
-},
+export default function FreeCourses() {
+  const { courses, is_loading } = useCourseStore();
 
-];
-
-export default function FreeCoursesSection() {
-  const renderItem: ListRenderItem<Course> = ({ item }) => (
-    <TouchableOpacity
-      className="flex-row justify-between items-center bg-white py-4 px-3 mb-3 rounded-2xl border border-gray-100"
-      onPress={() => console.log(`Pressed ${item.title}`)}
-    >
-      {/* Left side text */}
-      <View className="flex-1 pr-3">
-        <Text className="text-base font-semibold text-gray-900 mb-1">
-          {item.title}
-        </Text>
-        <Text className="text-sm text-gray-600">{item.provider}</Text>
-        <Text className="text-sm text-gray-500 mb-1">{item.type}</Text>
-        <View className="flex-row items-center">
-          <MaterialIcons name="star" size={16} color="#007AFF" />
-          <Text className="ml-1 text-sm text-gray-700">{item.rating}</Text>
+  if (is_loading) {
+    return (
+      <View className="mb-6">
+        <View className="flex-row justify-between items-center mt-4 mb-4">
+          <Text className="text-2xl font-bold text-gray-900">Free Courses</Text>
+        </View>
+        <View className="rounded-lg p-6 items-center justify-center">
+          <Image
+            source={require('../../../assets/images/Loading.gif')}
+            style={{ width: 160, height: 160, marginBottom: 16 }}
+          />
+          <Text className="text-sm text-gray-500">Loading free courses...</Text>
         </View>
       </View>
+    );
+  }
 
-      {/* Right side image */}
-      <Image
-        source={item.image}
-        className="w-24 h-24 rounded-lg"
-        resizeMode="contain"
-      />
+  // Filter courses that are free and published
+  const freeCourses: Course[] = courses
+    .filter(course => course.type === 'free' && course.status === 'Published')
+    .map(course => ({
+      id: course.id || course._id,
+      title: course.title,
+      provider: course.offeredBy || "NoteSwift Network",
+      type: "Free Course",
+      rating: course.rating ? `${course.rating} (${course.enrolledCount || 0})` : "4.9 (0)",
+      image: course.thumbnail ? {uri: course.thumbnail} : require("../../../assets/images/notes1.png"),
+      package: {
+        id: course.id || course._id,
+        title: course.title,
+        description: course.description,
+        type: 'free',
+        isFeatured: course.isFeatured || false,
+        skills: course.skills || [],
+        learningPoints: course.learningPoints || [],
+        features: course.features || []
+      }
+    }));
+
+  const renderItem: ListRenderItem<Course> = ({ item }) => (
+    <TouchableOpacity
+      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 mx-2"
+      onPress={() => {
+        router.push({
+          pathname: '/Home/Components/PackageDetails',
+          params: { packageData: JSON.stringify(item.package) }
+        });
+      }}
+    >
+      <View className="flex-row">
+        <Image
+          source={item.image}
+          className="w-16 h-16 rounded-lg mr-4"
+          resizeMode="cover"
+        />
+        <View className="flex-1">
+          <Text className="text-lg font-semibold text-gray-900 mb-1">
+            {item.title}
+          </Text>
+          <Text className="text-sm text-gray-600 mb-2">
+            {item.provider}
+          </Text>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <MaterialIcons name="star" size={16} color="#fbbf24" />
+              <Text className="text-sm text-gray-600 ml-1">
+                {item.rating}
+              </Text>
+            </View>
+            <View className="bg-green-100 px-2 py-1 rounded-full">
+              <Text className="text-xs font-medium text-green-800">
+                {item.type}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 
+  if (freeCourses.length === 0) {
+    return (
+      <View className="mb-6">
+        <View className="flex-row justify-between items-center mt-4 mb-4">
+          <Text className="text-2xl font-bold text-gray-900">Free Courses</Text>
+        </View>
+        <View className="rounded-lg p-6 items-center justify-center">
+          <Image
+            source={require('../../../assets/images/Freelancer.gif')}
+            style={{ width: 220, height: 220, marginBottom: 4 }}
+          />
+          <Text className="text-lg font-semibold text-gray-800">
+            No free courses available
+          </Text>
+          <Text className="text-sm text-gray-500 mt-1 text-center px-4">
+            Check back later for new free courses!
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View className="mb-2">
-      {/* Header */}
-      <View className="flex-row justify-between items-center mb-4 px-1">
-        <Text className="text-2xl font-bold text-gray-900">
-         Upcoming list of Free{'\n'}Courses
-        </Text>
+    <View className="mb-6">
+      <View className="flex-row justify-between items-center mt-4 mb-4">
+        <Text className="text-2xl font-bold text-gray-900">Free Courses</Text>
         <TouchableOpacity>
-          <Text className="text-sm text-blue-500 font-medium">See All</Text>
+          <Text className="text-base text-blue-500 font-medium">View All</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Course List */}
       <FlatList
         data={freeCourses}
-        keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        scrollEnabled={false}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 4 }}
       />
     </View>
   );

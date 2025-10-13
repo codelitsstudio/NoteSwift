@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, usePathname } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-export default function HeaderTwo() {
+export default function HeaderTwo({ title }: { title?: string }) {
   const router = useRouter();
   const pathname = usePathname(); // Get current route path
 
@@ -33,26 +33,21 @@ export default function HeaderTwo() {
   };
 
   return (
-    <SafeAreaView edges={["top", "left", "right"]} className="bg-white border-b border-gray-100">
-      <View className="h-14 flex-row items-center justify-between px-3 mb-2">
-        <TouchableOpacity
+    <SafeAreaView edges={["top", "left", "right"]} className="bg-white ">
+      <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-200">
+        <TouchableOpacity 
           activeOpacity={0.7}
-          onPress={() => router.back()}
-          className="flex-row items-center py-1 px-0.5"
+          onPress={() => router.back()} 
+          className="p-2"
         >
-          <Ionicons name="chevron-back" size={26} color="#0A84FF" />
-          <Text numberOfLines={1} className="text-buttonBlue text-xl font-normal ml-1">
-            Back
-          </Text>
+          <Ionicons name="chevron-back" size={22} color="#374151" />
         </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={handleShare}
-          className="w-14 h-11 items-center justify-center"
-        >
-          <Ionicons name="share-outline" size={25} color="#0A84FF" />
-        </TouchableOpacity>
+        
+        <Text className="text-lg font-semibold text-gray-900">
+          {title || ''}
+        </Text>
+        
+        <View className="w-10" />
       </View>
     </SafeAreaView>
   );

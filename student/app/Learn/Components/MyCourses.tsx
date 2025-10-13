@@ -35,7 +35,7 @@ const OngoingCourseCard = ({ item, enrollment }: { item: any, enrollment?: any }
               </View>
             ) : (
               <Text className="text-xs text-customBlue bg-customBlue/10 px-2 py-1 rounded-full font-semibold">
-                {item.subject || item.category || 'General'}
+                {item.subjects?.map((s: any) => s.name).join(', ') || item.category || 'General'}
               </Text>
             )}
             <View className="flex-row items-center mr-1">

@@ -13,6 +13,10 @@ import {
   ShieldCheck,
   Info,
   Crown,
+  UserCheck,
+  BookOpen,
+  Sparkles,
+  BotMessageSquare,
 } from "lucide-react";
 import {
   SidebarMenu,
@@ -25,6 +29,10 @@ import { useLoading } from "@/context/loading-context";
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/content", label: "Content", icon: BookCopy },
+  { href: "/dashboard/teacher-management", label: "Teacher Management", icon: Users },
+  { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
+  { href: "/dashboard/recommendations", label: "Course Recommendations", icon: BotMessageSquare },
+
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/reports", label: "Reports", icon: LineChart },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },

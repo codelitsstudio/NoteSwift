@@ -187,3 +187,33 @@ export async function handleAdminLogin(username: string, password: string) {
     return { success: false, error: "Invalid username or password." };
   }
 }
+
+// ---------------------------- CREATE ADMIN SESSION ----------------------------
+export async function handleCreateAdminSession(username: string, deviceFingerprint: string, ipAddress?: string, userAgent?: string) {
+  try {
+    const { createAdminSession } = await import('@/lib/auth');
+
+    const sessionData = {
+      adminId: 'admin_001', // Fixed admin ID for single admin system
+      username,
+      loginTime: Date.now(),
+      deviceFingerprint,
+      ipAddress,
+      userAgent,
+    };
+
+    const token = await createAdminSession(sessionData);
+
+    return {
+      success: true,
+      token,
+      sessionData: {
+        username: sessionData.username,
+        loginTime: sessionData.loginTime,
+      }
+    };
+  } catch (error) {
+    console.error('Error creating admin session:', error);
+    return { success: false, error: 'Failed to create session.' };
+  }
+}

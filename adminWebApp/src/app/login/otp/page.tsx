@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { handleVerifyOtp, handleSendOtp } from "@/app/actions";
+import { handleVerifyOtp, handleSendOtp, handleCreateAdminSession } from "@/app/actions";
+import { generateDeviceFingerprint } from "@/lib/auth";
 
 export default function OtpPage() {
   const router = useRouter();
@@ -34,13 +35,44 @@ export default function OtpPage() {
     const result = await handleVerifyOtp({ otp });
 
     if (result.success) {
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.removeItem("isPasswordVerified");
-      toast({
-        title: "Authentication Successful",
-        description: "Welcome to the dashboard!",
+      // Create secure session with device fingerprint
+      const deviceFingerprint = generateDeviceFingerprint();
+
+      const loginResponse = await fetch('/api/auth/complete-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deviceFingerprint,
+          userAgent: navigator.userAgent,
+        }),
       });
-      router.push("/dashboard");
+
+      const loginResult = await loginResponse.json();
+
+      if (loginResult.success) {
+        // Backup session info to localStorage for UI purposes
+        localStorage.setItem('admin_session_backup', JSON.stringify({
+          username: 'admin',
+          loginTime: Date.now(),
+        }));
+        localStorage.setItem("isAuthenticated", "true");
+        localStorage.removeItem("isPasswordVerified");
+
+        toast({
+          title: "Authentication Successful",
+          description: "Welcome to the dashboard!",
+        });
+        router.push("/dashboard");
+      } else {
+        setError("Failed to create session. Please try again.");
+        toast({
+          variant: "destructive",
+          title: "Session Creation Failed",
+          description: "Could not establish secure session.",
+        });
+      }
     } else {
       setError(result.error || "Invalid code. Please try again.");
       toast({

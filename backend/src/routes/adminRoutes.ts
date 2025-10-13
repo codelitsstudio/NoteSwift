@@ -2,6 +2,21 @@ import express from 'express';
 import { DatabaseMaintenanceService } from '../services/DatabaseMaintenanceService';
 import { DatabaseSeeder } from '../services/DatabaseSeeder';
 import { EnrollmentService } from '../services/EnrollmentService';
+import {
+  getFeaturedCourse,
+  enrollInCourse,
+  getUserEnrollments,
+  getAllCourses,
+  getLessonProgress,
+  updateLessonProgress,
+  updateModuleProgress,
+  getModuleProgress,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  getCourseById,
+  getAllCoursesAdmin
+} from '../controller/courseController';
 
 const router = express.Router();
 
@@ -204,6 +219,94 @@ router.post('/students/:studentId/auto-enroll', async (req, res) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+});
+
+/**
+ * Course Management Routes
+ */
+
+/**
+ * GET /api/admin/courses
+ * Get all courses for admin management
+ */
+router.get('/courses', getAllCoursesAdmin);
+
+/**
+ * POST /api/admin/courses
+ * Create a new course
+ */
+router.post('/courses', createCourse);
+
+/**
+ * GET /api/admin/courses/:id
+ * Get a specific course by ID
+ */
+router.get('/courses/:id', getCourseById);
+
+/**
+ * PUT /api/admin/courses/:id
+ * Update a course
+ */
+router.put('/courses/:id', updateCourse);
+
+/**
+ * DELETE /api/admin/courses/:id
+ * Delete a course
+ */
+router.delete('/courses/:id', deleteCourse);
+
+/**
+ * GET /api/admin/homepage-settings
+ * Get homepage settings for admin
+ */
+router.get('/homepage-settings', async (req, res) => {
+  const { getHomepageSettings } = await import('../controller/courseController');
+  return getHomepageSettings(req, res);
+});
+
+/**
+ * PUT /api/admin/homepage-settings
+ * Update homepage settings
+ */
+router.put('/homepage-settings', async (req, res) => {
+  const { updateHomepageSettings } = await import('../controller/courseController');
+  return updateHomepageSettings(req, res);
+});
+
+/**
+ * GET /api/admin/recommendations
+ * Get recommendation stats and settings
+ */
+router.get('/recommendations', async (req, res) => {
+  const { getRecommendationStats } = await import('../controller/courseController');
+  return getRecommendationStats(req, res);
+});
+
+/**
+ * POST /api/admin/recommendations
+ * Analyze a course for recommendations
+ */
+router.post('/recommendations', async (req, res) => {
+  const { analyzeCourseForRecommendations } = await import('../controller/courseController');
+  return analyzeCourseForRecommendations(req, res);
+});
+
+/**
+ * POST /api/admin/recommendations/analyze-all
+ * Analyze all courses for recommendations
+ */
+router.post('/recommendations/analyze-all', async (req, res) => {
+  const { analyzeAllCoursesForRecommendations } = await import('../controller/courseController');
+  return analyzeAllCoursesForRecommendations(req, res);
+});
+
+/**
+ * GET /api/admin/recommendations/course-changes
+ * Check for course changes since last analysis
+ */
+router.get('/recommendations/course-changes', async (req, res) => {
+  const { checkCourseChanges } = await import('../controller/courseController');
+  return checkCourseChanges(req, res);
 });
 
 export default router;

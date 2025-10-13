@@ -9,10 +9,40 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  subject: string;
+  subjects?: {
+    name: string;
+    modules?: {
+      name: string;
+      description: string;
+      duration?: string;
+    }[];
+  }[];
   tags: string[];
   status: string;
+  type?: 'featured' | 'pro' | 'free' | 'recommended' | 'upcoming';
+  offeredBy?: string;
+  icon?: string;
+  thumbnail?: string;
+  duration?: string; // For time display
+  rating?: number;
+  enrolledCount?: number;
+  program: string; // SEE, +2, Bachelor, CTEVT
   isFeatured?: boolean;
+  skills?: string[];
+  learningPoints?: string[];
+  features?: string[];
+  price?: number;
+  courseOverview?: string;
+  keyFeatures?: string[];
+  syllabus?: {
+    moduleNumber: number;
+    title: string;
+    description: string;
+  }[];
+  faq?: {
+    question: string;
+    answer: string;
+  }[];
   createdAt: string;
   updatedAt: string;
 }

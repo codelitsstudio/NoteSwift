@@ -20,42 +20,81 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setIsLoading(true);
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-  const resp = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
-  const loginResult = await resp.json();
-
-  if (loginResult.success) {
-    const otpResp = await fetch("/api/auth/send-otp", { method: "POST" });
-    const result = await otpResp.json();
-    if (result.success) {
-      localStorage.setItem("isPasswordVerified", "true");
-      toast({
-        title: "Code Sent",
-        description: "A one-time code has been sent to your email.",
+    try {
+      const response = await fetch("/api/teacher/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username, password })
       });
-      router.push("/login/otp");
-    } else {
-      setError(result.error || "Failed to send login code. Please try again.");
+
+      const result = await response.json();
+
+      if (result.error) {
+        setError(result.message || "Login failed");
+        
+        // If application is being reviewed, redirect to pending approval page
+        if (result.message && result.message.includes('application is being reviewed')) {
+          toast({
+            title: "Application Under Review",
+            description: "Your application is being reviewed. Please check back later.",
+          });
+          
+          setTimeout(() => {
+            router.push('/pending-approval');
+          }, 2000);
+          return;
+        }
+
+        // If application is rejected, show error
+        if (result.message && result.message.includes('application has been rejected')) {
+          toast({
+            variant: "destructive",
+            title: "Application Rejected",
+            description: "Your application has been rejected. Please contact support for more information.",
+          });
+          return;
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: result.message || "Invalid credentials.",
+        });
+        return;
+      }
+
+      // Store token and teacher info
+      localStorage.setItem('teacherToken', result.result.token);
+      localStorage.setItem('teacherId', result.result.teacher._id);
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back to NoteSwift Teacher!",
+      });
+
+      // Check onboarding status
+      if (result.result.teacher.onboardingStep !== 'completed') {
+        router.push('/onboarding');
+      } else {
+        router.push('/dashboard');
+      }
+
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError("An unexpected error occurred. Please try again.");
       toast({
         variant: "destructive",
-        title: "Failed to Send Code",
-        description: result.error || "An unexpected error occurred.",
+        title: "Error",
+        description: "An unexpected error occurred.",
       });
+    } finally {
+      setIsLoading(false);
     }
-  } else {
-    setError("Invalid username or password. Please try again.");
-    toast({
-      variant: "destructive",
-      title: "Login Failed",
-      description: loginResult.error || "Invalid credentials.",
-    });
-  }
-
-  setIsLoading(false);
-};
+  };
 
 
   return (
@@ -163,7 +202,7 @@ export default function LoginPage() {
         <p className="text-xs sm:text-sm text-gray-600">
           Don't have an account?{" "}
           <button
-            onClick={() => router.push("/signup")}
+            onClick={() => router.push("/register")}
             className="font-semibold text-blue-500 hover:text-blue-700 hover:underline transition-colors"
           >
             Sign up

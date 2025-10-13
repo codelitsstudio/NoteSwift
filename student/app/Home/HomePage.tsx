@@ -4,7 +4,7 @@ import { View, Text, ScrollView, KeyboardAvoidingView, Platform, BackHandler } f
 import Toast from "react-native-toast-message";
 import { useFocusEffect } from '@react-navigation/native';
 
-import FeaturedClasses from "./Components/FeaturedDemoClasses";
+import FeaturedClasses from "./Components/FeaturedHomepage";
 import QuickAccess from "../QuickAccess/QuickAccess";
 import UpcomingCourses from "./Components/UpcomingCourses";
 import TopicsSection from "../../components/Container/TopicSection";
@@ -110,7 +110,8 @@ export default function HomePage() {
   const { 
     featuredCourse,
     fetchFeaturedCourse, 
-    fetchUserEnrollments, 
+    fetchUserEnrollments,
+    fetchAllCourses,
     checkAndShowPopup,
   } = useCourseStore();
 
@@ -172,7 +173,8 @@ export default function HomePage() {
       // Fetch both featured course and user enrollments
       await Promise.all([
         fetchFeaturedCourse(),
-        fetchUserEnrollments(userId)
+        fetchUserEnrollments(userId),
+        fetchAllCourses()
       ]);
 
       console.log('Both API calls completed, now checking popup...');

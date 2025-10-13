@@ -8,12 +8,12 @@ interface FilterModalProps {
   onClose: () => void;
   filters: {
     type: string;
-    grade: string;
+    program: string;
     subject: string;
   };
   onApplyFilters: (filters: {
     type: string;
-    grade: string;
+    program: string;
     subject: string;
   }) => void;
 }
@@ -30,12 +30,12 @@ export default function FilterModal({ visible, onClose, filters, onApplyFilters 
     { value: 'pro', label: 'Pro Packages' }
   ];
 
-  const gradeOptions = [
-    { value: 'all', label: 'All Grades' },
-    { value: 'grade8-10', label: 'Grade 8-10' },
-    { value: 'grade10', label: 'Grade 10' },
-    { value: 'grade11', label: 'Grade 11' },
-    { value: 'grade12', label: 'Grade 12' }
+  const programOptions = [
+    { value: 'all', label: 'All Programs' },
+    { value: 'SEE', label: 'SEE (Grade 8-10)' },
+    { value: '+2', label: '+2 (Grade 11-12)' },
+    { value: 'Bachelor', label: 'Bachelor' },
+    { value: 'CTEVT', label: 'CTEVT' }
   ];
 
   const subjectOptions = [
@@ -74,7 +74,7 @@ export default function FilterModal({ visible, onClose, filters, onApplyFilters 
   };
 
   const handleReset = () => {
-    const resetFilters = { type: 'all', grade: 'all', subject: 'all' };
+    const resetFilters = { type: 'all', program: 'all', subject: 'all' };
     setTempFilters(resetFilters);
     setLastAction('reset');
     // Apply reset immediately like in the previous version
@@ -83,7 +83,7 @@ export default function FilterModal({ visible, onClose, filters, onApplyFilters 
   };
 
   const handleQuickFreeOnly = () => {
-    const freeOnlyFilters = { type: 'free', grade: 'all', subject: 'all' };
+    const freeOnlyFilters = { type: 'free', program: 'all', subject: 'all' };
     setTempFilters(freeOnlyFilters);
     setLastAction(null);
     // Apply free-only filter immediately
@@ -103,12 +103,12 @@ export default function FilterModal({ visible, onClose, filters, onApplyFilters 
       }
     },
     {
-      title: 'Grade Level',
+      title: 'Program Level',
       description: 'Select your current education level',
-      options: gradeOptions,
-      selectedValue: tempFilters.grade,
+      options: programOptions,
+      selectedValue: tempFilters.program,
       onSelect: (value: string) => {
-        setTempFilters(prev => ({ ...prev, grade: value }));
+        setTempFilters(prev => ({ ...prev, program: value }));
         setLastAction(null);
       }
     },
@@ -146,7 +146,7 @@ export default function FilterModal({ visible, onClose, filters, onApplyFilters 
                   <MaterialIcons 
                     name={
                       category.title === 'Course Type' ? 'school' :
-                      category.title === 'Grade Level' ? 'grade' : 'subject'
+                      category.title === 'Program Level' ? 'school' : 'subject'
                     } 
                     size={20} 
                     color={category.selectedValue === option.value ? '#3B82F6' : '#6B7280'} 

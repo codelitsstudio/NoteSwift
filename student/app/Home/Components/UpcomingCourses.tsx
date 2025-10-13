@@ -1,51 +1,107 @@
-import React from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, Image } from "react-native";
+import { router } from "expo-router";
+import axios from "@/api/axios";
 import CourseMiniCard from "../../../components/Container/CourseMiniCard";
+import { useCourseStore } from "../../../stores/courseStore";
 
-const courses = [
-  {
-  id: 1,
-  title: "Critical Thinking Workshop",
-  teacher: "Niru Nirmala",
-  time: "9:00am - 10:00am",
-  image: require("../../../assets/images/science.png"),
-},
-{
-  id: 2,
-  title: "Productivity & Time Management",
-  teacher: "Raju Shrestha",
-  time: "8:00am - 9:00am",
-  image: require("../../../assets/images/maths.avif"),
-},
-{
-  id: 3,
-  title: "Effective Communication Skills",
-  teacher: "Anita Joshi",
-  time: "7:00pm - 8:00pm",
-  image: require("../../../assets/images/science.png"),
-},
-
-];
+interface Course {
+  _id: string;
+  title: string;
+  description: string;
+  price?: number;
+  type: string;
+  status: string;
+  icon?: string;
+  skills?: string[];
+  features?: string[];
+  offeredBy?: string;
+  thumbnail?: string;
+  duration?: string;
+}
 
 export default function UpcomingCourses() {
+  const [homepageUpcomingCourses, setHomepageUpcomingCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { courses } = useCourseStore();
+
+  // Fetch homepage upcoming courses
+  const fetchHomepageUpcomingCourses = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/courses/homepage/upcoming');
+      if (response.data.success) {
+        setHomepageUpcomingCourses(response.data.data.courses);
+      }
+    } catch (error) {
+      console.error('Error fetching homepage upcoming courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHomepageUpcomingCourses();
+  }, []);
+
+  if (loading) {
+    return (
+      <View className="mb-6">
+        <View className="flex-row justify-between items-center mt-4 mb-4">
+          <Text className="text-2xl font-bold text-gray-900">Upcoming Courses</Text>
+        </View>
+        <View className="rounded-lg p-6 items-center justify-center">
+          <Image
+            source={require('../../../assets/images/Loading.gif')}
+            style={{ width: 160, height: 160, marginBottom: 16 }}
+          />
+          <Text className="text-sm text-gray-500">Loading upcoming courses...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (homepageUpcomingCourses.length === 0) {
+    return (
+      <View className="mb-6">
+        <View className="flex-row justify-between items-center mt-4 mb-4">
+          <Text className="text-2xl font-bold text-gray-900">Upcoming Courses</Text>
+        </View>
+        <View className="rounded-lg p-6 items-center justify-center">
+          <Image
+            source={require('../../../assets/images/classes.gif')}
+            style={{ width: 180, height: 180, marginBottom: 16 }}
+          />
+          <Text className="text-lg font-semibold text-gray-800">
+            No upcoming courses available
+          </Text>
+          <Text className="text-sm text-gray-500 mt-1 text-center px-4">
+            Stay tuned for exciting new courses!
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View className="mb-6">
-       {/* Upcoming */}
-                <View className="flex-row justify-between items-center mt-4 mb-4">
-                  <Text className="text-2xl font-bold text-gray-900">Upcoming Classes</Text>
-                  <TouchableOpacity onPress={() => {}}>
-                    <Text className="text-base text-blue-500 font-medium">View More</Text>
-                  </TouchableOpacity>
-                </View>
+      <View className="flex-row justify-between items-center mt-4 mb-4">
+        <Text className="text-2xl font-bold text-gray-900">Upcoming Courses</Text>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {courses.map((course) => (
+        {homepageUpcomingCourses.map((course) => (
           <CourseMiniCard
-            key={course.id}
+            key={course._id}
             title={course.title}
-            teacher={course.teacher}
-            time={course.time}
-            image={course.image}
-            onPress={() => console.log(`Pressed ${course.title}`)}
+            teacher={course.offeredBy || "NoteSwift"}
+            time={course.duration || "Coming Soon"}
+            image={course.thumbnail ? { uri: course.thumbnail } : require("../../../assets/images/science.png")}
+            onPress={() => {
+              router.push({
+                pathname: '/Home/Components/PackageDetails',
+                params: { packageData: JSON.stringify({ ...course, type: course.type || 'pro' }) }
+              });
+            }}
           />
         ))}
       </ScrollView>

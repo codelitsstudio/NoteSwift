@@ -172,7 +172,13 @@ export default function RootLayout() {
                   {/* Detail Screens with HeaderTwo */}
                   <Stack.Screen name="Learn/ScienceSubjectPage" options={{ header: () => <HeaderTwo /> }} />
                   <Stack.Screen name="Learn/ScienceChapterPage" options={{ header: () => <HeaderTwo /> }} />
-                  <Stack.Screen name="Home/Components/FirstCourseDescription" options={{ header: () => <HeaderTwo /> }} />
+                  <Stack.Screen 
+                    name="Home/Components/PackageDetails" 
+                    options={{ 
+                      header: () => <HeaderTwo title="Package Details" />, 
+                    }} 
+                  />
+                  
 
 
                   {/* Special Screens */}

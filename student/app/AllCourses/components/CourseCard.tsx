@@ -7,10 +7,17 @@ interface Course {
   name: string;
   price: number;
   description: string;
+  subjects?: {
+    name: string;
+    modules?: {
+      name: string;
+      description: string;
+      duration?: string;
+    }[];
+  }[];
   icon: string;
   type: 'free' | 'pro';
-  grade?: string;
-  subject?: string;
+  program: string;
   duration?: string;
   rating?: number;
   enrolledCount?: number;

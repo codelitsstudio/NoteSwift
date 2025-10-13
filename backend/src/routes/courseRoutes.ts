@@ -7,7 +7,10 @@ import {
   getLessonProgress,
   updateLessonProgress,
   updateModuleProgress,
-  getModuleProgress
+  getModuleProgress,
+  getPersonalizedRecommendations,
+  getHomepageFeaturedCourses,
+  getHomepageUpcomingCourses
 } from '../controller/courseController';
 import { authenticateStudent } from '../middlewares/student.middleware';
 
@@ -16,11 +19,14 @@ const router = express.Router();
 
 // Public routes (no authentication required)
 router.get('/featured', getFeaturedCourse);
+router.get('/homepage/featured', getHomepageFeaturedCourses);
+router.get('/homepage/upcoming', getHomepageUpcomingCourses);
 router.get('/', getAllCourses);
 
 // Protected routes (authentication required)
 router.post('/enroll', authenticateStudent, enrollInCourse);
 router.get('/enrollments/:userId', authenticateStudent, getUserEnrollments);
+router.get('/recommendations', authenticateStudent, getPersonalizedRecommendations);
 
 // Additional useful routes you might need
 // Extend Express Request interface to include 'user' for type safety

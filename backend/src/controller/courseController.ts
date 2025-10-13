@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import Course from "../models/Course.model";
 import CourseEnrollment from "../models/CourseEnrollment";
+import HomepageSettings from "../models/HomepageSettings.model";
 import { Types } from "mongoose";
 
 // Extend Express Request to include user injected by auth middleware
@@ -302,7 +303,7 @@ export const getUserEnrollments = async (req: AuthRequest, res: Response): Promi
     const enrollments = await CourseEnrollment.find({
       studentId: userId,
       isActive: true,
-    }).populate("courseId", "title description subject tags");
+    }).populate("courseId", "title description subjects tags");
 
     res.json({
       success: true,
@@ -350,6 +351,561 @@ export const getAllCourses = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+};
+
+// Admin course management functions
+export const createCourse = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const courseData = req.body;
+
+    // Set isFeatured based on type
+    if (courseData.type === 'featured') {
+      courseData.isFeatured = true;
+    }
+
+    const course = new Course(courseData);
+    await course.save();
+
+    res.status(201).json({
+      success: true,
+      data: { course },
+      message: "Course created successfully",
+    });
+  } catch (error) {
+    console.error("Error creating course:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const updateCourse = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Set isFeatured based on type
+    if (updateData.type === 'featured') {
+      updateData.isFeatured = true;
+    }
+
+    const course = await Course.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true
+    });
+
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: { course },
+      message: "Course updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating course:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const deleteCourse = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const course = await Course.findByIdAndDelete(id);
+
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: "Course deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getCourseById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const course = await Course.findById(id);
+
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: { course },
+      message: "Course retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error fetching course:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getAllCoursesAdmin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const courses = await Course.find({})
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: { courses },
+      message: "Courses retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error fetching courses:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// Get personalized course recommendations based on student's grade
+export const getPersonalizedRecommendations = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const studentId = req.user?.id;
+    if (!studentId) {
+      res.status(401).json({ success: false, message: "Authentication required" });
+      return;
+    }
+
+    // Get student profile to find their grade
+    const Student = require("../models/students/Student.model").default;
+    const student = await Student.findById(studentId);
+
+    if (!student) {
+      res.status(404).json({ success: false, message: "Student not found" });
+      return;
+    }
+
+    const studentGrade = student.grade;
+
+    // Find courses that have recommendation data and match the student's grade
+    const recommendedCourses = await Course.find({
+      status: 'Published',
+      'recommendationData.targetGrades': {
+        $in: [`Grade ${studentGrade}`, `${studentGrade}`, `Class ${studentGrade}`]
+      }
+    })
+    .select('title description thumbnail recommendationData type price')
+    .sort({ 'recommendationData.confidence': -1, createdAt: -1 })
+    .limit(10);
+
+    // If no specific grade matches, get courses with high confidence scores
+    let fallbackCourses = [];
+    if (recommendedCourses.length < 5) {
+      fallbackCourses = await Course.find({
+        status: 'Published',
+        recommendationData: { $exists: true },
+        'recommendationData.confidence': { $gte: 0.7 },
+        _id: { $nin: recommendedCourses.map(c => c._id) }
+      })
+      .select('title description thumbnail recommendationData type price')
+      .sort({ 'recommendationData.confidence': -1, createdAt: -1 })
+      .limit(10 - recommendedCourses.length);
+    }
+
+    const allRecommendations = [...recommendedCourses, ...fallbackCourses];
+
+    res.json({
+      success: true,
+      data: {
+        recommendations: allRecommendations,
+        studentGrade,
+        totalRecommendations: allRecommendations.length
+      },
+      message: "Personalized recommendations retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error fetching personalized recommendations:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// Get homepage settings for admin
+export const getHomepageSettings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    let settings = await HomepageSettings.findOne();
+    if (!settings) {
+      // Create default settings if none exist
+      settings = await HomepageSettings.create({
+        selectedFeaturedCourses: []
+      });
+    }
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error("Error fetching homepage settings:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Update homepage settings
+export const updateHomepageSettings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { selectedFeaturedCourses } = req.body;
+
+    if (!Array.isArray(selectedFeaturedCourses)) {
+      res.status(400).json({
+        success: false,
+        message: "selectedFeaturedCourses must be an array"
+      });
+      return;
+    }
+
+    let settings = await HomepageSettings.findOne();
+    if (!settings) {
+      settings = await HomepageSettings.create({
+        selectedFeaturedCourses: selectedFeaturedCourses || []
+      });
+    } else {
+      settings.selectedFeaturedCourses = selectedFeaturedCourses || [];
+      await settings.save();
+    }
+
+    res.json({
+      success: true,
+      data: settings,
+      message: "Homepage settings updated successfully"
+    });
+  } catch (error) {
+    console.error("Error updating homepage settings:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Get featured courses for student homepage (only selected ones)
+export const getHomepageFeaturedCourses = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const settings = await HomepageSettings.findOne();
+    if (!settings || settings.selectedFeaturedCourses.length === 0) {
+      res.json({
+        success: true,
+        data: {
+          courses: []
+        }
+      });
+      return;
+    }
+
+    // Get courses that are both featured and selected for homepage
+    const courses = await Course.find({
+      _id: { $in: settings.selectedFeaturedCourses },
+      type: 'featured',
+      status: 'Published'
+    }).select('_id title description price type status icon skills features');
+
+    res.json({
+      success: true,
+      data: {
+        courses
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching homepage featured courses:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Get upcoming courses for student homepage
+export const getHomepageUpcomingCourses = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Get courses that have 'upcoming' tag and are draft status
+    const courses = await Course.find({
+      tags: { $in: ['upcoming'] },
+      status: 'Draft'
+    }).select('_id title description price type status icon skills features tags');
+
+    res.json({
+      success: true,
+      data: {
+        courses
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching homepage upcoming courses:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Get recommendation stats for admin dashboard
+export const getRecommendationStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const totalCourses = await Course.countDocuments();
+    const analyzedCourses = await Course.countDocuments({
+      'recommendationData.lastAnalyzed': { $exists: true }
+    });
+
+    // Get grade distribution from analyzed courses
+    const gradeDistribution = await Course.aggregate([
+      { $match: { 'recommendationData.lastAnalyzed': { $exists: true } } },
+      { $unwind: '$recommendationData.targetGrades' },
+      { $group: { _id: '$recommendationData.targetGrades', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    res.json({
+      success: true,
+      result: {
+        stats: {
+          totalCourses,
+          analyzedCourses,
+          gradeDistribution: gradeDistribution.map(item => [item._id, item.count])
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching recommendation stats:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Analyze a single course for recommendations
+export const analyzeCourseForRecommendations = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { courseId, mode = 'auto' } = req.body;
+
+    if (!courseId) {
+      res.status(400).json({
+        success: false,
+        message: "Course ID is required"
+      });
+      return;
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        message: "Course not found"
+      });
+      return;
+    }
+
+    // Simulate AI analysis (in real implementation, this would call an AI service)
+    const mockAnalysis = {
+      targetGrades: generateTargetGrades(course.program),
+      targetAudience: generateTargetAudience(course.program),
+      difficultyLevel: generateDifficultyLevel(course.program),
+      recommendedFor: generateRecommendedFor(course.program),
+      confidence: Math.random() * 0.3 + 0.7, // 0.7-1.0 confidence
+      lastAnalyzed: new Date()
+    };
+
+    await Course.findByIdAndUpdate(courseId, {
+      recommendationData: mockAnalysis
+    });
+
+    res.json({
+      success: true,
+      message: "Course analyzed successfully",
+      data: mockAnalysis
+    });
+  } catch (error) {
+    console.error("Error analyzing course:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Analyze all courses for recommendations
+export const analyzeAllCoursesForRecommendations = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const courses = await Course.find({});
+
+    // Analyze courses in batches to avoid overwhelming the system
+    const batchSize = 5;
+    const results = [];
+
+    for (let i = 0; i < courses.length; i += batchSize) {
+      const batch = courses.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (course) => {
+        try {
+          const mockAnalysis = {
+            targetGrades: generateTargetGrades(course.program),
+            targetAudience: generateTargetAudience(course.program),
+            difficultyLevel: generateDifficultyLevel(course.program),
+            recommendedFor: generateRecommendedFor(course.program),
+            confidence: Math.random() * 0.3 + 0.7,
+            lastAnalyzed: new Date()
+          };
+
+          await Course.findByIdAndUpdate(course._id, {
+            recommendationData: mockAnalysis
+          });
+
+          return { courseId: course._id, success: true };
+        } catch (error) {
+          console.error(`Error analyzing course ${course._id}:`, error);
+          return { courseId: course._id, success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+
+      // Small delay between batches
+      if (i + batchSize < courses.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+
+    res.json({
+      success: true,
+      message: `Analyzed ${successCount} out of ${courses.length} courses`,
+      data: {
+        totalCourses: courses.length,
+        analyzedCourses: successCount,
+        results
+      }
+    });
+  } catch (error) {
+    console.error("Error analyzing all courses:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Helper functions for mock AI analysis
+function generateTargetGrades(program: string): string[] {
+  const gradeMap: { [key: string]: string[] } = {
+    'Primary': ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'],
+    'Secondary': ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'],
+    'Higher Secondary': ['Grade 11', 'Grade 12'],
+    'College': ['Undergraduate', 'Graduate']
+  };
+
+  return gradeMap[program] || ['Grade 1', 'Grade 2', 'Grade 3'];
+}
+
+function generateTargetAudience(program: string): string {
+  const audienceMap: { [key: string]: string } = {
+    'Primary': 'Young learners building foundational skills',
+    'Secondary': 'Adolescent students developing critical thinking',
+    'Higher Secondary': 'Pre-university students preparing for higher education',
+    'College': 'University students and professionals'
+  };
+
+  return audienceMap[program] || 'General learners';
+}
+
+function generateDifficultyLevel(program: string): string {
+  const levels = ['Beginner', 'Intermediate', 'Advanced'];
+  const programIndex = ['Primary', 'Secondary', 'Higher Secondary', 'College'].indexOf(program);
+  return levels[Math.min(programIndex, levels.length - 1)];
+}
+
+function generateRecommendedFor(program: string): string[] {
+  const recommendations = [
+    'Students struggling with the subject',
+    'Students looking to excel',
+    'Parents wanting to support their children',
+    'Teachers seeking additional resources'
+  ];
+
+  return recommendations.slice(0, Math.floor(Math.random() * 3) + 2);
+}
+
+// Check for course changes since last analysis
+export const checkCourseChanges = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { since } = req.query;
+
+    let query: any = {};
+
+    if (since) {
+      // Check for courses updated since the given timestamp
+      query.updatedAt = { $gt: new Date(since as string) };
+    }
+
+    // Get courses that have been modified or are new (no recommendation data)
+    const modifiedCourses = await Course.find({
+      ...query,
+      $or: [
+        { recommendationData: { $exists: false } },
+        { updatedAt: { $gt: new Date(since as string || '2020-01-01') } }
+      ]
+    }).select('_id title status program updatedAt');
+
+    // Also check for courses that exist but don't have recommendation data
+    const unanalyzedCourses = await Course.find({
+      recommendationData: { $exists: false }
+    }).select('_id title status program updatedAt');
+
+    const allChangedCourses = [...modifiedCourses, ...unanalyzedCourses.filter(course =>
+      !modifiedCourses.some(modified => modified._id.toString() === course._id.toString())
+    )];
+
+    res.json({
+      success: true,
+      data: {
+        changedCourses: allChangedCourses,
+        hasChanges: allChangedCourses.length > 0,
+        totalChanged: allChangedCourses.length
+      }
+    });
+  } catch (error) {
+    console.error("Error checking course changes:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
     });
   }
 };

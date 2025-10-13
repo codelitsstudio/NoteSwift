@@ -1,9 +1,23 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Video, Calendar, Clock, Users, PlayCircle, UserPlus, Settings, TrendingUp, Plus, VideoIcon } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Video, Calendar, Clock, Users, PlayCircle, UserPlus, Settings, TrendingUp, Plus, VideoIcon, Eye, MessageSquare, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+
+function getPlatformBadge(platform: string): string {
+  switch (platform.toLowerCase()) {
+    case 'zoom':
+      return 'bg-blue-100 text-blue-700';
+    case 'google meet':
+      return 'bg-green-100 text-green-700';
+    case 'teams':
+      return 'bg-purple-100 text-purple-700';
+    default:
+      return 'bg-gray-100 text-gray-700';
+  }
+}
 
 async function getData() {
   const now = Date.now();
