@@ -20,43 +20,68 @@ export class CloudinaryService {
   static async uploadProfileImage(base64Image: string, userId: string): Promise<CloudinaryUploadResult> {
     try {
       console.log('📤 Uploading profile image to Cloudinary for user:', userId);
+      console.log('📤 Cloudinary Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME);
+      console.log('📤 Base64 image starts with:', base64Image.substring(0, 50) + '...');
 
-      // Extract base64 data (remove data:image/... prefix)
-      const base64Data = base64Image.split(',')[1];
+      // Try noteswift_courses preset first, fallback to ml_default if it fails
+      const presets = ['noteswift_courses', 'ml_default'];
+      
+      for (const preset of presets) {
+        try {
+          console.log(`📤 Trying upload preset: ${preset}`);
 
-      // Upload using direct API (same as admin panel)
-      const formData = new FormData();
-      formData.append('file', `data:image/jpeg;base64,${base64Data}`);
-      formData.append('upload_preset', 'ml_default'); // Use existing preset
-      formData.append('folder', 'noteswift/profile-images');
-      formData.append('public_id', `user_${userId}_${Date.now()}`);
+          // Upload using direct API (same as admin panel)
+          const formData = new FormData();
+          formData.append('file', base64Image); // Send the full data URL
+          formData.append('upload_preset', preset);
+          formData.append('folder', 'noteswift/profile-images');
+          formData.append('public_id', `user_${userId}_${Date.now()}`);
 
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
+          console.log('📤 Making request to Cloudinary API...');
+
+          const response = await fetch(
+            `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`,
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+
+          console.log('📤 Cloudinary response status:', response.status);
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Profile image uploaded successfully with preset:', preset, result.secure_url);
+            return {
+              public_id: result.public_id,
+              secure_url: result.secure_url,
+              url: result.url,
+              format: result.format,
+              width: result.width,
+              height: result.height,
+              bytes: result.bytes,
+            };
+          } else {
+            const errorData = await response.text();
+            console.log(`⚠️ Preset ${preset} failed:`, response.status, errorData);
+            if (preset === presets[presets.length - 1]) {
+              // This was the last preset, throw the error
+              throw new Error(`Cloudinary upload failed with all presets: ${response.status} ${response.statusText}`);
+            }
+            // Try next preset
+            continue;
+          }
+        } catch (presetError) {
+          console.log(`⚠️ Preset ${preset} error:`, presetError);
+          if (preset === presets[presets.length - 1]) {
+            throw presetError;
+          }
+          // Try next preset
+          continue;
         }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Cloudinary API error:', errorData);
-        throw new Error(`Cloudinary upload failed: ${response.status} ${response.statusText}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Profile image uploaded successfully:', result.secure_url);
-
-      return {
-        public_id: result.public_id,
-        secure_url: result.secure_url,
-        url: result.url,
-        format: result.format,
-        width: result.width,
-        height: result.height,
-        bytes: result.bytes,
-      };
+      throw new Error('All upload presets failed');
     } catch (error: any) {
       console.error('❌ Cloudinary upload failed:', error);
       console.error('❌ Error details:', {
