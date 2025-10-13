@@ -14,13 +14,14 @@ import FreeCourses from "./Components/FreeCourses";
 import PrimaryNav from "../../components/Navigation/PrimaryNav";
 import { OfflineScreen } from "../../components/Container/OfflineScreen";
 
-import { CourseNotificationSheet } from '../../components/Picker/CourseNotificationSheet';
+import { NotificationSheet, NotificationData } from '../../components/Picker/NotificationSheet';
 import { useCourseStore } from '../../stores/courseStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import SearchBar from '../../components/InputFields/SearchBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Skeleton from '../../components/Container/Skeleton';
+import { fetchActiveHomepageNotification } from '../../api/student/notification';
 
 // HomePage Skeleton Component
 const HomePageSkeleton: React.FC = () => {
@@ -105,10 +106,10 @@ export default function HomePage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Add loading state
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeNotification, setActiveNotification] = useState<NotificationData | null>(null);
 
   const { user, isLoggedIn } = useAuthStore();
   const { 
-    featuredCourse,
     fetchFeaturedCourse, 
     fetchUserEnrollments,
     fetchAllCourses,
@@ -177,18 +178,21 @@ export default function HomePage() {
         fetchAllCourses()
       ]);
 
-      console.log('Both API calls completed, now checking popup...');
+      // Fetch active notification separately
+      const activeNotification = await fetchActiveHomepageNotification();
+      console.log('Active notification fetched:', activeNotification);
 
-      // Check if we should show the popup
-      const shouldShowPopup = checkAndShowPopup(userId);
-      console.log('Should show popup:', shouldShowPopup);
-
-      if (shouldShowPopup) {
-        // Show popup after a short delay for better UX
+      // Set the active notification if one exists
+      if (activeNotification) {
+        console.log('Setting active notification:', activeNotification);
+        setActiveNotification(activeNotification);
+        // Show notification popup after a short delay for better UX
         setTimeout(() => {
-          console.log('Setting notification visible to true');
+          console.log('Setting notification visible to true for active notification');
           setNotificationVisible(true);
         }, 1500);
+      } else {
+        console.log('No active notification found');
       }
 
       setIsInitialized(true);
@@ -297,14 +301,22 @@ export default function HomePage() {
 
       <PrimaryNav current="Home" />
 
-      {/* Course Notification Sheet */}
-      {featuredCourse && (
-        <CourseNotificationSheet
-          key={`course-sheet-${featuredCourse.id || featuredCourse._id}`}
-          visible={notificationVisible}
-          onClose={handleClosePopup}
-        />
-      )}
+      {/* Notification Sheet */}
+      <NotificationSheet
+        visible={notificationVisible}
+        onClose={handleClosePopup}
+        notificationData={activeNotification || {
+          id: 'homepage-notification',
+          badge: 'Important',
+          badgeIcon: 'notifications',
+          title: 'Welcome to NoteSwift!',
+          description: 'Explore our latest courses and start your learning journey today.',
+          thumbnail: 'https://example.com/notification-image.jpg',
+          showDontShowAgain: true,
+          buttonText: 'Close',
+          buttonIcon: 'close'
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }

@@ -58,7 +58,7 @@ export default function RecommendationClasses() {
             source={require('../../../assets/images/Loading.gif')}
             style={{ width: 160, height: 160, marginBottom: 16 }}
           />
-          <Text className="text-sm font-semibold text-gray-800">
+          <Text className="text-sm font-semibold text-gray-500">
             Finding perfect courses for you...
           </Text>
         </View>
