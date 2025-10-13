@@ -1,11 +1,4 @@
-import { v2 as cloudinary } from 'cloudinary';
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Cloudinary Service using direct API (consistent with admin panel)
 
 export interface CloudinaryUploadResult {
   public_id: string;
@@ -27,21 +20,34 @@ export class CloudinaryService {
   static async uploadProfileImage(base64Image: string, userId: string): Promise<CloudinaryUploadResult> {
     try {
       console.log('📤 Uploading profile image to Cloudinary for user:', userId);
-      
-      const result = await cloudinary.uploader.upload(base64Image, {
-        folder: 'noteswift/profile-images',
-        public_id: `user_${userId}_${Date.now()}`,
-        resource_type: 'image',
-        transformation: [
-          { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-          { quality: 'auto:good' },
-          { fetch_format: 'auto' }
-        ],
-        overwrite: true,
-      });
 
+      // Extract base64 data (remove data:image/... prefix)
+      const base64Data = base64Image.split(',')[1];
+
+      // Upload using direct API (same as admin panel)
+      const formData = new FormData();
+      formData.append('file', `data:image/jpeg;base64,${base64Data}`);
+      formData.append('upload_preset', 'ml_default'); // Use existing preset
+      formData.append('folder', 'noteswift/profile-images');
+      formData.append('public_id', `user_${userId}_${Date.now()}`);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Cloudinary API error:', errorData);
+        throw new Error(`Cloudinary upload failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
       console.log('✅ Profile image uploaded successfully:', result.secure_url);
-      
+
       return {
         public_id: result.public_id,
         secure_url: result.secure_url,
@@ -70,13 +76,32 @@ export class CloudinaryService {
   static async deleteProfileImage(publicId: string): Promise<void> {
     try {
       console.log('🗑️ Deleting profile image from Cloudinary:', publicId);
-      
-      const result = await cloudinary.uploader.destroy(publicId);
-      
-      if (result.result === 'ok') {
-        console.log('✅ Profile image deleted successfully');
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/destroy`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            public_id: publicId,
+            api_key: process.env.CLOUDINARY_API_KEY!,
+            api_secret: process.env.CLOUDINARY_API_SECRET!,
+            timestamp: Math.floor(Date.now() / 1000).toString(),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Cloudinary delete API error:', await response.text());
       } else {
-        console.log('⚠️ Image deletion result:', result.result);
+        const result = await response.json();
+        if (result.result === 'ok') {
+          console.log('✅ Profile image deleted successfully');
+        } else {
+          console.log('⚠️ Image deletion result:', result.result);
+        }
       }
     } catch (error) {
       console.error('❌ Cloudinary deletion failed:', error);
@@ -92,14 +117,8 @@ export class CloudinaryService {
    * @returns Optimized image URL
    */
   static getOptimizedImageUrl(publicId: string, width: number = 400, height: number = 400): string {
-    return cloudinary.url(publicId, {
-      width,
-      height,
-      crop: 'fill',
-      gravity: 'face',
-      quality: 'auto:good',
-      fetch_format: 'auto',
-    });
+    // Return Cloudinary URL with transformations
+    return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/c_fill,g_face,w_${width},h_${height},q_auto,f_auto/${publicId}`;
   }
 }
 

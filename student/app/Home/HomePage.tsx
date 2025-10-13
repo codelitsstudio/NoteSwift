@@ -182,15 +182,23 @@ export default function HomePage() {
       const activeNotification = await fetchActiveHomepageNotification();
       console.log('Active notification fetched:', activeNotification);
 
-      // Set the active notification if one exists
+      // Set the active notification if one exists and hasn't been dismissed
       if (activeNotification) {
-        console.log('Setting active notification:', activeNotification);
-        setActiveNotification(activeNotification);
-        // Show notification popup after a short delay for better UX
-        setTimeout(() => {
-          console.log('Setting notification visible to true for active notification');
-          setNotificationVisible(true);
-        }, 1500);
+        // Check if user has previously dismissed this notification
+        const dismissedKey = `notification_dismissed_${activeNotification.id}`;
+        const hasBeenDismissed = await AsyncStorage.getItem(dismissedKey);
+        
+        if (hasBeenDismissed === 'true') {
+          console.log('Notification has been dismissed, not showing:', activeNotification.id);
+        } else {
+          console.log('Setting active notification:', activeNotification);
+          setActiveNotification(activeNotification);
+          // Show notification popup after a short delay for better UX
+          setTimeout(() => {
+            console.log('Setting notification visible to true for active notification');
+            setNotificationVisible(true);
+          }, 1500);
+        }
       } else {
         console.log('No active notification found');
       }

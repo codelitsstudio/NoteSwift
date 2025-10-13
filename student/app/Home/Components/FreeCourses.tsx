@@ -2,10 +2,8 @@ import React from "react";
 import {
   View,
   Text,
-  FlatList,
   Image,
   TouchableOpacity,
-  ListRenderItem,
   ImageSourcePropType,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -76,47 +74,6 @@ export default function FreeCourses() {
       }
     }));
 
-  const renderItem: ListRenderItem<Course> = ({ item }) => (
-    <TouchableOpacity
-      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 mx-2"
-      onPress={() => {
-        router.push({
-          pathname: '/Home/Components/PackageDetails',
-          params: { packageData: JSON.stringify(item.package) }
-        });
-      }}
-    >
-      <View className="flex-row">
-        <Image
-          source={item.image}
-          className="w-16 h-16 rounded-lg mr-4"
-          resizeMode="cover"
-        />
-        <View className="flex-1">
-          <Text className="text-lg font-semibold text-gray-900 mb-1">
-            {item.title}
-          </Text>
-          <Text className="text-sm text-gray-600 mb-2">
-            {item.provider}
-          </Text>
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <MaterialIcons name="star" size={16} color="#fbbf24" />
-              <Text className="text-sm text-gray-600 ml-1">
-                {item.rating}
-              </Text>
-            </View>
-            <View className="bg-green-100 px-2 py-1 rounded-full">
-              <Text className="text-xs font-medium text-green-800">
-                {item.type}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
   if (freeCourses.length === 0) {
     return (
       <View className="mb-6">
@@ -147,13 +104,49 @@ export default function FreeCourses() {
           <Text className="text-base text-blue-500 font-medium">View All</Text>
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={freeCourses}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 4 }}
-      />
+      <View className="px-1">
+        {freeCourses.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            className="bg-white rounded-lg border border-gray-200 p-4 mb-4"
+            onPress={() => {
+              router.push({
+                pathname: '/Home/Components/PackageDetails',
+                params: { packageData: JSON.stringify(item.package) }
+              });
+            }}
+          >
+            <View className="flex-row">
+              <Image
+                source={item.image}
+                className="w-20 h-20 rounded-lg mr-4"
+                resizeMode="cover"
+              />
+              <View className="flex-1">
+                <Text className="text-lg font-semibold text-gray-900 mb-1">
+                  {item.title}
+                </Text>
+                <Text className="text-sm text-gray-600 mb-2">
+                  {item.provider}
+                </Text>
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <MaterialIcons name="star" size={16} color="#fbbf24" />
+                    <Text className="text-sm text-gray-600 ml-1">
+                      {item.rating}
+                    </Text>
+                  </View>
+                  <View className="bg-green-100 px-2 py-1 rounded-full">
+                    <Text className="text-xs font-medium text-green-800">
+                      {item.type}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }

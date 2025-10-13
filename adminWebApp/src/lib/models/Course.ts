@@ -36,6 +36,7 @@ export interface ICourse {
     answer: string;
   }[];
   icon?: string;
+  thumbnail?: string; // Cloudinary image URL
   isFeatured?: boolean;
   keyFeatures?: string[];  // Added missing keyFeatures field
   // AI-powered recommendation metadata
@@ -86,6 +87,7 @@ const courseSchema = new Schema<ICourse>({
     answer: { type: String, required: true }
   }],
   icon: { type: String },
+  thumbnail: { type: String }, // Cloudinary image URL
   isFeatured: { type: Boolean, default: false },
   keyFeatures: { type: [String], default: [] },  // Added missing keyFeatures field
   // AI-powered recommendation metadata

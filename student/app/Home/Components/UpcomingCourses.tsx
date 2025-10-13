@@ -95,7 +95,7 @@ export default function UpcomingCourses() {
             title={course.title}
             teacher={course.offeredBy || "NoteSwift"}
             time={course.duration || "Coming Soon"}
-            image={course.thumbnail ? { uri: course.thumbnail } : require("../../../assets/images/science.png")}
+            image={course.thumbnail ? { uri: course.thumbnail } : require("../../../assets/images/Plus.png")}
             onPress={() => {
               router.push({
                 pathname: '/Home/Components/PackageDetails',
