@@ -1,28 +1,5 @@
 import mongoose, { Schema, models } from 'mongoose';
-
-// Local copy of Notification interface for backend
-export interface Notification {
-  _id?: string;
-  id: string;
-  type: 'homepage' | 'push';
-  title: string;
-  description?: string;
-  badge?: string;
-  badgeIcon?: string;
-  thumbnail?: string;
-  showDontShowAgain?: boolean;
-  buttonText?: string;
-  buttonIcon?: string;
-  subject?: string; // For announcements
-  message?: string; // For push notifications
-  targetAudience?: 'all' | 'students' | 'admins';
-  status: 'draft' | 'sent' | 'scheduled';
-  sentAt?: Date;
-  scheduledFor?: Date;
-  createdBy: string; // Admin ID
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Notification } from '@shared/model/common/Notification';
 
 const notificationSchema = new Schema<Notification>({
   id: { type: String, required: true, unique: true },
