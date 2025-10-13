@@ -6,6 +6,7 @@ import { StudentUserRoutes } from "./student/user.route";
 import { AdminAuthRoutes } from "./admin/auth.route";
 import { AdminRoutes } from "./admin/index";
 import courseRoutes from "./courseRoutes";
+import notificationRoutes from "./notificationRoutes";
 import mongoose from "mongoose";
 
 const router = Router();
@@ -52,6 +53,9 @@ router.use("/student/user", authenticateStudent, StudentUserRoutes);
 
 // Course routes
 router.use("/courses", courseRoutes);
+
+// Notification routes
+router.use("/notifications", notificationRoutes);
 
 //admin
 router.use("/admin", AdminRoutes);
