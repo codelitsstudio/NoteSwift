@@ -1,7 +1,6 @@
 import mongoose, { Schema, models } from 'mongoose';
 
-// Local copy of Notification interface for backend
-export interface Notification {
+export interface INotification {
   _id?: string;
   id: string;
   type: 'homepage' | 'push';
@@ -13,18 +12,18 @@ export interface Notification {
   showDontShowAgain?: boolean;
   buttonText?: string;
   buttonIcon?: string;
-  subject?: string; // For announcements
-  message?: string; // For push notifications
+  subject?: string;
+  message?: string;
   targetAudience?: 'all' | 'students' | 'admins';
   status: 'draft' | 'sent' | 'scheduled';
   sentAt?: Date;
   scheduledFor?: Date;
-  createdBy: string; // Admin ID
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const notificationSchema = new Schema<Notification>({
+const notificationSchema = new Schema<INotification>({
   id: { type: String, required: true, unique: true },
   type: {
     type: String,
@@ -39,8 +38,8 @@ const notificationSchema = new Schema<Notification>({
   showDontShowAgain: { type: Boolean, default: true },
   buttonText: { type: String },
   buttonIcon: { type: String },
-  subject: { type: String }, // For announcements
-  message: { type: String }, // For push notifications
+  subject: { type: String },
+  message: { type: String },
   targetAudience: {
     type: String,
     enum: ['all', 'students', 'admins'],
@@ -53,7 +52,7 @@ const notificationSchema = new Schema<Notification>({
   },
   sentAt: { type: Date },
   scheduledFor: { type: Date },
-  createdBy: { type: String, required: true }, // Admin ID
+  createdBy: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -64,4 +63,6 @@ notificationSchema.pre('save', function(next) {
   next();
 });
 
-export const NotificationModel = models.Notification || mongoose.model<Notification>('Notification', notificationSchema);
+const Notification = models.Notification || mongoose.model<INotification>('Notification', notificationSchema);
+
+export default Notification;
