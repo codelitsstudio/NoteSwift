@@ -135,47 +135,79 @@ export const updateModuleProgress = async (req: AuthRequest, res: Response): Pro
   }
 };
 
-// Get module progress for a specific module
-export const getModuleProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+// Get homepage featured courses
+export const getHomepageFeaturedCourses = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { courseId, moduleNumber } = req.params;
-    const studentId = req.user?.id;
-
-    if (!courseId || !studentId || !moduleNumber) {
-      res.status(400).json({ 
-        success: false, 
-        message: "Course ID, student ID, and module number are required" 
-      });
-      return;
-    }
-
-    const enrollment = await CourseEnrollment.findOne({ courseId, studentId });
-    if (!enrollment) {
-      res.status(404).json({ success: false, message: "Enrollment not found" });
-      return;
-    }
-
-    const moduleProgress = enrollment.moduleProgress.find(
-      m => m.moduleNumber === parseInt(moduleNumber)
-    );
-    console.log(`Fetching module ${moduleNumber} progress:`, moduleProgress);
+    const courses = await Course.find({
+      status: 'Published',
+      isFeatured: true
+    })
+      .sort({ createdAt: -1 })
+      .limit(10);
 
     res.json({
       success: true,
       data: {
-        moduleProgress: moduleProgress || {
-          moduleNumber: parseInt(moduleNumber),
-          videoCompleted: false,
-          notesCompleted: false,
-          sectionsCompleted: [],
-          progress: 0
-        },
-        overallProgress: enrollment.progress
+        courses
       },
+      message: "Homepage featured courses retrieved successfully"
     });
   } catch (error) {
-    console.error("Error fetching module progress:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error('Error fetching homepage featured courses:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch homepage featured courses"
+    });
+  }
+};
+
+// Get personalized recommendations for a student
+export const getPersonalizedRecommendations = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const studentId = req.user?.id;
+
+    if (!studentId) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required"
+      });
+      return;
+    }
+
+    // For now, return featured courses as recommendations
+    // In the future, this can be enhanced with AI-based recommendations
+    const recommendations = await Course.find({
+      status: 'Published',
+      isFeatured: true
+    })
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // Add recommendation metadata
+    const recommendationsWithData = recommendations.map(course => ({
+      ...course.toObject(),
+      recommendationData: {
+        targetGrades: ['10', '11', '12'], // Default grades
+        targetAudience: 'Students',
+        difficultyLevel: 'Intermediate',
+        recommendedFor: ['Grade 10 Students', 'Exam Preparation'],
+        confidence: 0.85
+      }
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        recommendations: recommendationsWithData
+      },
+      message: "Personalized recommendations retrieved successfully"
+    });
+  } catch (error) {
+    console.error('Error fetching personalized recommendations:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch personalized recommendations"
+    });
   }
 };
 // Get featured course
@@ -491,71 +523,6 @@ export const getAllCoursesAdmin = async (req: Request, res: Response): Promise<v
   }
 };
 
-// Get personalized course recommendations based on student's grade
-export const getPersonalizedRecommendations = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const studentId = req.user?.id;
-    if (!studentId) {
-      res.status(401).json({ success: false, message: "Authentication required" });
-      return;
-    }
-
-    // Get student profile to find their grade
-    const Student = require("../models/students/Student.model").default;
-    const student = await Student.findById(studentId);
-
-    if (!student) {
-      res.status(404).json({ success: false, message: "Student not found" });
-      return;
-    }
-
-    const studentGrade = student.grade;
-
-    // Find courses that have recommendation data and match the student's grade
-    const recommendedCourses = await Course.find({
-      status: 'Published',
-      'recommendationData.targetGrades': {
-        $in: [`Grade ${studentGrade}`, `${studentGrade}`, `Class ${studentGrade}`]
-      }
-    })
-    .select('title description thumbnail recommendationData type price')
-    .sort({ 'recommendationData.confidence': -1, createdAt: -1 })
-    .limit(10);
-
-    // If no specific grade matches, get courses with high confidence scores
-    let fallbackCourses = [];
-    if (recommendedCourses.length < 5) {
-      fallbackCourses = await Course.find({
-        status: 'Published',
-        recommendationData: { $exists: true },
-        'recommendationData.confidence': { $gte: 0.7 },
-        _id: { $nin: recommendedCourses.map(c => c._id) }
-      })
-      .select('title description thumbnail recommendationData type price')
-      .sort({ 'recommendationData.confidence': -1, createdAt: -1 })
-      .limit(10 - recommendedCourses.length);
-    }
-
-    const allRecommendations = [...recommendedCourses, ...fallbackCourses];
-
-    res.json({
-      success: true,
-      data: {
-        recommendations: allRecommendations,
-        studentGrade,
-        totalRecommendations: allRecommendations.length
-      },
-      message: "Personalized recommendations retrieved successfully",
-    });
-  } catch (error) {
-    console.error("Error fetching personalized recommendations:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
 // Get homepage settings for admin
 export const getHomepageSettings = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -616,62 +583,28 @@ export const updateHomepageSettings = async (req: Request, res: Response): Promi
   }
 };
 
-// Get featured courses for student homepage (only selected ones)
-export const getHomepageFeaturedCourses = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const settings = await HomepageSettings.findOne();
-    if (!settings || settings.selectedFeaturedCourses.length === 0) {
-      res.json({
-        success: true,
-        data: {
-          courses: []
-        }
-      });
-      return;
-    }
-
-    // Get courses that are both featured and selected for homepage
-    const courses = await Course.find({
-      _id: { $in: settings.selectedFeaturedCourses },
-      type: 'featured',
-      status: 'Published'
-    }).select('_id title description price type status icon skills features');
-
-    res.json({
-      success: true,
-      data: {
-        courses
-      }
-    });
-  } catch (error) {
-    console.error("Error fetching homepage featured courses:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
-  }
-};
-
 // Get upcoming courses for student homepage
 export const getHomepageUpcomingCourses = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Get courses that have 'upcoming' tag and are draft status
     const courses = await Course.find({
-      tags: { $in: ['upcoming'] },
-      status: 'Draft'
-    }).select('_id title description price type status icon skills features tags');
+      status: 'Published',
+      startDate: { $gte: new Date() }
+    })
+      .sort({ startDate: 1 })
+      .limit(10);
 
     res.json({
       success: true,
       data: {
         courses
-      }
+      },
+      message: "Homepage upcoming courses retrieved successfully"
     });
   } catch (error) {
-    console.error("Error fetching homepage upcoming courses:", error);
+    console.error('Error fetching homepage upcoming courses:', error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Failed to fetch homepage upcoming courses"
     });
   }
 };
@@ -906,6 +839,59 @@ export const checkCourseChanges = async (req: Request, res: Response): Promise<v
     res.status(500).json({
       success: false,
       message: "Internal server error"
+    });
+  }
+};
+
+// Get module progress for a specific course and module
+export const getModuleProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { courseId, moduleNumber } = req.params;
+    const studentId = req.user?.id;
+
+    if (!courseId || !studentId || moduleNumber === undefined) {
+      res.status(400).json({
+        success: false,
+        message: "Course ID, student ID, and module number are required"
+      });
+      return;
+    }
+
+    const enrollment = await CourseEnrollment.findOne({ courseId, studentId });
+    if (!enrollment) {
+      res.status(404).json({ success: false, message: "Enrollment not found" });
+      return;
+    }
+
+    const moduleNum = parseInt(moduleNumber);
+    if (moduleNum < 1 || moduleNum > 5) {
+      res.status(400).json({
+        success: false,
+        message: "Module number must be between 1 and 5"
+      });
+      return;
+    }
+
+    const moduleProgress = enrollment.moduleProgress?.[moduleNum - 1] || {
+      videosCompleted: 0,
+      notesCompleted: 0,
+      quizCompleted: false,
+      completed: false
+    };
+
+    res.json({
+      success: true,
+      data: {
+        moduleProgress,
+        overallProgress: enrollment.progress
+      },
+      message: "Module progress retrieved successfully"
+    });
+  } catch (error) {
+    console.error('Error fetching module progress:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch module progress"
     });
   }
 };
