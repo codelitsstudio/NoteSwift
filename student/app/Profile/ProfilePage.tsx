@@ -1,6 +1,7 @@
 // profile/ProfilePage.tsx
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, View, Text, Alert, StatusBar, Platform, Share , Linking } from 'react-native';
+import { ScrollView, View, Text, Alert, StatusBar, Platform, Share , Linking } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ProfileHeader from './components/ProfileHeader';
 import ListItem from './components/ListItem';
 import ProgressBar from './components/ProgressBar';
@@ -445,9 +446,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" style={{ 
-      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 
-    }}>
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         <ProfileHeader onEditPress={handleHeaderEdit} onAvatarPress={handleAvatarPress} />

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { View, ScrollView, Text, SafeAreaView, StatusBar, Platform } from "react-native";
+import { View, ScrollView, Text, StatusBar, Platform } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ProHeader from "./Components/ProHeader";
 import FeatureCard from "./Components/FeatureCard";
 import SubscribeButton from "../../components/Buttons/SubscribeButton";
@@ -23,7 +24,7 @@ export default function NoteswiftProDetail() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
             
       {/* Header */}
@@ -83,7 +84,7 @@ export default function NoteswiftProDetail() {
       </ScrollView>
 
       {/* Sticky Footer */}
-      <View className="absolute bottom-0 left-0 right-0">
+      <View className="absolute bottom-6 left-0 right-0">
         <SubscribeButton selectedPlan={selectedPlan} />
       </View>
     </SafeAreaView>

@@ -12,34 +12,37 @@ import { getTaskSuggestions } from "@/ai/flows/task-suggestions";
 import type { TaskSuggestionsInput } from "@/ai/flows/task-suggestions";
 
 import dbConnect from "@/lib/mongoose";
-import Otp from "@/models/Otp";
-import Course from "@/models/Course";
+import Otp from "@/lib/models/Otp";
+import Course from "@/lib/models/Course";
+import Student from "@/lib/models/Student";
+import CourseEnrollment from "@/lib/models/CourseEnrollment";
+import Transaction from "@/lib/models/Transaction";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ---------------------------- OTP HANDLER ----------------------------
-export async function handleSendOtp() {
+export async function handleSendOtp(email?: string) {
   try {
     await dbConnect();
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const email = process.env.OTP_EMAIL_TO!;
-    if (!email) {
-      throw new Error("OTP_EMAIL_TO environment variable is not set.");
+    const targetEmail = email || process.env.OTP_EMAIL_TO!;
+    if (!targetEmail) {
+      throw new Error("Email is required for OTP sending.");
     }
 
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
     // Remove old OTPs
-    await Otp.deleteMany({ email });
+    await Otp.deleteMany({ email: targetEmail });
 
     // Save new OTP
-    const OTP = new Otp({ email, otp, expires })
+    const OTP = new Otp({ email: targetEmail, otp, expires })
     await OTP.save();
-    console.log(email)
+    console.log(targetEmail)
     await resend.emails.send({
       from: "NoteSwift Admin <noteswift@codelitsstudio.com>",
-      to: email,
+      to: targetEmail,
       subject: "Your NoteSwift Admin Login Code",
       react: OtpEmail({ otp }),
     });
@@ -55,7 +58,7 @@ const otpSchema = z.object({
   otp: z.string().length(6, "Your one-time code must be 6 characters."),
 });
 
-export async function handleVerifyOtp(data: { otp: string }) {
+export async function handleVerifyOtp(data: { otp: string }, email?: string) {
   const validation = otpSchema.safeParse(data);
   if (!validation.success) {
     return { success: false, error: "Invalid OTP format." };
@@ -64,12 +67,12 @@ export async function handleVerifyOtp(data: { otp: string }) {
   try {
     await dbConnect();
 
-    const email = process.env.OTP_EMAIL_TO!;
-    if (!email) {
-      throw new Error("OTP_EMAIL_TO environment variable is not set.");
+    const targetEmail = email || process.env.OTP_EMAIL_TO!;
+    if (!targetEmail) {
+      throw new Error("Email is required for OTP verification.");
     }
 
-    const record = await Otp.findOne({ email, otp: validation.data.otp });
+    const record = await Otp.findOne({ email: targetEmail, otp: validation.data.otp });
 
     if (!record) {
       return { success: false, error: "The one-time code is incorrect." };
@@ -100,54 +103,64 @@ export async function handleSuggestTags(data: ContentTaggingInput) {
   }
 }
 
-// ---------------------------- CREATE COURSE ----------------------------
-const courseSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters long."),
-  description: z.string().min(10, "Description must be at least 10 characters long."),
-  subject: z.string().min(2, "Subject must be at least 2 characters long."),
-  tags: z.array(z.string()).optional(),
-});
 
-export async function handleCreateCourse(data: z.infer<typeof courseSchema>) {
-  try {
-    const validation = courseSchema.safeParse(data);
-    if (!validation.success) {
-      return { success: false, error: "Invalid data." };
-    }
-
-    await dbConnect();
-
-    await Course.create({
-      ...validation.data,
-      status: "Draft",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    revalidatePath("/dashboard/content");
-    return { success: true, message: "Course created successfully." };
-  } catch (error) {
-    console.error("Error creating course:", error);
-    return { success: false, error: "An unexpected error occurred while creating the course." };
-  }
-}
-
-// ---------------------------- MOCKED DASHBOARD INSIGHTS ----------------------------
+// ---------------------------- DASHBOARD INSIGHTS ----------------------------
 export async function handleGetDashboardInsights() {
   try {
-    const mockInput: DashboardInsightsInput = {
-      totalUsers: 1250,
-      activeUsersToday: 350,
-      newSignupsLastWeek: 260,
-      coursesPublished: 48,
-      topCourses: [
-        { name: "Algebra II", engagement: 400 },
-        { name: "World History", engagement: 300 },
-        { name: "AP Physics", engagement: 300 },
-      ],
+    await dbConnect();
+
+    // Get real metrics from database
+    const totalUsers = await Student.countDocuments();
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeUsersToday = await Student.countDocuments({
+      lastLoginAt: { $gte: last24Hours }
+    });
+
+    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const newSignupsLastWeek = await Student.countDocuments({
+      createdAt: { $gte: lastWeek }
+    });
+
+    const coursesPublished = await Course.countDocuments();
+
+    // Get top courses by enrollment
+    const topCoursesData = await CourseEnrollment.aggregate([
+      {
+        $group: {
+          _id: '$courseId',
+          engagement: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { engagement: -1 }
+      },
+      {
+        $limit: 3
+      }
+    ]);
+
+    // Get course names
+    const courseIds = topCoursesData.map(tc => tc._id);
+    const courses = await Course.find({ _id: { $in: courseIds } });
+    const courseMap = courses.reduce((map, course) => {
+      map[course._id.toString()] = course.title;
+      return map;
+    }, {} as Record<string, string>);
+
+    const topCourses = topCoursesData.map(tc => ({
+      name: courseMap[tc._id] || 'Unknown Course',
+      engagement: tc.engagement
+    }));
+
+    const realInput: DashboardInsightsInput = {
+      totalUsers,
+      activeUsersToday,
+      newSignupsLastWeek,
+      coursesPublished,
+      topCourses,
     };
 
-    const result = await getDashboardInsights(mockInput);
+    const result = await getDashboardInsights(realInput);
     return { success: true, insights: result };
   } catch (error) {
     console.error("Error getting dashboard insights:", error);
@@ -155,16 +168,36 @@ export async function handleGetDashboardInsights() {
   }
 }
 
-// ---------------------------- MOCKED TASK SUGGESTIONS ----------------------------
+// ---------------------------- TASK SUGGESTIONS ----------------------------
 export async function handleGetTaskSuggestions() {
   try {
-    const mockInput: TaskSuggestionsInput = {
-      inactiveUserCount: 15,
-      unreviewedContentCount: 8,
-      failedPaymentsCount: 2,
+    await dbConnect();
+
+    // Get real metrics for task suggestions
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    // Inactive users (users who haven't logged in for 30 days)
+    const inactiveUserCount = await Student.countDocuments({
+      lastLoginAt: { $lt: thirtyDaysAgo }
+    });
+
+    // Unreviewed content (courses that might need review - using courses without recent updates as proxy)
+    const unreviewedContentCount = await Course.countDocuments({
+      updatedAt: { $lt: thirtyDaysAgo }
+    });
+
+    // Failed payments (transactions with failed status)
+    const failedPaymentsCount = await Transaction.countDocuments({
+      status: 'failed'
+    });
+
+    const realInput: TaskSuggestionsInput = {
+      inactiveUserCount,
+      unreviewedContentCount,
+      failedPaymentsCount,
     };
 
-    const result = await getTaskSuggestions(mockInput);
+    const result = await getTaskSuggestions(realInput);
     return { success: true, suggestions: result };
   } catch (error) {
     console.error("Error getting task suggestions:", error);
@@ -173,18 +206,37 @@ export async function handleGetTaskSuggestions() {
 }
 
 // ---------------------------- ADMIN LOGIN ----------------------------
-export async function handleAdminLogin(username: string, password: string) {
-  const adminUsername = process.env.ADMIN_USERNAME;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+export async function handleAdminLogin(email: string, password: string) {
+  try {
+    const { authenticateAdmin, generateAdminToken } = await import('@/lib/auth/admin-auth');
 
-  if (!adminUsername || !adminPassword) {
-    return { success: false, error: "Server configuration error." };
-  }
+    const authResult = await authenticateAdmin(email, password);
 
-  if (username === adminUsername && password === adminPassword) {
-    return { success: true };
-  } else {
-    return { success: false, error: "Invalid username or password." };
+    if (!authResult.success) {
+      return { success: false, error: authResult.error || "Authentication failed" };
+    }
+
+    // Prevent system admin from logging in through regular login page
+    if (authResult.admin.role === 'system_admin') {
+      return { success: false, error: "System administrators must login through the dedicated admin portal" };
+    }
+
+    // Generate JWT token
+    const token = generateAdminToken(authResult.admin._id);
+
+    return {
+      success: true,
+      token,
+      admin: {
+        _id: authResult.admin._id,
+        email: authResult.admin.email,
+        name: authResult.admin.name,
+        role: authResult.admin.role
+      }
+    };
+  } catch (error) {
+    console.error('Error during admin login:', error);
+    return { success: false, error: "An unexpected error occurred" };
   }
 }
 

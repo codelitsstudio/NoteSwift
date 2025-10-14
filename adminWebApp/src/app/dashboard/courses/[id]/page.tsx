@@ -452,9 +452,9 @@ export default function CourseEditorPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading course...</p>
         </div>
       </div>
@@ -462,8 +462,8 @@ export default function CourseEditorPage() {
   }
 
   return (
-    <div className="h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-8 px-6 h-full">
+    <div className="h-screen">
+      <div className="mx-auto py-8 px-6 h-full">
         <div className="flex items-center justify-between mb-8">
           <div>
             <div className="flex items-center gap-3">

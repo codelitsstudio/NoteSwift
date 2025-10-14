@@ -345,8 +345,10 @@ export default function NotificationsPage() {
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8">
-                      <Loader2 className="animate-spin mx-auto" />
-                      Loading notifications...
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+                        Loading notifications...
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : notifications.length === 0 ? (

@@ -18,7 +18,8 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import MyCourses from './Components/MyCourses';
 import { useAuthStore } from '../../stores/authStore';
 import { useCourseStore } from '../../stores/courseStore';
-import LiveClasses from './Components/LiveClasses';
+import LiveClasses, { hasLiveClasses } from './Components/LiveClasses';
+import LiveClassJoinBottomSheet from './Components/LiveClassJoinBottomSheet';
 import Skeleton from '../../components/Container/Skeleton';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -93,6 +94,15 @@ export default function HomePage() {
   const { fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse, is_loading } = useCourseStore();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Bottom sheet state for live class join
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [showJoinSheet, setShowJoinSheet] = useState(false);
+
+  const handleJoinPress = (item: any) => {
+    setSelectedClass(item);
+    setShowJoinSheet(true);
+  };
 
   useEffect(()=>{
     fetchFeed();
@@ -163,8 +173,19 @@ export default function HomePage() {
 
             <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
               
-            <MyCourses />
-            <LiveClasses />
+            {/* Conditional rendering: Live Today first if there are classes, otherwise Ongoing Courses first */}
+            {hasLiveClasses() ? (
+              <>
+                <LiveClasses onJoinPress={handleJoinPress} />
+                <MyCourses />
+              </>
+            ) : (
+              <>
+                <MyCourses />
+                <LiveClasses onJoinPress={handleJoinPress} />
+              </>
+            )}
+            
             <View className="flex-row justify-between items-center mt-6 mb-4">
               <Text className="text-[1.3rem] font-bold text-gray-900">Upcoming Classes</Text>
               <TouchableOpacity onPress={() => {}}>
@@ -174,7 +195,7 @@ export default function HomePage() {
       
             <ActiveCourses searchQuery={searchQuery} />
                       <View className="flex-row justify-between items-center mt-4 mb-4">
-              <Text className="text-2xl font-bold text-gray-900">Model Questions</Text>
+              <Text className="text-xl font-bold text-gray-900">Model Questions</Text>
               <TouchableOpacity onPress={() => {}}>
                 <Text className="text-base text-blue-500 font-medium">View More</Text>
               </TouchableOpacity>
@@ -187,6 +208,21 @@ export default function HomePage() {
       </ScrollView>
 
       <PrimaryNav current="Learn" />
+
+      {/* Live Class Join Bottom Sheet - Rendered outside ScrollView */}
+      {selectedClass && (
+        <LiveClassJoinBottomSheet
+          isVisible={showJoinSheet}
+          onClose={() => setShowJoinSheet(false)}
+          classData={{
+            id: selectedClass.id,
+            title: selectedClass.title,
+            teacher: selectedClass.teacher,
+            subject: selectedClass.subject,
+            participants: selectedClass.participants,
+          }}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

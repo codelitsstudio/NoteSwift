@@ -138,7 +138,7 @@ const SettingsPage = () => {
   };
 
   return (
-  <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+  <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right', 'bottom']}>
       <View className="flex-1 bg-[#FAFAFA]">
         <SettingsHeader onClose={() => router.back()} />
         <ScrollView>

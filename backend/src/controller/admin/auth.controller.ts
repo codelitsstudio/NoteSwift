@@ -5,6 +5,7 @@ import { LoginAdmin } from "@shared/api/admin/auth";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { Admin } from "models/admins/Admin.model";
+import auditLogger from "lib/audit-logger";
 
 const options = { maxAge: 60 * 60 * 24 * 14 * 1000, httpOnly: false }; // 14 days
 
@@ -20,11 +21,37 @@ export const loginAdmin: Controller = async (req, res) => {
 
         const admin = await Admin.findOne({ email: body.email });
         if (!admin) {
+            // Log failed login attempt
+            await auditLogger.logLogin(
+                'unknown',
+                'admin',
+                'Unknown Admin',
+                body.email,
+                false,
+                {
+                    ipAddress: req.ip || req.connection.remoteAddress,
+                    userAgent: req.get('User-Agent'),
+                    reason: 'Admin not found'
+                }
+            );
             return jsonResponse.clientError("Admin not found");
         }
 
         const match = await bcrypt.compare(body.password, admin.password);
         if (!match) {
+            // Log failed login attempt
+            await auditLogger.logLogin(
+                admin._id.toString(),
+                'admin',
+                admin.full_name,
+                admin.email,
+                false,
+                {
+                    ipAddress: req.ip || req.connection.remoteAddress,
+                    userAgent: req.get('User-Agent'),
+                    reason: 'Invalid password'
+                }
+            );
             return jsonResponse.clientError("Invalid password");
         }
 
@@ -36,6 +63,19 @@ export const loginAdmin: Controller = async (req, res) => {
         });
 
         res.cookie("session", token, options);
+
+        // Log successful login
+        await auditLogger.logLogin(
+            admin._id.toString(),
+            'admin',
+            admin.full_name,
+            admin.email,
+            true,
+            {
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent')
+            }
+        );
 
         jsonResponse.success({
             _id: admin._id.toString(),

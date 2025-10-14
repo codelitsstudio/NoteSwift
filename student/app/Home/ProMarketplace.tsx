@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, StatusBar, Platform } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity, StatusBar, Platform } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from "expo-router";
 import axios from '../../api/axios';
@@ -153,7 +154,7 @@ export default function ProMarketplace() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['bottom', 'top']}>
           <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
           
       {/* Header */}

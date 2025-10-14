@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, ScrollView, Text, TouchableOpacity, SafeAreaView, Pressable } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity, Pressable } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import SearchBar from "./components/SearchBar";
@@ -245,6 +246,7 @@ export default function AllCoursesPage() {
         flex: 1,
         backgroundColor: '#FAFAFA'
       }}
+      edges={['bottom']}
     >
       {/* Search and Filter */}
       <View style={{ 

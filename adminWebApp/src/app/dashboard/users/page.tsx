@@ -319,6 +319,7 @@ export default function UsersPage() {
           <h1 className="text-4xl font-bold font-headline tracking-tight">User Management</h1>
         </div>
         <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
           <div className="text-muted-foreground">Loading users...</div>
         </div>
       </div>

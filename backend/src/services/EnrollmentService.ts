@@ -1,12 +1,19 @@
 import mongoose from 'mongoose';
 import Course from '../models/Course.model';
 import CourseEnrollment from '../models/CourseEnrollment';
+import auditLogger from '../lib/audit-logger';
 
 export interface EnrollmentOptions {
   courseId: string;
   studentId: string;
   progress?: number;
   isActive?: boolean;
+  performedBy?: {
+    id: string;
+    type: 'admin' | 'teacher' | 'student' | 'system';
+    name: string;
+    email?: string;
+  };
 }
 
 export interface EnrollmentStats {
@@ -23,7 +30,7 @@ export class EnrollmentService {
    */
   static async enrollStudent(options: EnrollmentOptions): Promise<any> {
     try {
-      const { courseId, studentId, progress = 0, isActive = true } = options;
+      const { courseId, studentId, progress = 0, isActive = true, performedBy } = options;
 
       // Validate course exists
       const course = await Course.findById(courseId);
@@ -48,6 +55,21 @@ export class EnrollmentService {
           await existingEnrollment.save();
           
           console.log(`✅ Reactivated enrollment for student ${studentId} in course "${course.title}"`);
+
+          // Log enrollment reactivation
+          if (performedBy) {
+            await auditLogger.logEnrollment(
+              performedBy.id,
+              performedBy.type,
+              performedBy.name,
+              studentId,
+              'Unknown Student', // We don't have student name here
+              courseId,
+              course.title,
+              performedBy.email
+            );
+          }
+
           return existingEnrollment;
         }
       }
@@ -63,6 +85,20 @@ export class EnrollmentService {
 
       await enrollment.save();
       console.log(`✅ Successfully enrolled student ${studentId} in course "${course.title}"`);
+
+      // Log new enrollment
+      if (performedBy) {
+        await auditLogger.logEnrollment(
+          performedBy.id,
+          performedBy.type,
+          performedBy.name,
+          studentId,
+          'Unknown Student', // We don't have student name here
+          courseId,
+          course.title,
+          performedBy.email
+        );
+      }
       
       return enrollment;
     } catch (error) {
@@ -74,7 +110,7 @@ export class EnrollmentService {
   /**
    * Unenrolls a student from a course
    */
-  static async unenrollStudent(courseId: string, studentId: string): Promise<void> {
+  static async unenrollStudent(courseId: string, studentId: string, performedBy?: { id: string; type: 'admin' | 'teacher' | 'student' | 'system'; name: string; email?: string; }): Promise<void> {
     try {
       const enrollment = await CourseEnrollment.findOne({
         courseId: new mongoose.Types.ObjectId(courseId),
@@ -87,8 +123,25 @@ export class EnrollmentService {
 
       enrollment.isActive = false;
       await enrollment.save();
+
+      // Get course details for logging
+      const course = await Course.findById(courseId);
       
       console.log(`✅ Successfully unenrolled student ${studentId} from course ${courseId}`);
+
+      // Log unenrollment
+      if (performedBy && course) {
+        await auditLogger.logUnenrollment(
+          performedBy.id,
+          performedBy.type,
+          performedBy.name,
+          studentId,
+          'Unknown Student', // We don't have student name here
+          courseId,
+          course.title,
+          performedBy.email
+        );
+      }
     } catch (error) {
       console.error('❌ Unenrollment failed:', error);
       throw error;
@@ -242,7 +295,7 @@ export class EnrollmentService {
   /**
    * Bulk enrollment utility for admin operations
    */
-  static async bulkEnrollStudents(courseId: string, studentIds: string[]): Promise<{
+  static async bulkEnrollStudents(courseId: string, studentIds: string[], performedBy?: { id: string; type: 'admin' | 'teacher' | 'student' | 'system'; name: string; email?: string; }): Promise<{
     successful: string[];
     failed: Array<{ studentId: string; error: string }>;
   }> {
@@ -251,7 +304,7 @@ export class EnrollmentService {
 
     for (const studentId of studentIds) {
       try {
-        await this.enrollStudent({ courseId, studentId });
+        await this.enrollStudent({ courseId, studentId, performedBy });
         successful.push(studentId);
       } catch (error) {
         failed.push({

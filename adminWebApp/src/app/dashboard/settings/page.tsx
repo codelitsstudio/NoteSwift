@@ -1,117 +1,115 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { PlatformSettings } from "@/components/admin/platform-settings";
+import { SecuritySettings } from "@/components/admin/security-settings";
+import { PaymentSettings } from "@/components/admin/payment-settings";
+import { EmailSettings } from "@/components/admin/email-settings";
+import { UserManagementSettings } from "@/components/admin/user-management-settings";
+import { ContentModerationSettings } from "@/components/admin/content-moderation-settings";
+import { SystemMaintenanceSettings } from "@/components/admin/system-maintenance-settings";
 
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-4xl font-bold font-headline tracking-tight">Settings & Configuration</h1>
+      <div>
+        <h1 className="text-4xl font-bold font-headline tracking-tight">Admin Settings</h1>
+        <p className="text-muted-foreground mt-2">Configure and manage your NoteSwift platform settings</p>
+      </div>
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="theme">Theme</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="features">Feature Flags</TabsTrigger>
+      <Tabs defaultValue="platform" className="w-full">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="platform">Platform</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="payment">Payment</TabsTrigger>
+          <TabsTrigger value="email">Email/SMS</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general">
+        <TabsContent value="platform">
           <Card className="shadow-md mt-6">
             <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-              <CardDescription>Manage basic application settings.</CardDescription>
+              <CardTitle>Platform Configuration</CardTitle>
+              <CardDescription>Basic platform settings and branding</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="appName">Application Name</Label>
-                <Input id="appName" defaultValue="NoteSwift Admin" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Input id="timezone" defaultValue="America/New_York" />
-              </div>
+            <CardContent>
+              <PlatformSettings />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="theme">
+        <TabsContent value="security">
           <Card className="shadow-md mt-6">
             <CardHeader>
-              <CardTitle>Theme Customization</CardTitle>
-              <CardDescription>Adjust the look and feel of the application.</CardDescription>
+              <CardTitle>Security Settings</CardTitle>
+              <CardDescription>Password policies, sessions, and authentication</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label>Dark Mode</Label>
-                  <p className="text-sm text-muted-foreground">Enable or disable dark mode for the dashboard.</p>
-                </div>
-                <Switch />
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="primaryColor">Primary Color</Label>
-                <Input id="primaryColor" defaultValue="#2563EB" />
-                <p className="text-sm text-muted-foreground">Set the primary accent color for buttons and links.</p>
-              </div>
+            <CardContent>
+              <SecuritySettings />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="integrations">
+        <TabsContent value="payment">
           <Card className="shadow-md mt-6">
             <CardHeader>
-              <CardTitle>API Integrations</CardTitle>
-              <CardDescription>Connect with third-party services.</CardDescription>
+              <CardTitle>Payment & Financial Settings</CardTitle>
+              <CardDescription>Payment gateways, commissions, and financial configuration</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="googleApi">Google API Key</Label>
-                <Input id="googleApi" type="password" defaultValue="SECRET_KEY" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stripeApi">Stripe API Key</Label>
-                <Input id="stripeApi" type="password" defaultValue="SECRET_KEY" />
-              </div>
+            <CardContent>
+              <PaymentSettings />
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="features">
-           <Card className="shadow-md mt-6">
+
+        <TabsContent value="email">
+          <Card className="shadow-md mt-6">
             <CardHeader>
-              <CardTitle>Feature Flags</CardTitle>
-              <CardDescription>Enable or disable experimental features across the platform.</CardDescription>
+              <CardTitle>Email & SMS Configuration</CardTitle>
+              <CardDescription>SMTP settings, API keys, and notification templates</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label>AI Content Suggestions</Label>
-                  <p className="text-sm text-muted-foreground">Allow AI to suggest tags and descriptions.</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label>New User Onboarding Flow</Label>
-                  <p className="text-sm text-muted-foreground">Show a guided tour for new users.</p>
-                </div>
-                <Switch />
-              </div>
-               <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label>Real-time Collaboration</Label>
-                  <p className="text-sm text-muted-foreground">Enable live collaboration on notes (Beta).</p>
-                </div>
-                <Switch />
-              </div>
+            <CardContent>
+              <EmailSettings />
             </CardContent>
           </Card>
         </TabsContent>
-        
+
+        <TabsContent value="users">
+          <Card className="shadow-md mt-6">
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Registration policies, verification, and user controls</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UserManagementSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="content">
+          <Card className="shadow-md mt-6">
+            <CardHeader>
+              <CardTitle>Content Moderation</CardTitle>
+              <CardDescription>Content policies, filters, and moderation settings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ContentModerationSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="maintenance">
+          <Card className="shadow-md mt-6">
+            <CardHeader>
+              <CardTitle>System Maintenance</CardTitle>
+              <CardDescription>Backup, maintenance mode, and system health</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SystemMaintenanceSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );

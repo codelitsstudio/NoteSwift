@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { handleVerifyOtp, handleSendOtp, handleCreateAdminSession } from "@/app/actions";
-import { generateDeviceFingerprint } from "@/lib/auth";
+import { handleVerifyOtp, handleSendOtp, handleAdminLogin } from "@/app/actions";
 
 export default function OtpPage() {
   const router = useRouter();
@@ -19,11 +18,23 @@ export default function OtpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     const isVerified = localStorage.getItem("isPasswordVerified");
     if (isVerified !== "true") {
       router.replace("/login");
+    }
+
+    // Get the email and password from localStorage
+    const storedEmail = localStorage.getItem("adminLoginEmail");
+    const storedPassword = localStorage.getItem("adminLoginPassword");
+    if (storedEmail) {
+      setEmail(storedEmail);
+    }
+    if (storedPassword) {
+      setPassword(storedPassword);
     }
   }, [router]);
 
@@ -32,26 +43,16 @@ export default function OtpPage() {
     setError("");
     setIsLoading(true);
 
-    const result = await handleVerifyOtp({ otp });
+    const result = await handleVerifyOtp({ otp }, email);
 
     if (result.success) {
-      // Create secure session with device fingerprint
-      const deviceFingerprint = generateDeviceFingerprint();
+      // Now authenticate with the stored credentials to get the token
+      const loginResult = await handleAdminLogin(email, password);
 
-      const loginResponse = await fetch('/api/auth/complete-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          deviceFingerprint,
-          userAgent: navigator.userAgent,
-        }),
-      });
+      if (loginResult.success && loginResult.token) {
+        // Store the token for the AdminProvider to use
+        localStorage.setItem('adminToken', loginResult.token);
 
-      const loginResult = await loginResponse.json();
-
-      if (loginResult.success) {
         // Backup session info to localStorage for UI purposes
         localStorage.setItem('admin_session_backup', JSON.stringify({
           username: 'admin',
@@ -59,18 +60,20 @@ export default function OtpPage() {
         }));
         localStorage.setItem("isAuthenticated", "true");
         localStorage.removeItem("isPasswordVerified");
+        localStorage.removeItem("adminLoginEmail");
+        localStorage.removeItem("adminLoginPassword");
 
         toast({
           title: "Authentication Successful",
-          description: "Welcome to the dashboard!",
+          description: "Redirecting to the dashboard.....!",
         });
         router.push("/dashboard");
       } else {
-        setError("Failed to create session. Please try again.");
+        setError("Authentication failed. Please try logging in again.");
         toast({
           variant: "destructive",
-          title: "Session Creation Failed",
-          description: "Could not establish secure session.",
+          title: "Authentication Failed",
+          description: "Could not complete login process.",
         });
       }
     } else {
@@ -86,7 +89,7 @@ export default function OtpPage() {
 
   const onResend = async () => {
     setIsResending(true);
-    const result = await handleSendOtp();
+    const result = await handleSendOtp(email);
     if (result.success) {
       toast({
         title: "Code Resent",
