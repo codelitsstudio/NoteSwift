@@ -196,7 +196,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
             (data.tests ?? []).map((t: any, idx: number) => (
               <TouchableOpacity
                 key={idx}
-                className="mb-3 p-5 bg-white rounded-xl shadow"
+                className="mb-3 p-5 bg-white rounded-3xl shadow"
                 activeOpacity={0.85}
               >
                 <Text className="text-base font-medium text-gray-900">{t.title}</Text>
@@ -216,7 +216,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
         <ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
           {(data.notes || []).length ? (
             (data.notes ?? []).map((n: any, i: number) => (
-              <View key={i} className="mb-3 p-5 bg-white rounded-xl shadow">
+              <View key={i} className="mb-3 p-5 bg-white rounded-3xl shadow">
                 <Text className="text-base font-medium text-gray-900">{n.title}</Text>
                 {n.snippet ? <Text className="text-sm text-gray-600 mt-2">{n.snippet}</Text> : null}
               </View>
@@ -235,7 +235,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
       {/* Info */}
       {active === "Info" && (
         <ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
-          <View className="bg-white p-5 rounded-xl border border-gray-200">
+          <View className="bg-white p-5 rounded-3xl border border-gray-200">
             <Text className="text-base font-semibold mb-2">About this chapter</Text>
             <Text className="text-sm text-gray-700">{data.description}</Text>
             {data.duration && (

@@ -151,7 +151,10 @@ export default function TeacherDetailPage() {
     return (
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
-          <div>Loading teacher details...</div>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+            <div>Loading teacher details...</div>
+          </div>
         </div>
       </div>
     );

@@ -15,11 +15,11 @@ const StatCard = () => {
         <View className="flex-row justify-between items-start mb-4">
           <View className="flex-1">
             <Text className="text-gray-500 text-sm font-medium">Platform Stats</Text>
-            <Text className="text-blue-600 text-lg font-bold mt-1">
-              Total Courses Available
+            <Text className="text-blue-600 text-[1.4rem] font-bold mt-1">
+              Total Courses:
             </Text>
-            <Text className="text-black text-2xl font-extrabold mt-1">
-              {totalCoursesAvailable}
+            <Text className="text-black text-lg font-extrabold mt-1">
+              {totalCoursesAvailable} offered
             </Text>
           </View>
 

@@ -1,0 +1,68 @@
+"use client";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminList } from "@/components/admin/admin-list";
+import { InviteAdmin } from "@/components/admin/invite-admin";
+import { AdminHierarchy } from "@/components/admin/admin-hierarchy";
+import { useAdmin } from "@/context/admin-context";
+
+export default function AdminManagementPage() {
+  const { admin, canInviteAdmins } = useAdmin();
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-4xl font-bold font-headline tracking-tight">Admin Management</h1>
+        <p className="text-muted-foreground mt-2">Manage administrators and their permissions</p>
+      </div>
+
+      <Tabs defaultValue="hierarchy" className="w-full">
+        <TabsList className={`grid w-full ${canInviteAdmins ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <TabsTrigger value="hierarchy">Admin Hierarchy</TabsTrigger>
+          <TabsTrigger value="list">All Admins</TabsTrigger>
+          {canInviteAdmins && (
+            <TabsTrigger value="invite">Invite Admin</TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="hierarchy">
+          <Card className="shadow-md mt-6">
+            <CardHeader>
+              <CardTitle>Admin Hierarchy</CardTitle>
+              <CardDescription>View the current admin structure and permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdminHierarchy />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="list">
+          <Card className="shadow-md mt-6">
+            <CardHeader>
+              <CardTitle>All Administrators</CardTitle>
+              <CardDescription>Manage existing administrators and their roles</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdminList />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {canInviteAdmins && (
+          <TabsContent value="invite">
+            <Card className="shadow-md mt-6">
+              <CardHeader>
+                <CardTitle>Invite New Administrator</CardTitle>
+                <CardDescription>Send invitation to add a new admin to the platform</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InviteAdmin />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
+  );
+}

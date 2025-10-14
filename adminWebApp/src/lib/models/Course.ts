@@ -101,6 +101,12 @@ const courseSchema = new Schema<ICourse>({
   },
 }, { timestamps: true });
 
+// Add indexes for performance
+courseSchema.index({ status: 1 });
+courseSchema.index({ type: 1 });
+courseSchema.index({ title: 1 });
+courseSchema.index({ isFeatured: 1 });
+
 // Clear any existing Course model to ensure schema updates take effect
 if (mongoose.models.Course) {
   delete mongoose.models.Course;

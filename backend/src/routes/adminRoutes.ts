@@ -2,6 +2,8 @@ import express from 'express';
 import { DatabaseMaintenanceService } from '../services/DatabaseMaintenanceService';
 import { DatabaseSeeder } from '../services/DatabaseSeeder';
 import { EnrollmentService } from '../services/EnrollmentService';
+import { authenticateAdmin } from '../middlewares/admin.middleware';
+import auditLogger from '../lib/audit-logger';
 import {
   getFeaturedCourse,
   enrollInCourse,
@@ -17,6 +19,11 @@ import {
   getCourseById,
   getAllCoursesAdmin
 } from '../controller/courseController';
+import {
+  createOfflineTransaction,
+  getTransactions,
+  getUnlockCodes,
+} from '../controller/ordersPaymentsController';
 
 const router = express.Router();
 
@@ -53,11 +60,35 @@ router.get('/database/health', async (req, res) => {
 router.post('/database/maintenance', async (req, res) => {
   try {
     await DatabaseMaintenanceService.performMaintenance();
+
+    // Log database maintenance
+    await auditLogger.logSystemEvent(
+      'database_maintenance',
+      'Database maintenance performed successfully',
+      'success',
+      {
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent')
+      }
+    );
+
     res.json({
       success: true,
       message: 'Database maintenance completed successfully'
     });
   } catch (error) {
+    // Log failed maintenance
+    await auditLogger.logSystemEvent(
+      'database_maintenance',
+      `Database maintenance failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'failure',
+      {
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    );
+
     res.status(500).json({
       success: false,
       message: 'Database maintenance failed',
@@ -73,11 +104,35 @@ router.post('/database/maintenance', async (req, res) => {
 router.post('/database/seed', async (req, res) => {
   try {
     await DatabaseSeeder.seedDatabase();
+
+    // Log database seeding
+    await auditLogger.logSystemEvent(
+      'database_seeding',
+      'Database seeded successfully',
+      'success',
+      {
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent')
+      }
+    );
+
     res.json({
       success: true,
       message: 'Database seeded successfully'
     });
   } catch (error) {
+    // Log failed seeding
+    await auditLogger.logSystemEvent(
+      'database_seeding',
+      `Database seeding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'failure',
+      {
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    );
+
     res.status(500).json({
       success: false,
       message: 'Database seeding failed',
@@ -162,7 +217,12 @@ const bulkEnrollmentHandler = async (req: any, res: any) => {
       });
     }
     
-    const result = await EnrollmentService.bulkEnrollStudents(courseId, studentIds);
+    const result = await EnrollmentService.bulkEnrollStudents(courseId, studentIds, {
+      id: 'system',
+      type: 'admin',
+      name: 'Admin',
+      email: undefined
+    });
     res.json({
       success: true,
       data: result,
@@ -308,5 +368,23 @@ router.get('/recommendations/course-changes', async (req, res) => {
   const { checkCourseChanges } = await import('../controller/courseController');
   return checkCourseChanges(req, res);
 });
+
+/**
+ * POST /api/admin/orders-payments/transaction
+ * Create offline transaction and generate unlock code
+ */
+router.post('/orders-payments/transaction', authenticateAdmin, createOfflineTransaction);
+
+/**
+ * GET /api/admin/orders-payments/transactions
+ * Get all transactions
+ */
+router.get('/orders-payments/transactions', authenticateAdmin, getTransactions);
+
+/**
+ * GET /api/admin/orders-payments/codes
+ * Get all unlock codes
+ */
+router.get('/orders-payments/codes', authenticateAdmin, getUnlockCodes);
 
 export default router;

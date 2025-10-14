@@ -8,3 +8,16 @@ export namespace GetStudentLearnFeed {
     }
     export type ApiRes = ApiResponse<Res>;
 }
+
+export namespace RedeemUnlockCode {
+    export interface Req {
+        code: string;
+        courseId: string;
+        deviceHash: string;
+    }
+    export interface Res {
+        message: string;
+        enrollment: any; // TODO: define enrollment type
+    }
+    export type ApiRes = ApiResponse<Res>;
+}

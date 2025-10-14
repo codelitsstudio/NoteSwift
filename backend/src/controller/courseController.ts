@@ -4,6 +4,7 @@ import Course from "../models/Course.model";
 import CourseEnrollment from "../models/CourseEnrollment";
 import HomepageSettings from "../models/HomepageSettings.model";
 import { Types } from "mongoose";
+import auditLogger from "../lib/audit-logger";
 
 // Extend Express Request to include user injected by auth middleware
 interface AuthRequest extends Request {
@@ -423,6 +424,22 @@ export const createCourse = async (req: Request, res: Response): Promise<void> =
     const course = new Course(courseData);
     await course.save();
 
+    // Log course creation
+    await auditLogger.logCourseCreated(
+      'system', // Admin action via API
+      'admin',
+      'Admin',
+      course._id.toString(),
+      course.title,
+      undefined,
+      {
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        courseType: course.type,
+        category: course.category
+      }
+    );
+
     res.status(201).json({
       success: true,
       data: { course },
@@ -460,6 +477,21 @@ export const updateCourse = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    // Log course update
+    await auditLogger.logCourseUpdated(
+      'system', // Admin action via API
+      'admin',
+      'Admin',
+      course._id.toString(),
+      course.title,
+      updateData,
+      undefined,
+      {
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent')
+      }
+    );
+
     res.json({
       success: true,
       data: { course },
@@ -486,6 +518,20 @@ export const deleteCourse = async (req: Request, res: Response): Promise<void> =
       });
       return;
     }
+
+    // Log course deletion
+    await auditLogger.logCourseDeleted(
+      'system', // Admin action via API
+      'admin',
+      'Admin',
+      course._id.toString(),
+      course.title,
+      undefined,
+      {
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent')
+      }
+    );
 
     res.json({
       success: true,

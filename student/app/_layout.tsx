@@ -16,6 +16,18 @@ import "../global.css";
 import Header from "../components/Headers/Header";
 import HeaderTwo from "../components/Headers/HeaderTwo";
 import HeaderThree from "@/components/Headers/HeaderThree";
+import CourseTestListHeader from "@/components/Headers/TestHeaders/CourseTestListHeader";
+import MCQTestHeader from "@/components/Headers/TestHeaders/MCQTestHeader";
+import PDFTestHeader from "@/components/Headers/TestHeaders/PDFTestHeader";
+import TestResultHeader from "@/components/Headers/TestHeaders/TestResultHeader";
+import AIChatBotHeader from "@/components/Headers/AskHeaders/AIChatBotHeader";
+import QuestionGeneratorHeader from "@/components/Headers/AskHeaders/QuestionGeneratorHeader";
+import DoubtSolverHeader from "@/components/Headers/AskHeaders/DoubtSolverHeader";
+import StudyTipsHeader from "@/components/Headers/AskHeaders/StudyTipsHeader";
+import CommunityHeader from "@/components/Headers/AskHeaders/CommunityHeader";
+import SupportHeader from "@/components/Headers/AskHeaders/SupportHeader";
+import QuestionDetailHeader from "@/components/Headers/AskHeaders/QuestionDetailHeader";
+import AllQuestionsHeader from "@/components/Headers/AskHeaders/AllQuestionsHeader";
 import SplashScreen from "../components/Splash/SplashScreen";
 import { OfflineBanner } from "../components/Container/OfflineBanner";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
@@ -172,6 +184,7 @@ export default function RootLayout() {
                   {/* Detail Screens with HeaderTwo */}
                   <Stack.Screen name="Learn/ScienceSubjectPage" options={{ header: () => <HeaderTwo /> }} />
                   <Stack.Screen name="Learn/ScienceChapterPage" options={{ header: () => <HeaderTwo /> }} />
+                  <Stack.Screen name="Learn/SubjectPage" options={{ headerShown: false }} />
                   <Stack.Screen 
                     name="Home/Components/PackageDetails" 
                     options={{ 
@@ -232,7 +245,27 @@ export default function RootLayout() {
 
                   <Stack.Screen name="Lesson/LessonDetail/NotesAndReadable" options={{ headerShown: false }} />
                   <Stack.Screen name="Settings/ReportIssue" options={{ headerShown: false }} />
+
+                  {/* Test Module Screens */}
+                  <Stack.Screen name="Test/CourseTestList" options={{ header: () => <CourseTestListHeader /> }} />
+                  <Stack.Screen name="Test/MCQTest" options={{ header: () => <MCQTestHeader /> }} />
+                  <Stack.Screen name="Test/PDFTest" options={{ header: () => <PDFTestHeader /> }} />
+                  <Stack.Screen name="Test/TestResult" options={{ header: () => <TestResultHeader /> }} />
+
+                  {/* Ask Module Screens */}
+                  <Stack.Screen name="Ask/AIChatBot" options={{ header: () => <AIChatBotHeader /> }} />
+                  <Stack.Screen name="Ask/QuestionGenerator" options={{ header: () => <QuestionGeneratorHeader /> }} />
+                  <Stack.Screen name="Ask/DoubtSolver" options={{ header: () => <DoubtSolverHeader /> }} />
+                  <Stack.Screen name="Ask/StudyTips" options={{ header: () => <StudyTipsHeader /> }} />
+                  <Stack.Screen name="Ask/Community" options={{ header: () => <CommunityHeader /> }} />
+                  <Stack.Screen name="Ask/Support" options={{ header: () => <SupportHeader /> }} />
+                  <Stack.Screen name="Ask/QuestionDetail" options={{ header: () => <QuestionDetailHeader /> }} />
+                  <Stack.Screen name="Learn/LiveClass/[id]" options={{ headerShown: false }} />
+                  <Stack.Screen name="Learn/LiveClass/Room" options={{ headerShown: false }} />
+
                 </Stack>
+
+
 
                 {/* Offline Banner */}
                 <OfflineBanner isOffline={!isOnline} />

@@ -10,6 +10,7 @@ import otpService from "../../services/otpService";
 import emailOTPService from "../../services/emailOTPService";
 import CloudinaryService from "../../services/cloudinaryService";
 import reportEmailService from "../../services/reportEmailService";
+import auditLogger from "lib/audit-logger";
 
 const expiresIn = 60 * 60 * 24 * 14 * 1000;
 const options = { maxAge: expiresIn, httpOnly: false };
@@ -86,6 +87,24 @@ export const signUpStudent: Controller = async (req, res) => {
             user: studentObj,
             token
         }
+
+        // Log successful student account creation
+        await auditLogger.logUserCreated(
+            'system', // Self-registration
+            'system',
+            'System',
+            student._id.toString(),
+            'student',
+            student.full_name,
+            student.email,
+            undefined,
+            {
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                registrationMethod: 'email'
+            }
+        );
+
         jsonResponse.success(response);
     } catch (error) {
         console.error(error);
@@ -184,6 +203,19 @@ export const loginStudent: Controller = async (req, res) => {
         const student = await Student.findOne({ email: body.email });
         if (!student) {
             console.log('❌ Student not found for email:', body.email);
+            // Log failed login attempt
+            await auditLogger.logLogin(
+                'unknown',
+                'student',
+                'Unknown Student',
+                body.email,
+                false,
+                {
+                    ipAddress: req.ip || req.connection.remoteAddress,
+                    userAgent: req.get('User-Agent'),
+                    reason: 'Student not found'
+                }
+            );
             return jsonResponse.clientError("Student not found");
         }
 
@@ -194,6 +226,19 @@ export const loginStudent: Controller = async (req, res) => {
         const match = await bcrypt.compare(body.password, student.password);
         if (!match) {
             console.log('❌ Password mismatch');
+            // Log failed login attempt
+            await auditLogger.logLogin(
+                student._id.toString(),
+                'student',
+                student.full_name || student.email,
+                student.email,
+                false,
+                {
+                    ipAddress: req.ip || req.connection.remoteAddress,
+                    userAgent: req.get('User-Agent'),
+                    reason: 'Invalid password'
+                }
+            );
             return jsonResponse.clientError("Invalid password");
         }
 
@@ -214,7 +259,20 @@ export const loginStudent: Controller = async (req, res) => {
             user: studentObj,
             token
         };
-        
+
+        // Log successful login
+        await auditLogger.logLogin(
+            student._id.toString(),
+            'student',
+            student.full_name || student.email,
+            student.email,
+            true,
+            {
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent')
+            }
+        );
+
         console.log('✅ Login successful, sending response');
         jsonResponse.success(response);
 

@@ -1,14 +1,17 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   GestureResponderEvent,
   Platform,
   StatusBar,
+  TextInput,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import FloatingEnrollButton from '@/components/Buttons/FloatingEnrollButton';
@@ -16,6 +19,7 @@ import { useCourseStore } from '../../../stores/courseStore';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNotificationStore } from '../../../stores/notificationStore';
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { redeemUnlockCode } from '../../../api/student/learn';
 
 interface Module {
   name: string;
@@ -73,7 +77,7 @@ const PackageDetails = () => {
   // Safety check - if no package data, show error state
   if (!pkg) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
         <View className="flex-1 items-center justify-center p-4">
           <Text className="text-lg font-semibold text-gray-900 mb-2">Package Not Found</Text>
           <Text className="text-gray-600 text-center mb-4">The package details could not be loaded.</Text>
@@ -93,7 +97,7 @@ const PackageDetails = () => {
   // Additional safety check for required fields
   if (!packageTitle || !pkg.description) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
         <View className="flex-1 items-center justify-center p-4">
           <Text className="text-lg font-semibold text-gray-900 mb-2">Invalid Package Data</Text>
           <Text className="text-gray-600 text-center mb-4">The package data is incomplete.</Text>
@@ -114,11 +118,35 @@ const PackageDetails = () => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedTrialType, setSelectedTrialType] = useState<'free' | 'paid'>('free');
   const [paymentMethod, setPaymentMethod] = useState<string>('khalti');
+  const [unlockCode, setUnlockCode] = useState<string>('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['55%'], []);
+  const snapPoints = useMemo(() => keyboardVisible ? ['95%'] : ['55%'], [keyboardVisible]);
 
   const [expandedSubject, setExpandedSubject] = useState<number>(0);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+
+  // Keyboard handling for bottom sheet
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // FAQ Data
   const faqsData = [
@@ -145,6 +173,44 @@ const PackageDetails = () => {
   ];
 
   const toggleFaq = (question: string) => setExpandedFaq(expandedFaq === question ? null : question);
+
+  const handleRedeemCode = async () => {
+    if (!unlockCode.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter an unlock code',
+      });
+      return;
+    }
+
+    setIsRedeeming(true);
+    try {
+      // Generate device hash (simple for now)
+      const deviceHash = 'device-' + Date.now(); // TODO: proper device fingerprint
+
+      const result = await redeemUnlockCode(unlockCode, pkg._id, deviceHash);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Code redeemed successfully!',
+        text2: 'You are now enrolled in this course.',
+      });
+
+      // Refresh enrollment status
+      await enrollInCourse(pkg._id);
+      
+      bottomSheetRef.current?.dismiss();
+      setUnlockCode('');
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to redeem code',
+        text2: error.response?.data?.message || 'Please check your code and try again.',
+      });
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
 
   // Check enrollment status
   const alreadyEnrolled = pkg.id ? isEnrolled(pkg.id) : false;
@@ -205,7 +271,7 @@ const PackageDetails = () => {
   };
 
   return (
-  <SafeAreaView className="flex-1 bg-[#FAFAFA]">
+  <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -409,7 +475,7 @@ const PackageDetails = () => {
         </View>
       ) : (
         // Pro Package - Trial and Enroll Buttons
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4">
+        <View className="absolute bottom-6 left-0 right-0 bg-white border-t border-gray-200 py-4">
           <View className="px-5">
             <View className="flex-row justify-center">
               <TouchableOpacity
@@ -449,11 +515,21 @@ const PackageDetails = () => {
         ref={bottomSheetRef}
         index={0}
         snapPoints={snapPoints}
-        onDismiss={() => setShowCheckout(false)}
+        onDismiss={() => {
+          setShowCheckout(false);
+          Keyboard.dismiss();
+        }}
         backgroundStyle={{ backgroundColor: '#fff' }}
         handleIndicatorStyle={{ backgroundColor: '#E5E7EB' }}
+        keyboardBehavior={Platform.OS === 'ios' ? 'extend' : 'interactive'}
+        android_keyboardInputMode="adjustResize"
       >
         <BottomSheetView className="flex-1 px-6 pb-6">
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
           <View className="flex-row justify-between items-center mb-6">
             <Text className="text-xl font-bold text-gray-800">Checkout</Text>
             <TouchableOpacity onPress={() => {
@@ -526,69 +602,25 @@ const PackageDetails = () => {
               {/* Payment Method Selection */}
               <Text className="text-lg font-semibold text-gray-800 mb-4">Payment Method</Text>
               <View className="mb-6">
-                <TouchableOpacity 
-                  className={`flex-row items-center p-4 rounded-xl border-2 mb-4 ${
-                    paymentMethod === 'khalti' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
-                  }`}
-                  onPress={() => setPaymentMethod('khalti')}
-                >
-                  <MaterialIcons 
-                    name="payment" 
-                    size={24} 
-                    color={paymentMethod === 'khalti' ? '#3B82F6' : '#6B7280'} 
-                  />
-                  <Text className={`ml-3 font-medium ${
-                    paymentMethod === 'khalti' ? 'text-blue-900' : 'text-gray-700'
-                  }`}>
-                    Khalti
-                  </Text>
-                  {paymentMethod === 'khalti' && (
-                    <View className="ml-2">
-                      <MaterialIcons name="check-circle" size={20} color="#3B82F6" />
-                    </View>
-                  )}
-                </TouchableOpacity>
 
-                <TouchableOpacity 
-                  className={`flex-row items-center p-4 rounded-xl border-2 mb-4 ${
-                    paymentMethod === 'esewa' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
-                  }`}
-                  onPress={() => setPaymentMethod('esewa')}
-                >
-                  <MaterialIcons 
-                    name="account-balance-wallet" 
-                    size={24} 
-                    color={paymentMethod === 'esewa' ? '#3B82F6' : '#6B7280'} 
-                  />
-                  <Text className={`ml-3 font-medium ${
-                    paymentMethod === 'esewa' ? 'text-blue-900' : 'text-gray-700'
-                  }`}>
-                    eSewa
-                  </Text>
-                  {paymentMethod === 'esewa' && (
-                    <View className="ml-2">
-                      <MaterialIcons name="check-circle" size={20} color="#3B82F6" />
-                    </View>
-                  )}
-                </TouchableOpacity>
 
                 <TouchableOpacity 
                   className={`flex-row items-center p-4 rounded-xl border-2 ${
-                    paymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+                    paymentMethod === 'code' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
                   }`}
-                  onPress={() => setPaymentMethod('card')}
+                  onPress={() => setPaymentMethod('code')}
                 >
                   <MaterialIcons 
-                    name="credit-card" 
+                    name="lock-open" 
                     size={24} 
-                    color={paymentMethod === 'card' ? '#3B82F6' : '#6B7280'} 
+                    color={paymentMethod === 'code' ? '#3B82F6' : '#6B7280'} 
                   />
                   <Text className={`ml-3 font-medium ${
-                    paymentMethod === 'card' ? 'text-blue-900' : 'text-gray-700'
+                    paymentMethod === 'code' ? 'text-blue-900' : 'text-gray-700'
                   }`}>
-                    Credit/Debit Card
+                    Enter Unlock Code
                   </Text>
-                  {paymentMethod === 'card' && (
+                  {paymentMethod === 'code' && (
                     <View className="ml-2">
                       <MaterialIcons name="check-circle" size={20} color="#3B82F6" />
                     </View>
@@ -598,15 +630,44 @@ const PackageDetails = () => {
             </>
           )}
 
-          {/* Checkout Button - Disabled/Coming Soon */}
-          <View
-            className="bg-gray-300 py-4 rounded-3xl mb-4 opacity-70"
-            style={{ pointerEvents: 'none' }}
-          >
-            <Text className="text-gray-500 text-center font-semibold text-lg">
-              Available Soon
-            </Text>
-          </View>
+          {/* Checkout/Redeem Section */}
+          {paymentMethod === 'code' ? (
+            <>
+              <View className="mb-4">
+                <Text className="text-lg font-semibold text-gray-800 mb-2">Enter Unlock Code</Text>
+                <TextInput
+                  className="border border-gray-300 rounded-lg px-4 py-3 text-lg"
+                  placeholder="e.g. IEA-21JA-WA"
+                  value={unlockCode}
+                  onChangeText={setUnlockCode}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  autoFocus={paymentMethod === 'code'}
+                  keyboardType="default"
+                  returnKeyType="done"
+                  onSubmitEditing={handleRedeemCode}
+                />
+              </View>
+              <TouchableOpacity
+                className={`py-4 rounded-3xl mb-4 ${isRedeeming ? 'bg-gray-400' : 'bg-blue-500'}`}
+                onPress={handleRedeemCode}
+                disabled={isRedeeming}
+              >
+                <Text className="text-white text-center font-semibold text-lg">
+                  {isRedeeming ? 'Redeeming...' : 'Verify & Enroll'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View
+              className="bg-gray-300 py-4 rounded-3xl mb-4 opacity-70"
+              style={{ pointerEvents: 'none' }}
+            >
+              <Text className="text-gray-500 text-center font-semibold text-lg">
+                Available Soon
+              </Text>
+            </View>
+          )}
 
           <Text className="text-xs text-gray-500 text-center">
             {selectedTrialType === 'free' 
@@ -614,6 +675,7 @@ const PackageDetails = () => {
               : 'Your payment is secured with 256-bit SSL encryption'
             }
           </Text>
+          </ScrollView>
         </BottomSheetView>
       </BottomSheetModal>
     </SafeAreaView>

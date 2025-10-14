@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Bar,
   BarChart,
@@ -32,90 +33,158 @@ import {
 } from "lucide-react";
 import { DashboardInsights } from "@/components/dashboard-insights";
 import { TaskSuggestions } from "@/components/task-suggestions";
+import { useToast } from "@/hooks/use-toast";
 
+interface DashboardData {
+  metrics: Array<{
+    title: string;
+    value: string;
+    change: string;
+  }>;
+  userActivityData: Array<{
+    day: string;
+    signups: number;
+  }>;
+  courseEngagementData: Array<{
+    name: string;
+    value: number;
+    fill: string;
+  }>;
+}
 
-
-const metrics = [
-  {
-    title: "Total Users",
-    value: "1,250",
-    icon: UsersRound,
-    change: "+15.2% from last month",
-  },
-  {
-    title: "Courses Published",
-    value: "48",
-    icon: NotebookPen,
-    change: "+5 from last month",
-  },
-  {
-    title: "Notes Added",
-    value: "520",
-    icon: StickyNote,
-    change: "+50 from last month",
-  },
-  {
-    title: "Active Users (24h)",
-    value: "350",
-    icon: UserCheck,
-    change: "+20.1% from last month",
-  },
-];
-
-const userActivityData = [
-  { day: "Mon", signups: 20 },
-  { day: "Tue", signups: 35 },
-  { day: "Wed", signups: 25 },
-  { day: "Thu", signups: 40 },
-  { day: "Fri", signups: 50 },
-  { day: "Sat", signups: 60 },
-  { day: "Sun", signups: 30 },
-];
-
-const courseEngagementData = [
-  { name: "Algebra II", value: 400, fill: "hsl(var(--chart-1))" },
-  { name: "World History", value: 300, fill: "hsl(var(--chart-2))" },
-  { name: "AP Physics", value: 300, fill: "hsl(var(--chart-3))" },
-  { name: "English Lit", value: 200, fill: "hsl(var(--chart-4))" },
-  { name: "Chemistry", value: 150, fill: "hsl(var(--chart-5))" },
-];
+const metricIcons = {
+  "Total Users": UsersRound,
+  "Courses Published": NotebookPen,
+  "Notes Added": StickyNote,
+  "Active Users (24h)": UserCheck,
+};
 
 export default function DashboardPage() {
-  return (
-    <div className="flex flex-col gap-8">
-      {/* Removed duplicate <h1>Dashboard</h1> */}
+  const { toast } = useToast();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric) => (
-          <Card
-            key={metric.title}
-            className="shadow-md hover:shadow-lg transition-shadow"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {metric.title}
-              </CardTitle>
-              <metric.icon className="h-4 w-4 text-muted-foreground" />
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/dashboard');
+      const result = await response.json();
+
+      if (result.success) {
+        setData(result.data);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch dashboard data",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2 ">
+            <CardHeader>
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2"></div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metric.value}</div>
-              <p className="text-xs text-muted-foreground">
-                {metric.change}
-              </p>
+              <div className="h-[300px] w-full bg-gray-200 rounded animate-pulse"></div>
             </CardContent>
           </Card>
-        ))}
+
+          <Card>
+            <CardHeader>
+              <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 w-48 bg-gray-200 rounded animate-pulse mt-2"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full bg-gray-200 rounded animate-pulse"></div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex flex-col gap-8">
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="flex items-center justify-center py-12">
+            <p className="text-slate-600">Failed to load dashboard data</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const { metrics, userActivityData, courseEngagementData } = data;
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {metrics.map((metric) => {
+          const IconComponent = metricIcons[metric.title as keyof typeof metricIcons] || UsersRound;
+          return (
+            <Card
+              key={metric.title}
+              className=" hover:shadow-lg transition-shadow"
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {metric.title}
+                </CardTitle>
+                <IconComponent className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{metric.value}</div>
+                <p className="text-xs text-muted-foreground">
+                  {metric.change}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
+      <DashboardInsights />
 
-          <DashboardInsights />
-       
-       
-          <TaskSuggestions />
-  
+      <TaskSuggestions />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 shadow-md">
+        <Card className="lg:col-span-2 ">
           <CardHeader>
             <CardTitle className="font-headline">
               User Activity This Week
@@ -137,7 +206,7 @@ export default function DashboardPage() {
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar
                     dataKey="signups"
-                    fill="hsl(var(--primary))"
+                    fill="#2563eb"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
@@ -146,7 +215,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md">
+        <Card className="">
           <CardHeader>
             <CardTitle className="font-headline">
               Course Engagement

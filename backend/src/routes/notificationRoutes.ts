@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import { NotificationModel } from '../models/Notification.model';
+import auditLogger from '../lib/audit-logger';
 
 const router = express.Router();
 
@@ -65,6 +66,23 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
     const notification = new NotificationModel(notificationData);
     await notification.save();
+
+    // Log notification creation
+    await auditLogger.logMessage(
+      'system', // Admin/system action
+      'admin',
+      'Admin',
+      notification.recipientId || 'all',
+      notification.recipientType || 'all',
+      'All Recipients',
+      notification.type,
+      undefined,
+      {
+        notificationId: notification._id.toString(),
+        title: notification.title,
+        message: notification.message
+      }
+    );
 
     res.status(201).json({
       success: true,
@@ -144,6 +162,23 @@ router.post('/:id/send', async (req: Request, res: Response): Promise<void> => {
     // - For push notifications: send to FCM/APNs
     // - For homepage notifications: trigger real-time updates
     // - For announcements: send emails if needed
+
+    // Log notification send
+    await auditLogger.logMessage(
+      'system', // Admin/system action
+      'admin',
+      'Admin',
+      notification.recipientId || 'all',
+      notification.recipientType || 'all',
+      'All Recipients',
+      'notification_sent',
+      undefined,
+      {
+        notificationId: notification._id.toString(),
+        title: notification.title,
+        type: notification.type
+      }
+    );
 
     res.json({
       success: true,

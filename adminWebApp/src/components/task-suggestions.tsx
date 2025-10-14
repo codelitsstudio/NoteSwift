@@ -39,14 +39,14 @@ export function TaskSuggestions() {
 
   if (isLoading) {
     return (
-      <Card className="shadow-md max-w-full">
+      <Card className="max-w-full">
         <CardHeader>
           <div className="flex items-center gap-2">
             <BotMessageSquare className="h-6 w-6 text-primary" />
             <CardTitle className="font-headline">Suggested Tasks</CardTitle>
           </div>
           <CardDescription>
-            AI is analyzing your platform for actionable tasks...
+            AI is analyzing your real platform data for actionable tasks...
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -69,17 +69,17 @@ export function TaskSuggestions() {
 
   if (!suggestions || suggestions.tasks.length === 0) {
     return (
-      <Card className="shadow-md max-w-full">
+      <Card className="max-w-full">
         <CardHeader>
           <div className="flex items-center gap-2">
             <BotMessageSquare className="h-6 w-6 text-primary" />
             <CardTitle className="font-headline">Suggested Tasks</CardTitle>
           </div>
-          <CardDescription>AI-powered recommendations will appear here.</CardDescription>
+          <CardDescription>AI-powered recommendations will appear here based on real platform data.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center text-muted-foreground p-4">
-            <p>No immediate tasks to suggest. Great job!</p>
+            <p>No immediate tasks to suggest based on current platform data. Great job!</p>
           </div>
         </CardContent>
       </Card>
@@ -87,14 +87,14 @@ export function TaskSuggestions() {
   }
 
   return (
-    <Card className="shadow-md max-w-full">
+    <Card className="max-w-full">
       <CardHeader>
         <div className="flex items-center gap-2">
           <BotMessageSquare className="h-6 w-6 text-primary" />
           <CardTitle className="font-headline">Suggested Tasks</CardTitle>
         </div>
         <CardDescription>
-          AI-powered recommendations to help you manage the platform.
+          AI-powered recommendations based on real platform data and metrics.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

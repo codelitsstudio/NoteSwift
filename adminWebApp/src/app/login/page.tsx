@@ -28,7 +28,10 @@ export default function LoginPage() {
   const loginResult = await handleAdminLogin(username, password);
 
   if (loginResult.success) {
-    const result = await handleSendOtp();
+    // Store the email and password for OTP verification
+    localStorage.setItem('adminLoginEmail', username);
+    localStorage.setItem('adminLoginPassword', password);
+    const result = await handleSendOtp(username);
     if (result.success) {
       localStorage.setItem("isPasswordVerified", "true");
       toast({
@@ -74,11 +77,11 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Email address</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="eg: codelits_studio"
+                placeholder="eg: admin@example.com"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required

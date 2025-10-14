@@ -1,13 +1,14 @@
 // app/components/ProHeader.tsx
 import React from "react";
-import { View, Text, Pressable, SafeAreaView, Image } from "react-native";
+import { View, Text, Pressable, Image } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from "expo-router";
 
 export default function ProHeader() {
   const router = useRouter();
 
   return (
-    <SafeAreaView className="bg-white" style={{ flex: 0 }}>
+    <SafeAreaView className="bg-white" style={{ flex: 0 }} edges={['top']}>
       <View className="bg-white">
         {/* Top Row: Close Button + NoteSwift Pro Tab */}
         <View className="flex-row items-center justify-between border-b border-gray-200 px-4 py-6">

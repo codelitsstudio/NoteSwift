@@ -31,13 +31,13 @@ export function DashboardInsights() {
 
   if (isLoading) {
     return (
-      <Card className="shadow-md">
+      <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
             <CardTitle className="font-headline">AI-Powered Insights</CardTitle>
           </div>
-          <CardDescription>Analyzing your dashboard data...</CardDescription>
+          <CardDescription>AI analysis of your real platform data and performance metrics.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-16 w-full" />
@@ -63,13 +63,13 @@ export function DashboardInsights() {
   }
 
   return (
-    <Card className="shadow-md w-full">
+    <Card className="w-full">
       <CardHeader>
         <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
             <CardTitle className="font-headline">AI-Powered Insights</CardTitle>
         </div>
-        <CardDescription>Your automated data analyst report.</CardDescription>
+        <CardDescription>Your automated data analyst report based on real platform metrics.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="text-sm text-muted-foreground italic">

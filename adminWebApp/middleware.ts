@@ -4,7 +4,8 @@ import { jwtVerify } from 'jose';
 
 // Define protected routes
 const protectedRoutes = ['/dashboard'];
-const authRoutes = ['/login', '/login/otp'];
+const adminAuthRoutes = ['/admin/login', '/admin/otp'];
+const regularAuthRoutes = ['/login', '/login/otp'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -21,16 +22,18 @@ export async function middleware(request: NextRequest) {
 
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  const isAuthRoute = authRoutes.some(route => pathname === route);
+  const isAdminAuthRoute = adminAuthRoutes.some(route => pathname === route);
+  const isRegularAuthRoute = regularAuthRoutes.some(route => pathname === route);
 
-  // Get the session token from cookies
-  const sessionToken = request.cookies.get('admin_session')?.value;
+  // Get tokens from cookies or headers (admin system uses localStorage, but we can check headers)
+  const adminToken = request.cookies.get('admin_token')?.value ||
+                    request.headers.get('authorization')?.replace('Bearer ', '');
 
-  // If accessing protected route without valid session
+  // For protected routes, check authentication
   if (isProtectedRoute) {
-    if (!sessionToken) {
-      // Redirect to login if no session token
-      const loginUrl = new URL('/login', request.url);
+    if (!adminToken) {
+      // Redirect to admin login if no admin token
+      const loginUrl = new URL('/admin/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -38,35 +41,59 @@ export async function middleware(request: NextRequest) {
     try {
       // Verify the JWT token
       const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-key-change-in-production');
-      await jwtVerify(sessionToken, secret);
+      const { payload } = await jwtVerify(adminToken, secret);
+
+      // Check if it's an admin token
+      if (payload.type !== 'admin') {
+        // Not an admin token, redirect to admin login
+        const loginUrl = new URL('/admin/login', request.url);
+        return NextResponse.redirect(loginUrl);
+      }
 
       // Token is valid, allow access
       return NextResponse.next();
     } catch (error) {
-      // Token is invalid or expired, redirect to login
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-
-      // Clear invalid cookie
+      // Token is invalid or expired, redirect to admin login
+      const loginUrl = new URL('/admin/login', request.url);
       const response = NextResponse.redirect(loginUrl);
-      response.cookies.delete('admin_session');
+      response.cookies.delete('admin_token');
       return response;
     }
   }
 
-  // If accessing auth routes while already authenticated, redirect to dashboard
-  if (isAuthRoute && sessionToken) {
+  // Prevent system admin from accessing regular login page
+  if (pathname === '/login' && adminToken) {
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-key-change-in-production');
-      await jwtVerify(sessionToken, secret);
+      const { payload } = await jwtVerify(adminToken, secret);
 
-      // User is authenticated, redirect to dashboard or intended destination
-      const redirectTo = request.nextUrl.searchParams.get('redirect') || '/dashboard';
-      return NextResponse.redirect(new URL(redirectTo, request.url));
+      if (payload.type === 'admin' && payload.role === 'system_admin') {
+        // System admin trying to access regular login, redirect to dashboard
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    } catch (error) {
+      // Invalid token, clear it
+      const response = NextResponse.next();
+      response.cookies.delete('admin_token');
+      return response;
+    }
+  }
+
+  // If accessing admin auth routes while already authenticated as system admin, redirect to dashboard
+  if (isAdminAuthRoute && adminToken) {
+    try {
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-key-change-in-production');
+      const { payload } = await jwtVerify(adminToken, secret);
+
+      if (payload.type === 'admin') {
+        // Admin is already authenticated, redirect to dashboard
+        const redirectTo = request.nextUrl.searchParams.get('redirect') || '/dashboard';
+        return NextResponse.redirect(new URL(redirectTo, request.url));
+      }
     } catch (error) {
       // Invalid token, clear it and continue to login
       const response = NextResponse.next();
-      response.cookies.delete('admin_session');
+      response.cookies.delete('admin_token');
       return response;
     }
   }

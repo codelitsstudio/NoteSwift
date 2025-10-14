@@ -82,7 +82,7 @@ const QuickAccess: React.FC = () => {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           onPress={() => {
             console.log('Courses icon clicked');
-            handleNavigation('/Learn/LearnPage', 'Courses');
+            handleNavigation('/AllCourses/AllCoursesPage', 'Courses');
           }}
         >
           <MaterialIcons name="menu-book" size={28} color="#374151" />
