@@ -1,9 +1,3 @@
-// BACKEND TEMPORARILY DISABLED FOR FRONTEND DEVELOPMENT
-// import dbConnect from "@/lib/mongoose";
-// import Announcement from "@/models/Announcement";
-// import Teacher from "@/models/Teacher";
-// import Course from "@/models/Course";
-// import Batch from "@/models/Batch";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { CreateAnnouncementForm } from "./announcement-form";
 import { Badge } from "@/components/ui/badge";
@@ -11,117 +5,59 @@ import { Button } from "@/components/ui/button";
 import { Bell, Send, Calendar, Users, BarChart3, Eye, CheckCircle, Clock } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  // MOCK DATA FOR FRONTEND DEVELOPMENT
-  const now = Date.now();
-  return {
-    announcements: [
-      { 
-        _id: 'an1', 
-        title: 'Grade 11 Math - Calculus Test Next Week', 
-        message: 'The Calculus mid-term test will be held next Monday, October 7th at 10 AM. Topics covered: Differentiation, Integration basics. Duration: 60 minutes.',
-        priority: 'high',
-        targetAudience: 'Your Students',
-        course: 'Grade 11 Study Package (Mathematics)',
-        createdBy: { _id: 't1', name: 'You' }, 
-        createdAt: new Date(now - 3600000).toISOString(),
-        scheduledFor: new Date(now).toISOString(),
-        status: 'sent',
-        readCount: 3,
-        totalRecipients: 3,
-        deliveryRate: 100
+  const teacherEmail = "teacher@example.com"; // TODO: Get from auth
+  
+  try {
+    const response = await teacherAPI.announcements.getAll(teacherEmail);
+    
+    if (!response.success || !response.data) {
+      throw new Error('Failed to fetch announcements');
+    }
+
+    const announcements = response.data.announcements || [];
+    const stats = response.data.stats || {};
+
+    return {
+      announcements: announcements.map((a: any) => ({
+        _id: a._id,
+        title: a.title,
+        message: a.message,
+        priority: a.priority,
+        targetAudience: a.targetAudience === 'all' ? 'All Students' : a.targetAudience === 'batch' ? `Batch ${a.batchIds?.length || 0}` : 'Specific Students',
+        course: `${a.courseName} (${a.subjectName})`,
+        createdBy: { _id: a.teacherId, name: a.teacherName },
+        createdAt: a.createdAt,
+        scheduledFor: a.scheduledFor || a.createdAt,
+        status: a.sentAt ? 'sent' : 'scheduled',
+        readCount: a.readBy?.length || 0,
+        totalRecipients: a.recipientCount || 0,
+        deliveryRate: a.recipientCount > 0 ? Math.round((a.readBy?.length || 0) / a.recipientCount * 100) : 0
+      })),
+      templates: [], // TODO: Implement templates in backend
+      stats: {
+        totalAnnouncements: stats.total || 0,
+        sentThisMonth: stats.sent || 0,
+        avgReadRate: 0, // TODO: Calculate
+        scheduledUpcoming: stats.scheduled || 0
       },
-      { 
-        _id: 'an2', 
-        title: 'Trigonometry Assignment Due Friday', 
-        message: 'Reminder: Your trigonometry practice problems assignment is due this Friday by 5 PM. Please submit through the portal.',
-        priority: 'medium',
-        targetAudience: 'Your Students',
-        course: 'Grade 11 Study Package (Mathematics)',
-        createdBy: { _id: 't1', name: 'You' }, 
-        createdAt: new Date(now - 86400000).toISOString(),
-        scheduledFor: new Date(now - 86400000).toISOString(),
-        status: 'sent',
-        readCount: 3,
-        totalRecipients: 3,
-        deliveryRate: 100
-      },
-      { 
-        _id: 'an3', 
-        title: 'Extra Doubt Session - Saturday 10 AM', 
-        message: 'An extra doubt-clearing session for Quadratic Equations will be conducted this Saturday from 10 AM to 11:30 AM via Zoom. Link will be shared.',
-        priority: 'medium',
-        targetAudience: 'Your Students',
-        course: 'Grade 11 Study Package (Mathematics)',
-        createdBy: { _id: 't1', name: 'You' }, 
-        createdAt: new Date(now - 172800000).toISOString(),
-        scheduledFor: new Date(now - 172800000).toISOString(),
-        status: 'sent',
-        readCount: 2,
-        totalRecipients: 3,
-        deliveryRate: 100
-      },
-      { 
-        _id: 'an4', 
-        title: 'New Study Material Uploaded', 
-        message: 'New video tutorials and practice questions for Coordinate Geometry have been uploaded. Check the Courses section.',
-        priority: 'low',
-        targetAudience: 'Your Students',
-        course: 'Grade 11 Study Package (Mathematics)',
-        createdBy: { _id: 't1', name: 'You' }, 
-        createdAt: new Date(now - 259200000).toISOString(),
-        scheduledFor: new Date(now - 259200000).toISOString(),
-        status: 'sent',
-        readCount: 3,
-        totalRecipients: 3,
-        deliveryRate: 100
-      },
-      { 
-        _id: 'an5', 
-        title: 'Statistics Chapter Live Class Tomorrow', 
-        message: 'Tomorrow\'s live class will cover Statistics and Probability. Please complete the pre-reading assignment before class.',
-        priority: 'high',
-        targetAudience: 'Your Students',
-        course: 'Grade 11 Study Package (Mathematics)',
-        createdBy: { _id: 't1', name: 'You' }, 
-        createdAt: new Date(now - 345600000).toISOString(),
-        scheduledFor: new Date(now + 86400000).toISOString(),
-        status: 'scheduled',
-        readCount: 0,
-        totalRecipients: 3,
-        deliveryRate: 0
-      }
-    ],
-    templates: [
-      { _id: 'tpl1', name: 'Test Announcement', category: 'Academic', usageCount: 3 },
-      { _id: 'tpl2', name: 'Assignment Reminder', category: 'Academic', usageCount: 5 },
-      { _id: 'tpl3', name: 'Live Class Schedule', category: 'Academic', usageCount: 4 },
-      { _id: 'tpl4', name: 'New Material Uploaded', category: 'General', usageCount: 2 },
-      { _id: 'tpl5', name: 'Event Invitation', category: 'Events', usageCount: 12 }
-    ],
-    stats: {
-      totalAnnouncements: 5,
-      sentThisMonth: 4,
-      avgReadRate: 92,
-      scheduledUpcoming: 1
-    },
-    courses: [
-      { _id: '1', title: 'Mathematics Grade 10' },
-      { _id: '2', title: 'Physics Grade 11' },
-      { _id: '3', title: 'Chemistry Grade 12' }
-    ],
-    batches: [
-      { _id: 'b1', name: 'Batch 2024-A' },
-      { _id: 'b2', name: 'Batch 2024-B' },
-      { _id: 'b3', name: 'Batch 2025-A' }
-    ],
-    teachers: [
-      { _id: 't1', name: 'Mr. Smith' },
-      { _id: 't2', name: 'Ms. Johnson' },
-      { _id: 't3', name: 'Dr. Brown' }
-    ]
-  };
+      courses: [], // TODO: Fetch teacher's courses
+      batches: [], // TODO: Fetch from batch API
+      teachers: [] // Not needed for teacher's own page
+    };
+  } catch (error) {
+    console.error('Announcements fetch error:', error);
+    return {
+      announcements: [],
+      templates: [],
+      stats: { totalAnnouncements: 0, sentThisMonth: 0, avgReadRate: 0, scheduledUpcoming: 0 },
+      courses: [],
+      batches: [],
+      teachers: []
+    };
+  }
 }
 
 export default async function AnnouncementsPage() {

@@ -54,10 +54,11 @@ export function InviteAdmin() {
     setLoading(true);
 
     try {
-      const response = await adminApi.post('/api/admin/admins/invite', {
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.INVITE, createFetchOptions('POST', {
         email: email.trim(),
         message
-      });
+      }));
 
       const data = await response.json();
 

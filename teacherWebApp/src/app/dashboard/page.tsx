@@ -1,9 +1,5 @@
-// BACKEND TEMPORARILY DISABLED FOR FRONTEND DEVELOPMENT
-// import dbConnect from "@/lib/mongoose";
-// import LiveClass from "@/models/LiveClass";
-// import Announcement from "@/models/Announcement";
-// import Attendance from "@/models/Attendance";
-// import { Submission } from "@/models/Assignment";
+'use client';
+
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -12,48 +8,158 @@ import { BookOpen, Users, FileText, MessageSquare, Clock, TrendingUp, Calendar, 
 import { Progress } from "@/components/ui/progress";
 import { MiniActivityChart } from "./analytics/analytics-charts";
 import { DashboardGreeting } from "@/components/dashboard-greeting";
+import teacherAPI from "@/lib/api/teacher-api";
+import { useEffect, useState } from "react";
+import { useTeacherAuth } from "@/components/dashboard-client-wrapper";
 
-async function getData() {
-  // MOCK DATA FOR FRONTEND DEVELOPMENT
-  return {
-    stats: {
-      totalStudents: 3,
-      activeToday: 2,
-      pendingGrading: 5,
-      upcomingClasses: 2,
-      totalCourses: 1,
-      doubtsOpen: 3,
-      completionRate: 85
-    },
-    upcoming: [
-      { _id: '1', subject: 'Grade 11 Mathematics - Algebra', scheduledAt: new Date(Date.now() + 3600000).toISOString(), platform: 'Live', durationMinutes: 60, students: 3 },
-      { _id: '2', subject: 'Grade 11 Mathematics - Calculus', scheduledAt: new Date(Date.now() + 86400000).toISOString(), platform: 'Live', durationMinutes: 90, students: 3 }
-    ],
-    recentActivity: [
-      { type: 'submission', student: 'Jane Smith', action: 'submitted', item: 'Grade 11 Math - Algebra Assignment', time: '5 min ago' },
-      { type: 'doubt', student: 'Mike Johnson', action: 'asked a doubt in', item: 'Grade 11 Math - Calculus', time: '12 min ago' },
-      { type: 'test', student: 'Emily Davis', action: 'completed', item: 'Grade 11 Math - Mid-term', time: '1 hour ago' },
-      { type: 'submission', student: 'Jane Smith', action: 'submitted', item: 'Grade 11 Math - Geometry Quiz', time: '2 hours ago' }
-    ],
-    pendingTasks: [
-      { id: 1, task: 'Grade 5 Math assignment submissions', priority: 'high', dueDate: 'Today' },
-      { id: 2, task: 'Respond to 3 student doubts', priority: 'medium', dueDate: 'Tomorrow' },
-      { id: 3, task: 'Upload Grade 11 Math - Calculus notes', priority: 'low', dueDate: 'This week' },
-      { id: 4, task: 'Schedule next week\'s Math classes', priority: 'medium', dueDate: 'Tomorrow' }
-    ],
-    announcements: [
-      { _id: '1', title: 'Holiday Notice', message: 'School closed next Monday for national holiday', createdAt: new Date().toISOString(), priority: 'high' },
-      { _id: '2', title: 'Exam Schedule Released', message: 'Mid-term exams start from next week. Check schedule.', createdAt: new Date(Date.now() - 86400000).toISOString(), priority: 'high' },
-      { _id: '3', title: 'New Study Material Available', message: 'Updated reference materials uploaded for Physics Chapter 3', createdAt: new Date(Date.now() - 172800000).toISOString(), priority: 'normal' }
-    ],
-    performanceInsights: [
-      { subject: 'Grade 11 Mathematics', avgScore: 88, trend: 'up', change: '+5%' }
-    ]
-  };
+async function getData(teacherEmail: string) {
+  
+  try {
+    // Fetch data from all APIs in parallel
+    const [announcementsRes, assignmentsRes, testsRes, questionsRes, liveClassesRes, weeklyActivityRes] = await Promise.all([
+      teacherAPI.announcements.getAll(teacherEmail),
+      teacherAPI.assignments.getAll(teacherEmail),
+      teacherAPI.tests.getAll(teacherEmail),
+      teacherAPI.questions.getAll(teacherEmail),
+      teacherAPI.liveClasses.getAll(teacherEmail, undefined, true), // upcoming only
+      teacherAPI.analytics.getWeeklyActivity(teacherEmail),
+    ]);
+
+    const announcements = announcementsRes.data?.announcements || [];
+    const assignments = assignmentsRes.data?.assignments || [];
+    const tests = testsRes.data?.tests || [];
+    const questions = questionsRes.data?.questions || [];
+    const upcomingClasses = liveClassesRes.data?.liveClasses || [];
+    const weeklyActivity = weeklyActivityRes.data?.weeklyActivity || [];
+
+    // Calculate stats
+    const assignmentStats = assignmentsRes.data?.stats || {};
+    const testStats = testsRes.data?.stats || {};
+    const questionStats = questionsRes.data?.stats || {};
+
+    const pendingGrading = (assignmentStats.pendingGrading || 0) + (testStats.pendingGrading || 0);
+    const doubtsOpen = questionStats.open || questions.filter((q: any) => q.status === 'open').length;
+
+    return {
+      stats: {
+        totalStudents: 0, // TODO: Implement student counting
+        activeToday: 0,
+        pendingGrading,
+        upcomingClasses: upcomingClasses.length,
+        totalCourses: 1, // TODO: Get from teacher profile
+        doubtsOpen,
+        completionRate: 85 // TODO: Calculate from assignments/tests
+      },
+      weeklyActivity: weeklyActivity.map((w: any) => ({
+        day: w.day,
+        value: w.activity || 0
+      })),
+      upcoming: upcomingClasses.slice(0, 3).map((cls: any) => ({
+        _id: cls._id,
+        subject: `${cls.courseName} - ${cls.subjectName}`,
+        scheduledAt: cls.scheduledAt,
+        platform: cls.platform || 'Live',
+        durationMinutes: cls.duration || 60,
+        students: cls.attendees?.length || 0
+      })),
+      recentActivity: [], // TODO: Implement activity feed
+      pendingTasks: [
+        ...(pendingGrading > 0 ? [{ id: 1, task: `Grade ${pendingGrading} submissions`, priority: 'high', dueDate: 'Today' }] : []),
+        ...(doubtsOpen > 0 ? [{ id: 2, task: `Respond to ${doubtsOpen} student doubts`, priority: 'medium', dueDate: 'Today' }] : []),
+      ],
+      announcements: announcements.slice(0, 3).map((a: any) => ({
+        _id: a._id,
+        title: a.title,
+        message: a.message,
+        createdAt: a.createdAt,
+        priority: a.priority
+      })),
+      performanceInsights: [] // TODO: Implement performance tracking
+    };
+  } catch (error: any) {
+    console.error('Dashboard data fetch error:', error);
+    console.error('Teacher email used:', teacherEmail);
+    console.error('Error details:', error.message);
+    // Return empty data on error with a note about the teacher
+    return {
+      stats: { totalStudents: 0, activeToday: 0, pendingGrading: 0, upcomingClasses: 0, totalCourses: 0, doubtsOpen: 0, completionRate: 0 },
+      weeklyActivity: [],
+      upcoming: [],
+      recentActivity: [],
+      pendingTasks: [],
+      announcements: [],
+      performanceInsights: [],
+      error: `Failed to load data for teacher: ${teacherEmail}. Error: ${error.message}`
+    };
+  }
 }
 
-export default async function DashboardPage() {
-  const { stats, upcoming, recentActivity, pendingTasks, announcements, performanceInsights } = await getData();
+export default function DashboardPage() {
+  const { teacherEmail, loading: authLoading } = useTeacherAuth();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    // Debug: Check localStorage immediately
+    console.log('📦 Dashboard mounted - localStorage check:', {
+      hasToken: !!localStorage.getItem('teacherToken'),
+      hasEmail: !!localStorage.getItem('teacherEmail'),
+      hasId: !!localStorage.getItem('teacherId'),
+      email: localStorage.getItem('teacherEmail')
+    });
+    
+    console.log('🔍 Auth state:', { authLoading, teacherEmail });
+    
+    if (authLoading) {
+      console.log('⏳ Still authenticating...');
+      return;
+    }
+    
+    if (!teacherEmail) {
+      console.log('❌ No teacher email after auth');
+      return;
+    }
+
+    console.log('📊 Loading dashboard data for:', teacherEmail);
+    
+    const loadData = async () => {
+      try {
+        const result = await getData(teacherEmail);
+        console.log('✅ Dashboard data loaded');
+        setData(result);
+      } catch (error) {
+        console.error('❌ Failed to load dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [teacherEmail, authLoading]);
+
+  // Show loading during authentication OR data fetching
+  if (authLoading || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-muted-foreground">No data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { stats, weeklyActivity, upcoming, recentActivity, pendingTasks, announcements, performanceInsights } = data;
 
   return (
     <div className="flex flex-col gap-6">
@@ -116,18 +222,16 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Weekly Activity</CardTitle>
-          <CardDescription>Your students' submissions, doubts, and interactions</CardDescription>
+          <CardDescription>Student submissions, test attempts, and live classes in your assigned subject</CardDescription>
         </CardHeader>
         <CardContent>
-          <MiniActivityChart data={[
-            { day: 'Mon', value: 22 },
-            { day: 'Tue', value: 35 },
-            { day: 'Wed', value: 28 },
-            { day: 'Thu', value: 44 },
-            { day: 'Fri', value: 39 },
-            { day: 'Sat', value: 18 },
-            { day: 'Sun', value: 12 },
-          ]} />
+          {weeklyActivity.length > 0 ? (
+            <MiniActivityChart data={weeklyActivity} />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No activity data available yet</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -235,7 +339,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentActivity.map((activity, idx) => (
+              {recentActivity.map((activity: any, idx: number) => (
                 <div key={idx} className="flex items-start gap-3 border-b last:border-0 pb-3 last:pb-0">
                   <div className={`p-2 rounded-full ${
                     activity.type === 'submission' ? 'bg-blue-100 text-blue-600' :
@@ -268,7 +372,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {pendingTasks.map((task) => (
+              {pendingTasks.map((task: any) => (
                 <div key={task.id} className="border rounded-lg p-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <p className="text-sm font-medium">{task.task}</p>
@@ -335,7 +439,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {performanceInsights.map((insight, idx) => (
+              {performanceInsights.map((insight: any, idx: number) => (
                 <div key={idx} className="border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-semibold text-sm">{insight.subject}</p>

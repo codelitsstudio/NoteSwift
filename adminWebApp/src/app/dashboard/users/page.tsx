@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MoreHorizontal, Search, Filter, ChevronDown, ChevronRight, Eye, Mail, Calendar, MapPin, BookOpen, TrendingUp } from "lucide-react";
+import { MoreHorizontal, Search, Filter, ChevronDown, ChevronRight, Eye, Mail, Calendar, MapPin, BookOpen, TrendingUp, Users } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -204,9 +204,10 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
       const [studentsRes, teachersRes] = await Promise.all([
-        fetch('/api/admin/users?type=students'),
-        fetch('/api/admin/users?type=teachers')
+        fetch(`${API_ENDPOINTS.USERS.LIST}?type=students`, createFetchOptions('GET')),
+        fetch(`${API_ENDPOINTS.USERS.LIST}?type=teachers`, createFetchOptions('GET'))
       ]);
 
       if (studentsRes.ok) {
@@ -228,13 +229,30 @@ export default function UsersPage() {
   const fetchUserDetails = async (userId: string, userType: 'student' | 'teacher') => {
     try {
       setUserDetailsLoading(true);
-      const response = await fetch(`/api/admin/users/${userId}?type=${userType}`);
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      console.log('🔍 Fetching user details:', { userId, userType });
+      const url = `${API_ENDPOINTS.USERS.GET(userId)}?type=${userType}`;
+      console.log('📡 URL:', url);
+      const response = await fetch(url, createFetchOptions('GET'));
+      console.log('📥 Response status:', response.status);
       if (response.ok) {
-        const data = await response.json();
-        setSelectedUser(data);
+        const result = await response.json();
+        console.log('✅ User data received:', result);
+        
+        // Backend returns { success: true, data: { user: ..., type: ... } }
+        if (result.success && result.data) {
+          const userData = { ...result.data.user, type: result.data.type };
+          console.log('📦 Processed user data:', userData);
+          setSelectedUser(userData);
+        } else {
+          console.error('❌ Unexpected data format:', result);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error response:', errorText);
       }
     } catch (error) {
-      console.error('Error fetching user details:', error);
+      console.error('❌ Error fetching user details:', error);
     } finally {
       setUserDetailsLoading(false);
     }
@@ -329,7 +347,13 @@ export default function UsersPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold font-headline tracking-tight">User Management</h1>
+ <div>
+           <div className="flex items-center gap-2">
+                      <Users className="h-6 w-6 text-primary" />
+                      <CardTitle className="text-3xl font-bold text-gray-900">User Management</CardTitle>
+                  </div>
+          <p className="text-gray-600 mt-2">Manage users, roles, and permissions across the platform</p>
+        </div>
         <div className="flex items-center gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -522,36 +546,38 @@ export default function UsersPage() {
                                             <div className="flex items-center gap-3 text-sm">
                                               <BookOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                               <div>
-                                                <span className="font-medium">Enrolled Courses:</span> {selectedUser.enrolledCourses.length}
+                                                <span className="font-medium">Enrolled Courses:</span> {selectedUser.enrolledCourses?.length || 0}
                                               </div>
                                             </div>
                                             <div className="flex items-center gap-3 text-sm">
                                               <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                               <div>
-                                                <span className="font-medium">Last Updated:</span> {formatDate(selectedUser.createdAt)}
+                                                <span className="font-medium">Last Updated:</span> {selectedUser.createdAt ? formatDate(selectedUser.createdAt) : 'Unknown'}
                                               </div>
                                             </div>
                                           </div>
                                         </div>
 
                                         {/* Address Information */}
-                                        <div>
-                                          <h4 className="font-medium mb-3">Address Information</h4>
-                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div className="p-3 border rounded-lg bg-muted/20">
-                                              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Institution</div>
-                                              <div className="text-sm mt-1">{selectedUser.address.institution}</div>
-                                            </div>
-                                            <div className="p-3 border rounded-lg bg-muted/20">
-                                              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">District</div>
-                                              <div className="text-sm mt-1">{selectedUser.address.district}</div>
-                                            </div>
-                                            <div className="p-3 border rounded-lg bg-muted/20">
-                                              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Province</div>
-                                              <div className="text-sm mt-1">{selectedUser.address.province}</div>
+                                        {selectedUser.address && (
+                                          <div>
+                                            <h4 className="font-medium mb-3">Address Information</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                              <div className="p-3 border rounded-lg bg-muted/20">
+                                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Institution</div>
+                                                <div className="text-sm mt-1">{selectedUser.address.institution || 'N/A'}</div>
+                                              </div>
+                                              <div className="p-3 border rounded-lg bg-muted/20">
+                                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">District</div>
+                                                <div className="text-sm mt-1">{selectedUser.address.district || 'N/A'}</div>
+                                              </div>
+                                              <div className="p-3 border rounded-lg bg-muted/20">
+                                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Province</div>
+                                                <div className="text-sm mt-1">{selectedUser.address.province || 'N/A'}</div>
+                                              </div>
                                             </div>
                                           </div>
-                                        </div>
+                                        )}
 
                                         {/* Profile Information */}
                                         <div>
@@ -577,7 +603,7 @@ export default function UsersPage() {
                                         </div>
 
                                         {/* Enrolled Courses */}
-                                        {selectedUser.enrolledCourses.length > 0 && (
+                                        {selectedUser.enrolledCourses && selectedUser.enrolledCourses.length > 0 && (
                                           <div>
                                             <h4 className="font-medium mb-3">Enrolled Courses</h4>
                                             <div className="grid gap-3">
@@ -599,7 +625,7 @@ export default function UsersPage() {
                                         )}
 
                                         {/* Course Progress Details */}
-                                        {selectedUser.courseProgress.length > 0 && (
+                                        {selectedUser.courseProgress && selectedUser.courseProgress.length > 0 && (
                                           <div>
                                             <h4 className="font-medium mb-3">Course Progress Details</h4>
                                             <div className="grid gap-3">

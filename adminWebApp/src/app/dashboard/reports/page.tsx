@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Users, Activity, DollarSign, BookOpen, Calendar, RefreshCw, FileText, FileSpreadsheet } from 'lucide-react';
+import { Users, Activity, DollarSign, BookOpen, Calendar, RefreshCw, FileText, FileSpreadsheet, LineChart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { UserGrowthChart } from '@/components/reports/UserGrowthChart';
 import { CourseEnrollmentChart } from '@/components/reports/CourseEnrollmentChart';
@@ -64,23 +64,40 @@ export default function ReportsPage() {
   const fetchReportsData = async (selectedPeriod = period) => {
     try {
       setRefreshing(true);
-      const response = await fetch(`/api/admin/reports/overview?period=${selectedPeriod}`);
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      console.log('🔍 Fetching reports data for period:', selectedPeriod);
+      const url = `${API_ENDPOINTS.REPORTS.OVERVIEW}?period=${selectedPeriod}`;
+      console.log('📡 URL:', url);
+      const response = await fetch(url, createFetchOptions('GET'));
+      console.log('📥 Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
       const result = await response.json();
+      console.log('✅ Reports data received:', result);
 
       if (result.success) {
         setData(result.data);
+        toast({
+          title: "Success",
+          description: "Reports data loaded successfully",
+        });
       } else {
         toast({
           title: "Error",
-          description: "Failed to fetch reports data",
+          description: result.message || "Failed to fetch reports data",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error('Failed to fetch reports data:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to fetch reports data:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch reports data",
+        description: error.message || "Failed to fetch reports data",
         variant: "destructive",
       });
     } finally {
@@ -267,19 +284,20 @@ ${data.revenueTrendData.map(item => `${item.date}: ${formatCurrency(item.revenue
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <LineChart className="h-6 w-6 text-primary" />
               <h1 className="text-3xl font-semibold text-slate-900">Reports & Analytics</h1>
-              <p className="text-sm text-slate-600">Comprehensive platform analytics and performance metrics</p>
             </div>
+            <p className="mt-2  text-slate-600">Comprehensive platform analytics and performance metrics</p>
           </div>
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-6 text-lg text-slate-600">Loading analytics data...</p>
-            <p className="mt-2 text-sm text-slate-500">Fetching user metrics, course data, and performance indicators</p>
-          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-6 text-lg text-slate-600">Loading analytics data...</p>
+          <p className="mt-2 text-sm text-slate-500">Fetching user metrics, course data, and performance indicators</p>
         </div>
       </div>
     );
@@ -287,34 +305,37 @@ ${data.revenueTrendData.map(item => `${item.date}: ${formatCurrency(item.revenue
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <LineChart className="h-6 w-6 text-primary" />
               <h1 className="text-3xl font-semibold text-slate-900">Reports & Analytics</h1>
-              <p className="text-sm text-slate-600">Comprehensive platform analytics and performance metrics</p>
             </div>
+            <p className="mt-2 text-slate-600">Comprehensive platform analytics and performance metrics</p>
           </div>
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="flex items-center justify-center py-12">
-              <p className="text-slate-600">Failed to load reports data</p>
-            </CardContent>
-          </Card>
         </div>
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="flex items-center justify-center py-12">
+            <p className="text-slate-600">Failed to load reports data</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   const { metrics, userGrowthData, courseEnrollmentData, weeklyActiveUsersData, coursesPublishedData, revenueTrendData } = data || {};
   return (
-    <div className="min-h-screen bg-slate-50/50">
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <LineChart className="h-6 w-6 text-primary" />
             <h1 className="text-3xl font-semibold text-slate-900">Reports & Analytics</h1>
-            <p className="text-sm text-slate-600">Comprehensive platform analytics and performance metrics</p>
           </div>
+          <p className="mt-2 text-slate-600">Comprehensive platform analytics and performance metrics</p>
+        </div>
           <div className="flex items-center gap-3">
             <Select value={period} onValueChange={handlePeriodChange}>
               <SelectTrigger className="w-40 h-9">
@@ -481,7 +502,6 @@ ${data.revenueTrendData.map(item => `${item.date}: ${formatCurrency(item.revenue
             metrics={metrics}
           />
         </div>
-      </div>
     </div>
   );
 }

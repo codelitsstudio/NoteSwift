@@ -46,10 +46,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await fetch('/api/admin/profile', {
+      const { API_ENDPOINTS } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMIN_AUTH.PROFILE, {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        credentials: 'include'
       });
 
       if (response.ok) {

@@ -67,11 +67,11 @@ export default function AdminOtpPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: otp.trim() }),
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.ADMIN_AUTH.VERIFY_OTP,
+        createFetchOptions('POST', { email, otp: otp.trim() })
+      );
 
       const data = await response.json();
 
@@ -128,11 +128,11 @@ export default function AdminOtpPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: storedEmail, password: storedPassword }),
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.ADMIN_AUTH.LOGIN,
+        createFetchOptions('POST', { email: storedEmail, password: storedPassword })
+      );
 
       const data = await response.json();
 

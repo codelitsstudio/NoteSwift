@@ -1,8 +1,3 @@
-// BACKEND TEMPORARILY DISABLED FOR FRONTEND DEVELOPMENT
-// import dbConnect from "@/lib/mongoose";
-// import Assignment, { Submission } from "@/models/Assignment";
-// import Course from "@/models/Course";
-// import Chapter from "@/models/Chapter";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { SubmissionRow } from "./assignment-forms";
 import { Badge } from "@/components/ui/badge";
@@ -10,169 +5,70 @@ import { Button } from "@/components/ui/button";
 import { FileText, CheckCircle, Clock, AlertTriangle, Users, BarChart3, Copy, Search, TrendingUp, FileCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  // MOCK DATA FOR FRONTEND DEVELOPMENT
-  const now = Date.now();
-  return {
-    assignments: [
-      { 
-        _id: 'a1', 
-        title: 'Quadratic Equations Problem Set', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Algebra - Quadratic Equations',
-        description: 'Solve equations 1-15 focusing on quadratic formula applications', 
-        deadline: new Date(now + 86400000).toISOString(),
-        totalMarks: 50,
-        status: 'active',
-        enrolledStudents: 3,
-        submittedCount: 2,
-        gradedCount: 1,
-        createdAt: new Date(now - 172800000).toISOString()
-      },
-      { 
-        _id: 'a2', 
-        title: 'Calculus Differentiation Assignment', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Calculus - Differentiation',
-        description: 'Apply differentiation rules to solve problems 1-20', 
-        deadline: new Date(now + 172800000).toISOString(),
-        totalMarks: 100,
-        status: 'active',
-        enrolledStudents: 3,
-        submittedCount: 1,
-        gradedCount: 0,
-        createdAt: new Date(now - 259200000).toISOString()
-      },
-      { 
-        _id: 'a3', 
-        title: 'Trigonometry Practice Problems', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Trigonometry - Advanced',
-        description: 'Solve trigonometric identities and equations',
-        deadline: new Date(now - 86400000).toISOString(),
-        totalMarks: 75,
-        status: 'overdue',
-        enrolledStudents: 3,
-        submittedCount: 3,
-        gradedCount: 3,
-        avgScore: 85,
-        createdAt: new Date(now - 604800000).toISOString()
-      },
-      { 
-        _id: 'a4', 
-        title: 'Coordinate Geometry Assignment', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Coordinate Geometry',
-        description: 'Plot and analyze geometric figures on coordinate plane',
-        deadline: new Date(now + 432000000).toISOString(),
-        totalMarks: 40,
-        status: 'active',
-        enrolledStudents: 3,
-        submittedCount: 0,
-        gradedCount: 0,
-        createdAt: new Date(now - 86400000).toISOString()
-      },
-      { 
-        _id: 'a5', 
-        title: 'Statistics Project', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Statistics and Probability',
-        description: 'Collect data and perform statistical analysis',
-        deadline: new Date(now + 604800000).toISOString(),
-        totalMarks: 80,
-        status: 'active',
-        enrolledStudents: 3,
-        submittedCount: 0,
-        gradedCount: 0,
-        createdAt: new Date(now - 86400000).toISOString()
-      }
-    ],
-    submissions: [
-      { 
-        _id: 'sub1', 
-        assignment: 'a1', 
-        assignmentTitle: 'Algebra Problem Set 1',
-        student: { _id: 'st1', name: 'John Doe' }, 
-        submittedAt: new Date(now - 3600000).toISOString(), 
-        score: 42, 
-        totalMarks: 50,
-        feedback: 'Good work! Minor calculation errors in Q15-17.',
-        status: 'graded',
-        plagiarismScore: 5,
-        lateSubmission: false
-      },
-      { 
-        _id: 'sub2', 
-        assignment: 'a1', 
-        assignmentTitle: 'Algebra Problem Set 1',
-        student: { _id: 'st2', name: 'Jane Smith' }, 
-        submittedAt: new Date(now - 7200000).toISOString(), 
-        score: 0, 
-        totalMarks: 50,
-        feedback: '',
-        status: 'pending',
+  const teacherEmail = "teacher@example.com"; // TODO: Get from auth/session
+  try {
+    const response = await teacherAPI.assignments.getAll(teacherEmail);
+    const assignments = response.data?.assignments || [];
+    const stats = response.data?.stats || {};
+
+    const transformedAssignments = assignments.map((a: any) => ({
+      _id: a._id,
+      title: a.title,
+      course: a.courseName,
+      chapter: `${a.subjectName} - ${a.topicName || ''}`,
+      description: a.description,
+      deadline: a.deadline,
+      totalMarks: a.totalMarks,
+      status: a.status,
+      enrolledStudents: a.totalStudents || 0,
+      submittedCount: a.totalSubmissions || 0,
+      gradedCount: a.submissions?.filter((s: any) => s.status === 'graded').length || 0,
+      avgScore: a.avgScore || 0,
+      createdAt: a.createdAt
+    }));
+
+    const allSubmissions = assignments.flatMap((a: any) => 
+      (a.submissions || []).map((s: any) => ({
+        _id: s._id,
+        assignment: a._id,
+        assignmentTitle: a.title,
+        student: { _id: s.studentId, name: s.studentName || 'Student' },
+        submittedAt: s.submittedAt,
+        score: s.score || 0,
+        totalMarks: a.totalMarks,
+        feedback: s.feedback || '',
+        status: s.status,
         plagiarismScore: 0,
-        lateSubmission: false
+        lateSubmission: new Date(s.submittedAt) > new Date(a.deadline)
+      }))
+    );
+
+    return {
+      assignments: transformedAssignments,
+      submissions: allSubmissions,
+      stats: {
+        totalAssignments: stats.total || 0,
+        activeAssignments: stats.active || 0,
+        overdueAssignments: stats.overdue || 0,
+        avgSubmissionRate: 0,
+        pendingGrading: stats.pendingGrading || 0
       },
-      { 
-        _id: 'sub3', 
-        assignment: 'a2', 
-        assignmentTitle: 'Physics Lab Report',
-        student: { _id: 'st3', name: 'Mike Johnson' }, 
-        submittedAt: new Date(now - 14400000).toISOString(), 
-        score: 88, 
-        totalMarks: 100,
-        feedback: 'Excellent analysis and presentation.',
-        status: 'graded',
-        plagiarismScore: 12,
-        lateSubmission: false
-      },
-      { 
-        _id: 'sub4', 
-        assignment: 'a3', 
-        assignmentTitle: 'Chemistry Practical Assignment',
-        student: { _id: 'st4', name: 'Sarah Williams' }, 
-        submittedAt: new Date(now - 172800000).toISOString(), 
-        score: 68, 
-        totalMarks: 75,
-        feedback: 'Good identification skills. Improve analysis section.',
-        status: 'graded',
-        plagiarismScore: 8,
-        lateSubmission: true
-      },
-      { 
-        _id: 'sub5', 
-        assignment: 'a1', 
-        assignmentTitle: 'Algebra Problem Set 1',
-        student: { _id: 'st5', name: 'Alex Brown' }, 
-        submittedAt: new Date(now - 1800000).toISOString(), 
-        score: 0, 
-        totalMarks: 50,
-        feedback: '',
-        status: 'pending',
-        plagiarismScore: 0,
-        lateSubmission: false
-      }
-    ],
-    stats: {
-      totalAssignments: 34,
-      activeAssignments: 12,
-      overdueAssignments: 3,
-      avgSubmissionRate: 78,
-      pendingGrading: 42
-    },
-    courses: [
-      { _id: '1', title: 'Grade 11 Study Package' }
-    ],
-    chapters: [
-      { _id: 'ch1', course: '1', title: 'Algebra - Quadratic Equations' },
-      { _id: 'ch2', course: '1', title: 'Calculus - Differentiation' },
-      { _id: 'ch3', course: '1', title: 'Trigonometry - Advanced' },
-      { _id: 'ch4', course: '1', title: 'Coordinate Geometry' },
-      { _id: 'ch5', course: '1', title: 'Statistics and Probability' }
-    ]
-  };
+      courses: [],
+      chapters: []
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      assignments: [],
+      submissions: [],
+      stats: { totalAssignments: 0, activeAssignments: 0, overdueAssignments: 0, avgSubmissionRate: 0, pendingGrading: 0 },
+      courses: [],
+      chapters: []
+    };
+  }
 }
 
 export default async function AssignmentsPage() {

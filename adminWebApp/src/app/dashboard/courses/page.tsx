@@ -85,6 +85,11 @@ export default function CoursesManagementPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState('pro');
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   // Homepage display settings
   const [homepageSettings, setHomepageSettings] = useState({
@@ -148,7 +153,8 @@ export default function CoursesManagementPage() {
   // Fetch homepage settings from backend
   const fetchHomepageSettings = async () => {
     try {
-      const res = await fetch('/api/admin/homepage-settings');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const res = await fetch(API_ENDPOINTS.HOMEPAGE.SETTINGS, createFetchOptions('GET'));
       if (!res.ok) throw new Error('Failed to fetch homepage settings');
       const data = await res.json();
       if (data.success) {
@@ -167,11 +173,11 @@ export default function CoursesManagementPage() {
   // Save homepage settings to backend
   const saveHomepageSettings = async (settings: typeof homepageSettings) => {
     try {
-      const res = await fetch('/api/admin/homepage-settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const res = await fetch(
+        API_ENDPOINTS.HOMEPAGE.SETTINGS,
+        createFetchOptions('PUT', settings)
+      );
       if (!res.ok) throw new Error('Failed to save homepage settings');
       const data = await res.json();
       if (data.success) {
@@ -207,7 +213,8 @@ export default function CoursesManagementPage() {
 
   const fetchCourses = async () => {
     try {
-      const res = await fetch('/api/courses');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const res = await fetch(API_ENDPOINTS.COURSES.LIST, createFetchOptions('GET'));
       if (!res.ok) throw new Error('Failed to fetch courses');
       const json = await res.json();
       setCourses(json.result?.courses || []);
@@ -260,18 +267,50 @@ export default function CoursesManagementPage() {
     }
   };
 
-  const handleDelete = async (courseId: string) => {
-    if (!confirm('Are you sure you want to delete this course?')) return;
+  const openDeleteDialog = (course: Course) => {
+    setCourseToDelete(course);
+    setDeleteConfirmText('');
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!courseToDelete?._id) return;
+
+    // Validate that user entered the exact course title
+    if (deleteConfirmText !== courseToDelete.title) {
+      toast({ 
+        title: 'Error', 
+        description: 'Course title does not match. Please type the exact course title to confirm deletion.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     try {
-      const res = await fetch(`/api/courses/${courseId}`, { method: 'DELETE' });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const res = await fetch(
+        API_ENDPOINTS.COURSES.DELETE(courseToDelete._id),
+        createFetchOptions('DELETE')
+      );
+      
       if (!res.ok) throw new Error('Failed to delete course');
 
-      toast({ title: 'Success', description: 'Course deleted successfully' });
+      toast({ 
+        title: 'Success', 
+        description: `Course "${courseToDelete.title}" has been permanently deleted.` 
+      });
+      
+      setDeleteDialogOpen(false);
+      setCourseToDelete(null);
+      setDeleteConfirmText('');
       fetchCourses();
     } catch (err: any) {
       console.error(err);
-      toast({ title: 'Error', description: 'Failed to delete course' });
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to delete course',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -552,9 +591,12 @@ export default function CoursesManagementPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Course Management</h1>
-            <p className="text-gray-600">Create and manage courses for students</p>
-          </div>
+           <div className="flex items-center gap-2">
+                      <BookOpen className="h-6 w-6 text-primary" />
+                      <CardTitle className="text-3xl font-bold text-gray-900">Courses Management</CardTitle>
+                  </div>
+          <p className="text-gray-600 mt-2">Manage courses, subjects, and modules</p>
+        </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -673,7 +715,7 @@ export default function CoursesManagementPage() {
                         Edit Course
                       </Button>
                       <Button
-                        onClick={() => handleDelete(course._id!)}
+                        onClick={() => openDeleteDialog(course)}
                         size="sm"
                         variant="outline"
                         className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors"
@@ -1026,6 +1068,96 @@ export default function CoursesManagementPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <Trash2 className="w-5 h-5" />
+                Delete Course - Permanent Action
+              </DialogTitle>
+              <DialogDescription className="space-y-4 pt-4">
+                <div className="bg-gray-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-red-800 font-semibold mb-2">Warning: This action cannot be undone!</p>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    Deleting this course will permanently remove:
+                  </p>
+                  <ul className="list-disc list-inside text-gray-700 text-sm mt-2 space-y-1 ml-2">
+                    <li>All course content and materials</li>
+                    <li>All subjects and modules</li>
+                    <li>Student enrollment data</li>
+                    <li>Progress and completion records</li>
+                    <li>Course ratings and reviews</li>
+                  </ul>
+                </div>
+
+                {courseToDelete && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">You are about to delete:</p>
+                    <p className="font-semibold text-gray-900 text-lg">{courseToDelete.title}</p>
+                    <div className="flex gap-2 mt-2">
+                      <Badge variant="outline">{courseToDelete.type}</Badge>
+                      <Badge variant="secondary">{courseToDelete.status}</Badge>
+                      {courseToDelete.enrolledCount !== undefined && (
+                        <Badge variant="outline" className="text-blue-600">
+                          {courseToDelete.enrolledCount} students enrolled
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="deleteConfirm" className="text-sm font-semibold text-gray-700">
+                    Type the course title to confirm deletion:
+                  </Label>
+                  <Input
+                    id="deleteConfirm"
+                    placeholder={courseToDelete?.title || "Enter course title"}
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    className="font-mono"
+                    autoComplete="off"
+                  />
+                  {deleteConfirmText && deleteConfirmText !== courseToDelete?.title && (
+                    <p className="text-xs text-red-600">
+                      ❌ Course title does not match
+                    </p>
+                  )}
+                  {deleteConfirmText === courseToDelete?.title && (
+                    <p className="text-xs text-green-600">
+                      ✓ Course title matches
+                    </p>
+                  )}
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setCourseToDelete(null);
+                  setDeleteConfirmText('');
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteConfirmText !== courseToDelete?.title}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Permanently
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* CourseEditor modal removed. Use dedicated page for create/edit/view. */}
   </div>

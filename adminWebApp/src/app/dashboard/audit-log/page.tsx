@@ -141,7 +141,8 @@ export default function AuditLogPage() {
         ...(endDate && { endDate: endDate.toISOString() })
       });
 
-      const response = await fetch(`/api/admin/audit-logs?${params}`);
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(`${API_ENDPOINTS.AUDIT_LOGS.LIST}?${params}`, createFetchOptions('GET'));
       if (!response.ok) throw new Error('Failed to fetch audit logs');
 
       const data: AuditLogsResponse = await response.json();
@@ -189,7 +190,8 @@ export default function AuditLogPage() {
         ...(endDate && { endDate: endDate.toISOString() })
       });
 
-      const response = await fetch(`/api/admin/audit-logs?${params}`);
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(`${API_ENDPOINTS.AUDIT_LOGS.LIST}?${params}`, createFetchOptions('GET'));
       if (!response.ok) throw new Error('Failed to fetch audit logs for export');
 
       const data: AuditLogsResponse = await response.json();
@@ -307,9 +309,7 @@ export default function AuditLogPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Eye className="w-5 h-5 text-blue-600" />
-                  </div>
+                 
                   <div>
                     <p className="text-2xl font-bold">{statistics.totalLogs.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Total Events</p>
@@ -320,9 +320,7 @@ export default function AuditLogPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                  </div>
+            
                   <div>
                     <p className="text-2xl font-bold text-blue-600">{statistics.successCount.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Success</p>
@@ -333,9 +331,7 @@ export default function AuditLogPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <XCircle className="w-5 h-5 text-red-600" />
-                  </div>
+             
                   <div>
                     <p className="text-2xl font-bold text-red-600">{statistics.failureCount.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Failures</p>
@@ -346,9 +342,6 @@ export default function AuditLogPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <AlertTriangle className="w-5 h-5 text-blue-600" />
-                  </div>
                   <div>
                     <p className="text-2xl font-bold text-blue-600">{statistics.warningCount.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Warnings</p>

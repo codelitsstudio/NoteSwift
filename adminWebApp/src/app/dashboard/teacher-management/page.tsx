@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Eye, UserCheck, UserX, Shield, BookOpen, Plus, Edit, CheckCircle, User } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, UserCheck, UserX, Shield, BookOpen, Plus, Edit, CheckCircle, User, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { RemoveTeacherDialog } from "@/components/teachers/remove-teacher-dialog";
 
 interface Course {
   _id: string;
@@ -25,6 +26,16 @@ interface Course {
   status: string;
   gradeLevel?: string;
   chapters?: any[];
+  program?: string;
+  subjects?: Array<{
+    name: string;
+    description?: string;
+    modules?: Array<{
+      name: string;
+      description: string;
+      duration?: string;
+    }>;
+  }>;
 }
 
 export default function TeachersManagementPage() {
@@ -37,8 +48,12 @@ export default function TeachersManagementPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['pending']));
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherSummary | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [teacherToRemove, setTeacherToRemove] = useState<TeacherSummary | null>(null);
   const [editingSubject, setEditingSubject] = useState('');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
   const { toast } = useToast();
 
   const load = async () => {
@@ -64,7 +79,8 @@ export default function TeachersManagementPage() {
 
   const fetchCourses = async (): Promise<Course[]> => {
     try {
-      const res = await fetch('/api/courses');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const res = await fetch(API_ENDPOINTS.COURSES.LIST, createFetchOptions('GET'));
       if (!res.ok) throw new Error('Failed to fetch courses');
       const json = await res.json();
       return json.result?.courses || [];
@@ -118,45 +134,89 @@ export default function TeachersManagementPage() {
     }
   };
 
-  const handleRemove = async (id: string) => {
+  const openRemoveDialog = (teacher: TeacherSummary) => {
+    setTeacherToRemove(teacher);
+    setRemoveDialogOpen(true);
+  };
+
+  const handleRemoveTeacher = async (teacherId: string, reason: string) => {
     try {
-      await removeTeacher(id);
-      toast({ title: 'Removed', description: 'Teacher removed successfully' });
-      setApprovedTeachers(prev => prev.filter(t => t._id !== id));
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.TEACHERS.REMOVE(teacherId),
+        createFetchOptions('POST', { reason })
+      );
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({ 
+          title: 'Teacher Removed', 
+          description: data.message || 'Teacher has been removed and notified via email.' 
+        });
+        // Remove from all lists
+        setPendingTeachers(prev => prev.filter(t => t._id !== teacherId));
+        setApprovedTeachers(prev => prev.filter(t => t._id !== teacherId));
+        setRejectedTeachers(prev => prev.filter(t => t._id !== teacherId));
+      } else {
+        throw new Error(data.error || 'Failed to remove teacher');
+      }
     } catch (err: any) {
       console.error(err);
-      toast({ title: 'Remove failed', description: err.message || 'Could not remove teacher' });
+      toast({ 
+        title: 'Remove failed', 
+        description: err.message || 'Could not remove teacher',
+        variant: 'destructive'
+      });
+      throw err;
     }
   };
 
   const handleAssignTeacher = async () => {
-    if (!selectedTeacher) return;
+    if (!selectedTeacher || !selectedCourse || !selectedSubject) {
+      toast({ 
+        title: 'Error', 
+        description: 'Please select a course and subject',
+        variant: 'destructive' 
+      });
+      return;
+    }
 
     try {
-      const res = await fetch(`/api/teachers/${selectedTeacher._id}/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: editingSubject,
-          courseIds: selectedCourses,
-        }),
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const res = await fetch(API_ENDPOINTS.TEACHERS.ASSIGN(selectedTeacher._id), createFetchOptions('POST', {
+        courseId: selectedCourse,
+        subjectName: selectedSubject,
+      }));
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to assign teacher');
+      }
+
+      const data = await res.json();
+      toast({ 
+        title: 'Success', 
+        description: `Teacher assigned to ${data.data.subjectName} in ${data.data.courseName}` 
       });
-
-      if (!res.ok) throw new Error('Failed to assign teacher');
-
-      toast({ title: 'Success', description: 'Teacher assigned successfully' });
       setIsAssignDialogOpen(false);
+      setSelectedCourse('');
+      setSelectedSubject('');
       load(); // Refresh the data
     } catch (err: any) {
       console.error(err);
-      toast({ title: 'Error', description: 'Failed to assign teacher' });
+      toast({ 
+        title: 'Error', 
+        description: err.message || 'Failed to assign teacher',
+        variant: 'destructive'
+      });
     }
   };
 
   const openAssignDialog = (teacher: TeacherSummary) => {
     setSelectedTeacher(teacher);
     setEditingSubject((teacher as any).subjects?.[0]?.name || '');
-    setSelectedCourses((teacher as any).assignedCourses?.map((ac: any) => ac.courseId) || []);
+    setSelectedCourse('');
+    setSelectedSubject('');
     setIsAssignDialogOpen(true);
   };
 
@@ -180,6 +240,7 @@ export default function TeachersManagementPage() {
     <div className="flex flex-col gap-8">
      <div>
                    <div className="flex items-center gap-2">
+                     <Users className="h-6 w-6 text-primary" />
                               <CardTitle className="text-3xl font-bold text-gray-900">Teacher Management</CardTitle>
                           </div>
                   <p className="text-gray-600 mt-2">Manage and oversee teacher assignments and approvals</p>
@@ -319,7 +380,7 @@ export default function TeachersManagementPage() {
                               <Eye className="h-4 w-4 mr-2" />
                               View
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleRemove(t._id)}>
+                            <Button variant="outline" size="sm" onClick={() => openRemoveDialog(t)}>
                               Remove
                             </Button>
                           </div>
@@ -472,7 +533,7 @@ export default function TeachersManagementPage() {
                           <Eye className="h-4 w-4 mr-2" />
                           View
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleRemove(t._id)}>
+                        <Button variant="outline" size="sm" onClick={() => openRemoveDialog(t)}>
                           Remove
                         </Button>
                       </div>
@@ -578,62 +639,105 @@ export default function TeachersManagementPage() {
           </Card>
         </TabsContent>
 
-        {/* Course Assignment Dialog */}
+        {/* Subject Assignment Dialog */}
         <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Assign Courses to Teacher</DialogTitle>
+              <DialogTitle>Assign Subject to Teacher</DialogTitle>
               <DialogDescription>
-                Select courses for {selectedTeacher?.fullName || `${selectedTeacher?.firstName || ''} ${selectedTeacher?.lastName || ''}`}
+                Select a course and specific subject for {selectedTeacher?.fullName || `${selectedTeacher?.firstName || ''} ${selectedTeacher?.lastName || ''}`}
               </DialogDescription>
             </DialogHeader>
 
             {selectedTeacher && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="subject">Subject</Label>
-                    <Input
-                      id="subject"
-                      value={editingSubject}
-                      onChange={(e) => setEditingSubject(e.target.value)}
-                      placeholder="Enter subject"
-                    />
+                {/* Current Assignments */}
+                {(selectedTeacher as any).assignedCourses && (selectedTeacher as any).assignedCourses.length > 0 && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-sm font-medium text-blue-900 mb-2">Currently Assigned:</p>
+                    <div className="space-y-1">
+                      {(selectedTeacher as any).assignedCourses.map((ac: any, idx: number) => (
+                        <div key={idx} className="text-sm text-blue-700">
+                          • {ac.subject} in {ac.courseName}
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
+
+                {/* Course Selection */}
+                <div>
+                  <Label htmlFor="course-select">Select Course Package</Label>
+                  <Select value={selectedCourse} onValueChange={(value) => {
+                    setSelectedCourse(value);
+                    setSelectedSubject(''); // Reset subject when course changes
+                  }}>
+                    <SelectTrigger id="course-select">
+                      <SelectValue placeholder="Choose a course package" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.length === 0 ? (
+                        <div className="p-2 text-center text-muted-foreground">
+                          No courses available
+                        </div>
+                      ) : (
+                        courses.map(course => (
+                          <SelectItem key={course._id} value={course._id}>
+                            {course.title} {course.program ? `(${course.program})` : ''}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div>
-                  <Label>Available Courses</Label>
-                  <div className="mt-2 max-h-60 overflow-y-auto border rounded-md p-4 space-y-2">
-                    {courses.length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No courses available
-                      </div>
-                    ) : (
-                      courses.map(course => (
-                        <div key={course._id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={course._id}
-                            checked={selectedCourses.includes(course._id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedCourses(prev => [...prev, course._id]);
-                              } else {
-                                setSelectedCourses(prev => prev.filter(id => id !== course._id));
-                              }
-                            }}
-                          />
-                          <Label htmlFor={course._id} className="flex-1 cursor-pointer">
-                            <div className="font-medium">{course.title}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {course.subject} • {course.gradeLevel} • {course.chapters?.length || 0} chapters
-                            </div>
-                          </Label>
-                        </div>
-                      ))
+                {/* Subject Selection */}
+                {selectedCourse && (
+                  <div>
+                    <Label htmlFor="subject-select">Select Subject</Label>
+                    <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                      <SelectTrigger id="subject-select">
+                        <SelectValue placeholder="Choose a subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(() => {
+                          const course = courses.find(c => c._id === selectedCourse);
+                          const subjects = (course as any)?.subjects || [];
+                          
+                          if (subjects.length === 0) {
+                            return (
+                              <div className="p-2 text-center text-muted-foreground">
+                                No subjects in this course
+                              </div>
+                            );
+                          }
+                          
+                          return subjects.map((subject: any, idx: number) => (
+                            <SelectItem key={idx} value={subject.name}>
+                              <div>
+                                <div className="font-medium">{subject.name}</div>
+                                {subject.description && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {subject.description.substring(0, 50)}...
+                                  </div>
+                                )}
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {subject.modules?.length || 0} modules
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ));
+                        })()}
+                      </SelectContent>
+                    </Select>
+                    
+                    {selectedSubject && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Teacher will be able to manage all content for this subject including modules, videos, notes, live classes, and assessments.
+                      </p>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -641,12 +745,28 @@ export default function TeachersManagementPage() {
               <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAssignTeacher} disabled={!selectedTeacher}>
-                Assign Courses
+              <Button 
+                onClick={handleAssignTeacher} 
+                disabled={!selectedTeacher || !selectedCourse || !selectedSubject}
+              >
+                Assign Subject
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Remove Teacher Dialog */}
+        <RemoveTeacherDialog
+          open={removeDialogOpen}
+          onOpenChange={setRemoveDialogOpen}
+          teacher={teacherToRemove ? {
+            _id: teacherToRemove._id,
+            firstName: teacherToRemove.firstName || '',
+            lastName: teacherToRemove.lastName || '',
+            email: teacherToRemove.email
+          } : null}
+          onConfirm={handleRemoveTeacher}
+        />
       </Tabs>
     </div>
   );

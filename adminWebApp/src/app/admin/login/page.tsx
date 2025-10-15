@@ -33,11 +33,11 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.ADMIN_AUTH.LOGIN,
+        createFetchOptions('POST', { email: email.trim(), password })
+      );
 
       const data = await response.json();
 

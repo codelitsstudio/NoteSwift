@@ -129,7 +129,8 @@ export default function RecommendationsPage() {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch('/api/courses');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.COURSES.LIST, createFetchOptions('GET'));
       const data = await response.json();
       if (data.success) {
         setCourses(data.result.courses);
@@ -144,7 +145,8 @@ export default function RecommendationsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/recommendations');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.RECOMMENDATIONS.STATS, createFetchOptions('GET'));
       const data = await response.json();
       if (data.success) {
         setStats(data.result.stats);
@@ -164,11 +166,10 @@ export default function RecommendationsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId, mode }),
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.RECOMMENDATIONS.ANALYZE, 
+        createFetchOptions('POST', { courseId, mode })
+      );
 
       const data = await response.json();
 
@@ -223,10 +224,10 @@ export default function RecommendationsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/recommendations/analyze-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.RECOMMENDATIONS.ANALYZE_ALL, 
+        createFetchOptions('POST')
+      );
 
       const data = await response.json();
 
@@ -258,7 +259,7 @@ export default function RecommendationsPage() {
   const analyzedPercentage = stats ? (stats.analyzedCourses / stats.totalCourses) * 100 : 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
            <div className="flex items-center gap-2">

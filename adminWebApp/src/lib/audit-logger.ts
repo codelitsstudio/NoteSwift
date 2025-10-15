@@ -27,13 +27,8 @@ export interface AuditLogData {
 class AuditLogger {
   private async logToAPI(logData: AuditLogData): Promise<void> {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/admin/audit-logs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(logData),
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.AUDIT_LOGS.CREATE, createFetchOptions('POST', logData));
 
       if (!response.ok) {
         console.error('Failed to log audit event:', response.statusText);

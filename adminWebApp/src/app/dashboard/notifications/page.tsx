@@ -54,7 +54,8 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/notifications');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.NOTIFICATIONS.LIST, createFetchOptions('GET'));
       const data = await response.json();
       if (data.success) {
         setNotifications(data.result.notifications);
@@ -123,13 +124,11 @@ export default function NotificationsPage() {
         adminId: 'admin-system' // In real app, get from auth
       };
 
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(notificationData)
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.NOTIFICATIONS.CREATE,
+        createFetchOptions('POST', notificationData)
+      );
 
       const data = await response.json();
 
@@ -170,13 +169,11 @@ export default function NotificationsPage() {
         adminId: 'admin-system' // In real app, get from auth
       };
 
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(notificationData)
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.NOTIFICATIONS.CREATE,
+        createFetchOptions('POST', notificationData)
+      );
 
       const data = await response.json();
 
@@ -205,6 +202,7 @@ export default function NotificationsPage() {
     <div className="flex flex-col gap-8">
  <div>
            <div className="flex items-center gap-2">
+                      <Bell className="h-6 w-6 text-primary" />
                       <CardTitle className="text-3xl font-bold text-gray-900">Notifications</CardTitle>
                   </div>
           <p className="text-gray-600 mt-2">Manage and send notifications to students and teachers</p>

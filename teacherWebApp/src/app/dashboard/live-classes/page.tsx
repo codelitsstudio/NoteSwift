@@ -4,96 +4,67 @@ import { Button } from "@/components/ui/button";
 import { Video, Calendar, Clock, Users, PlayCircle, UserPlus, Settings, Plus, VideoIcon, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  const now = Date.now();
-  return {
-    // Student teams for organizing classes
-    studentTeams: [
-      {
-        _id: 'team1',
-        name: 'Full Class',
-        description: 'All Grade 11 Mathematics students',
-        students: ['Jane Smith', 'Mike Johnson', 'Emily Davis'],
-        studentCount: 3,
-        color: 'blue'
-      },
-      {
-        _id: 'team2',
-        name: 'Advanced Group',
-        description: 'High performers needing challenge',
-        students: ['Jane Smith', 'Emily Davis'],
-        studentCount: 2,
-        color: 'green'
-      },
-      {
-        _id: 'team3',
-        name: 'Support Group',
-        description: 'Students needing extra help',
-        students: ['Mike Johnson'],
-        studentCount: 1,
-        color: 'yellow'
+  const teacherEmail = "teacher@example.com";
+  
+  try {
+    const response = await teacherAPI.liveClasses.getAll(teacherEmail);
+    const liveClasses = response.data?.liveClasses || [];
+    const stats = response.data?.stats || {};
+
+    const now = new Date();
+    const upcomingClasses = liveClasses
+      .filter((lc: any) => new Date(lc.scheduledAt) > now && lc.status === 'scheduled')
+      .map((lc: any) => ({
+        _id: lc._id,
+        title: lc.title,
+        course: lc.courseName,
+        chapter: lc.moduleName,
+        scheduledAt: lc.scheduledAt,
+        durationMinutes: lc.duration,
+        participants: `${lc.attendees?.length || 0} students`,
+        participantCount: lc.attendees?.length || 0,
+        status: lc.status,
+        meetingCode: lc.meetingLink?.split('/').pop() || 'N/A'
+      }));
+
+    const pastClasses = liveClasses
+      .filter((lc: any) => lc.status === 'completed')
+      .map((lc: any) => ({
+        _id: lc._id,
+        title: lc.title,
+        course: lc.courseName,
+        chapter: lc.moduleName,
+        scheduledAt: lc.scheduledAt,
+        durationMinutes: lc.duration,
+        participants: `${lc.attendees?.length || 0} students`,
+        actualAttendees: lc.attendees?.filter((a: any) => a.status === 'attended').length || 0,
+        recordingAvailable: !!lc.recordingUrl,
+        recordingViews: 0
+      }));
+
+    return {
+      studentTeams: [],
+      upcomingClasses,
+      pastClasses,
+      stats: {
+        totalClassesThisMonth: stats.total || 0,
+        averageAttendance: stats.avgAttendance || 0,
+        totalRecordingViews: 0,
+        totalLiveHours: Math.round((stats.total || 0) * 60 / 60)
       }
-    ],
-    upcomingClasses: [
-      { 
-        _id: '1', 
-        title: 'Calculus - Differentiation Basics',
-        course: 'Grade 11 Study Package',
-        chapter: 'Calculus',
-        scheduledAt: new Date(now + 3600000).toISOString(),
-        durationMinutes: 60,
-        participants: 'Full Class (3 students)',
-        participantCount: 3,
-        status: 'scheduled',
-        meetingCode: 'xyz-abc-def'
-      },
-      { 
-        _id: '2', 
-        title: 'Trigonometry - Problem Solving',
-        course: 'Grade 11 Study Package',
-        chapter: 'Trigonometry',
-        scheduledAt: new Date(now + 86400000).toISOString(),
-        durationMinutes: 90,
-        participants: 'Full Class (3 students)',
-        participantCount: 3,
-        status: 'scheduled',
-        meetingCode: 'pqr-stu-vwx'
-      }
-    ],
-    pastClasses: [
-      { 
-        _id: '4', 
-        title: 'Quadratic Equations Review',
-        course: 'Grade 11 Study Package',
-        chapter: 'Quadratic Equations',
-        scheduledAt: new Date(now - 86400000).toISOString(),
-        durationMinutes: 60,
-        participants: 'Full Class',
-        actualAttendees: 3,
-        recordingAvailable: true,
-        recordingViews: 2
-      },
-      { 
-        _id: '5', 
-        title: 'Coordinate Geometry Deep Dive',
-        course: 'Grade 11 Study Package',
-        chapter: 'Coordinate Geometry',
-        scheduledAt: new Date(now - 172800000).toISOString(),
-        durationMinutes: 90,
-        participants: 'Advanced Group',
-        actualAttendees: 2,
-        recordingAvailable: true,
-        recordingViews: 5
-      }
-    ],
-    stats: {
-      totalClassesThisMonth: 4,
-      averageAttendance: 100,
-      totalRecordingViews: 7,
-      totalLiveHours: 6
-    }
-  };
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      studentTeams: [],
+      upcomingClasses: [],
+      pastClasses: [],
+      stats: { totalClassesThisMonth: 0, averageAttendance: 0, totalRecordingViews: 0, totalLiveHours: 0 }
+    };
+  }
 }
 
 export default async function LiveClassesPage() {

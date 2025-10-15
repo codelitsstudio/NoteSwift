@@ -10,8 +10,9 @@ import {
   getModuleProgress,
   getPersonalizedRecommendations,
   getHomepageFeaturedCourses,
-  getHomepageUpcomingCourses
-} from '../controller/courseController';
+  getHomepageUpcomingCourses,
+  getCourseContent, getSubjectContent
+} from '../controller/courseContentController';
 import { authenticateStudent } from '../middlewares/student.middleware';
 
 
@@ -50,5 +51,9 @@ router.post('/progress/:courseId', authenticateStudent, updateLessonProgress);
 // Module progress endpoints
 router.get('/progress/:courseId/module/:moduleNumber', authenticateStudent, getModuleProgress);
 router.post('/progress/:courseId/module', authenticateStudent, updateModuleProgress);
+
+// Course content endpoints (with teacher-managed content)
+router.get('/:courseId/content', authenticateStudent, getCourseContent);
+router.get('/:courseId/subject/:subjectName', authenticateStudent, getSubjectContent);
 
 export default router;

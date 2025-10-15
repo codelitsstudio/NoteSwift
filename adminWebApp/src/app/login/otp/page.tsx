@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { handleVerifyOtp, handleSendOtp, handleAdminLogin } from "@/app/actions";
 
 export default function OtpPage() {
   const router = useRouter();
@@ -43,19 +42,27 @@ export default function OtpPage() {
     setError("");
     setIsLoading(true);
 
-    const result = await handleVerifyOtp({ otp }, email);
+    try {
+      // Call Express backend to verify OTP for regular admins
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      
+      const response = await fetch(
+        API_ENDPOINTS.AUTH.VERIFY_OTP,
+        createFetchOptions('POST', { email, password, otp })
+      );
 
-    if (result.success) {
-      // Now authenticate with the stored credentials to get the token
-      const loginResult = await handleAdminLogin(email, password);
+      const data = await response.json();
 
-      if (loginResult.success && loginResult.token) {
-        // Store the token for the AdminProvider to use
-        localStorage.setItem('adminToken', loginResult.token);
+      if (response.ok && data.token) {
+        // Store the token in both localStorage and cookie
+        localStorage.setItem('adminToken', data.token);
+        
+        // Set cookie for middleware to detect
+        document.cookie = `admin_token=${data.token}; path=/; max-age=86400; samesite=lax`;
 
         // Backup session info to localStorage for UI purposes
         localStorage.setItem('admin_session_backup', JSON.stringify({
-          username: 'admin',
+          username: data.admin?.email || email,
           loginTime: Date.now(),
         }));
         localStorage.setItem("isAuthenticated", "true");
@@ -67,42 +74,66 @@ export default function OtpPage() {
           title: "Authentication Successful",
           description: "Redirecting to the dashboard.....!",
         });
-        router.push("/dashboard");
+        
+        // Use window.location.href for full page reload so middleware can see the cookie
+        window.location.href = "/dashboard";
       } else {
-        setError("Authentication failed. Please try logging in again.");
+        setError(data.error || "Invalid code. Please try again.");
         toast({
           variant: "destructive",
-          title: "Authentication Failed",
-          description: "Could not complete login process.",
+          title: "Verification Failed",
+          description: data.error || "The code you entered is incorrect.",
         });
       }
-    } else {
-      setError(result.error || "Invalid code. Please try again.");
+    } catch (err) {
+      console.error('OTP verification error:', err);
+      setError("An unexpected error occurred. Please try again.");
       toast({
         variant: "destructive",
-        title: "Verification Failed",
-        description: result.error || "The code you entered is incorrect.",
+        title: "Error",
+        description: "An unexpected error occurred.",
       });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const onResend = async () => {
     setIsResending(true);
-    const result = await handleSendOtp(email);
-    if (result.success) {
+    
+    try {
+      // Call Express backend to resend OTP for regular admins
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      
+      const response = await fetch(
+        API_ENDPOINTS.AUTH.LOGIN,
+        createFetchOptions('POST', { email, password })
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.requiresOtp) {
+        toast({
+          title: "Code Resent",
+          description: data.message || "A new one-time code has been sent.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Resend",
+          description: data.error || "Could not resend OTP.",
+        });
+      }
+    } catch (err) {
+      console.error('OTP resend error:', err);
       toast({
-        title: "Code Resent",
-        description: "A new one-time code has been sent.",
-      });
-    } else {
-       toast({
         variant: "destructive",
         title: "Failed to Resend",
-        description: result.error,
+        description: "An unexpected error occurred.",
       });
+    } finally {
+      setIsResending(false);
     }
-    setIsResending(false);
   }
 
   return (
@@ -111,7 +142,7 @@ export default function OtpPage() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center justify-center">
                                        <img
-      src="/assets/logo.jpg"
+      src="/assets/logo.png"
       alt="NoteSwift Logo"
       className="h-16 w-16 object-contain"
     />

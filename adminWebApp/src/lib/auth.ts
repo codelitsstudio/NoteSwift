@@ -94,12 +94,10 @@ export function generateDeviceFingerprint(): string {
  */
 export async function validateCurrentSession(): Promise<boolean> {
   try {
+    const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
     // Since the cookie is httpOnly, we can't read it directly
     // Instead, we make an API call to validate the session server-side
-    const response = await fetch('/api/auth/session', {
-      method: 'GET',
-      credentials: 'include', // This ensures cookies are sent
-    });
+    const response = await fetch(API_ENDPOINTS.AUTH.SESSION, createFetchOptions('GET'));
 
     if (!response.ok) {
       return false;
@@ -118,11 +116,9 @@ export async function validateCurrentSession(): Promise<boolean> {
  */
 export async function clearAdminSession(): Promise<void> {
   try {
+    const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
     // Make API call to clear the server-side session
-    await fetch('/api/auth/session', {
-      method: 'DELETE',
-      credentials: 'include',
-    });
+    await fetch(API_ENDPOINTS.AUTH.LOGOUT, createFetchOptions('POST'));
   } catch (error) {
     console.error('Error clearing server session:', error);
   }

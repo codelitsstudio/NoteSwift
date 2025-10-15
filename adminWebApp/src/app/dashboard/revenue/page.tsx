@@ -80,7 +80,8 @@ export default function RevenuePage() {
   const fetchRevenueData = async (selectedPeriod = period) => {
     try {
       setRefreshing(true);
-      const response = await fetch(`/api/admin/revenue/overview?period=${selectedPeriod}`);
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(`${API_ENDPOINTS.REVENUE.OVERVIEW}?period=${selectedPeriod}`, createFetchOptions('GET'));
       const result = await response.json();
 
       if (result.success) {
@@ -132,8 +133,13 @@ export default function RevenuePage() {
     return (
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold font-headline tracking-tight">Revenue & Finance Dashboard</h1>
-        </div>
+ <div>
+           <div className="flex items-center gap-2">
+                      <CreditCard className="h-6 w-6 text-primary" />
+                      <CardTitle className="text-3xl font-bold text-gray-900">Revenue & Finance Dashboard</CardTitle>
+                  </div>
+          <p className="text-gray-600 mt-2">Comprehensive financial monitoring across the entire platform</p>
+        </div>        </div>
         <div className="flex flex-col items-center justify-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           <p className="mt-6 text-lg text-muted-foreground">Loading financial data...</p>
@@ -146,7 +152,13 @@ export default function RevenuePage() {
   if (!data) {
     return (
       <div className="flex flex-col gap-8">
-        <h1 className="text-4xl font-bold font-headline tracking-tight">Revenue & Finance Dashboard</h1>
+         <div>
+           <div className="flex items-center gap-2">
+                      <CreditCard className="h-6 w-6 text-primary" />
+                      <CardTitle className="text-3xl font-bold text-gray-900">Revenue & Finance Dashboard</CardTitle>
+                  </div>
+          <p className="text-gray-600 mt-2">Comprehensive financial monitoring across the entire platform</p>
+        </div>
         <Card>
           <CardContent className="flex items-center justify-center py-12">
             <p className="text-muted-foreground">Failed to load revenue data</p>
@@ -162,11 +174,12 @@ export default function RevenuePage() {
     <div className="flex flex-col gap-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold font-headline tracking-tight">Revenue & Finance Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Comprehensive financial monitoring across the entire platform
-          </p>
+           <div>
+           <div className="flex items-center gap-2">
+                      <CreditCard className="h-6 w-6 text-primary" />
+                      <CardTitle className="text-3xl font-bold text-gray-900">Revenue & Finance Dashboard</CardTitle>
+                  </div>
+          <p className="text-gray-600 mt-2">Comprehensive financial monitoring across the entire platform</p>
         </div>
         <div className="flex items-center gap-4">
           <Select value={period} onValueChange={handlePeriodChange}>

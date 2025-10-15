@@ -7,15 +7,19 @@ import { EmailSettings } from "@/components/admin/email-settings";
 import { UserManagementSettings } from "@/components/admin/user-management-settings";
 import { ContentModerationSettings } from "@/components/admin/content-moderation-settings";
 import { SystemMaintenanceSettings } from "@/components/admin/system-maintenance-settings";
+import { Settings } from "lucide-react";
 
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-4xl font-bold font-headline tracking-tight">Admin Settings</h1>
-        <p className="text-muted-foreground mt-2">Configure and manage your NoteSwift platform settings</p>
-      </div>
 
+ <div>
+           <div className="flex items-center gap-2">
+   <Settings className="h-6 w-6 text-primary" />
+                      <CardTitle className="text-3xl font-bold text-gray-900">Admin Settings</CardTitle>
+                  </div>
+          <p className="text-gray-600 mt-2">Configure and manage your NoteSwift platform settings</p>
+        </div>
       <Tabs defaultValue="platform" className="w-full">
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="platform">Platform</TabsTrigger>

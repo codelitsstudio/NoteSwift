@@ -32,8 +32,8 @@ export async function middleware(request: NextRequest) {
   // For protected routes, check authentication
   if (isProtectedRoute) {
     if (!adminToken) {
-      // Redirect to admin login if no admin token
-      const loginUrl = new URL('/admin/login', request.url);
+      // Redirect to regular login (normal admins use /login)
+      const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -45,30 +45,30 @@ export async function middleware(request: NextRequest) {
 
       // Check if it's an admin token
       if (payload.type !== 'admin') {
-        // Not an admin token, redirect to admin login
-        const loginUrl = new URL('/admin/login', request.url);
+        // Not an admin token, redirect to regular login
+        const loginUrl = new URL('/login', request.url);
         return NextResponse.redirect(loginUrl);
       }
 
       // Token is valid, allow access
       return NextResponse.next();
     } catch (error) {
-      // Token is invalid or expired, redirect to admin login
-      const loginUrl = new URL('/admin/login', request.url);
+      // Token is invalid or expired, redirect to regular login
+      const loginUrl = new URL('/login', request.url);
       const response = NextResponse.redirect(loginUrl);
       response.cookies.delete('admin_token');
       return response;
     }
   }
 
-  // Prevent system admin from accessing regular login page
-  if (pathname === '/login' && adminToken) {
+  // If already authenticated, redirect to dashboard from login pages
+  if ((pathname === '/login' || pathname === '/login/otp') && adminToken) {
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-key-change-in-production');
       const { payload } = await jwtVerify(adminToken, secret);
 
-      if (payload.type === 'admin' && payload.role === 'system_admin') {
-        // System admin trying to access regular login, redirect to dashboard
+      if (payload.type === 'admin') {
+        // Already authenticated admin, redirect to dashboard
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     } catch (error) {
@@ -77,6 +77,14 @@ export async function middleware(request: NextRequest) {
       response.cookies.delete('admin_token');
       return response;
     }
+  }
+
+  // Prevent regular admins from accessing system admin login page
+  if (pathname === '/admin/login' || pathname === '/admin/otp') {
+    // Only system admins should use this route
+    // Regular admins should be redirected to /login
+    // Note: System admin access is validated on the backend
+    return NextResponse.next();
   }
 
   // If accessing admin auth routes while already authenticated as system admin, redirect to dashboard

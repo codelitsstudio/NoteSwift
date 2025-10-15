@@ -67,7 +67,8 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/dashboard');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.DASHBOARD.OVERVIEW, createFetchOptions('GET'));
       const result = await response.json();
 
       if (result.success) {

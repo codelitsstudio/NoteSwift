@@ -1,96 +1,23 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { z } from "zod";
+/**
+ * Server Actions for Admin Dashboard
+ * This file contains AI-related server actions that run on the Next.js server
+ * Auth-related actions have been migrated to Express backend
+ */
+
 import { suggestTags } from "@/ai/flows/content-tagging";
 import type { ContentTaggingInput } from "@/ai/flows/content-tagging";
-import { Resend } from "resend";
-import { OtpEmail } from "@/emails/otp-email";
 import { getDashboardInsights } from "@/ai/flows/dashboard-insights";
 import type { DashboardInsightsInput } from "@/ai/flows/dashboard-insights";
 import { getTaskSuggestions } from "@/ai/flows/task-suggestions";
 import type { TaskSuggestionsInput } from "@/ai/flows/task-suggestions";
 
 import dbConnect from "@/lib/mongoose";
-import Otp from "@/lib/models/Otp";
 import Course from "@/lib/models/Course";
 import Student from "@/lib/models/Student";
 import CourseEnrollment from "@/lib/models/CourseEnrollment";
 import Transaction from "@/lib/models/Transaction";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-// ---------------------------- OTP HANDLER ----------------------------
-export async function handleSendOtp(email?: string) {
-  try {
-    await dbConnect();
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const targetEmail = email || process.env.OTP_EMAIL_TO!;
-    if (!targetEmail) {
-      throw new Error("Email is required for OTP sending.");
-    }
-
-    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
-
-    // Remove old OTPs
-    await Otp.deleteMany({ email: targetEmail });
-
-    // Save new OTP
-    const OTP = new Otp({ email: targetEmail, otp, expires })
-    await OTP.save();
-    console.log(targetEmail)
-    await resend.emails.send({
-      from: "NoteSwift Admin <noteswift@codelitsstudio.com>",
-      to: targetEmail,
-      subject: "Your NoteSwift Admin Login Code",
-      react: OtpEmail({ otp }),
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Error sending OTP:", error);
-    return { success: false, error: "Could not send OTP. Please try again." };
-  }
-}
-
-const otpSchema = z.object({
-  otp: z.string().length(6, "Your one-time code must be 6 characters."),
-});
-
-export async function handleVerifyOtp(data: { otp: string }, email?: string) {
-  const validation = otpSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, error: "Invalid OTP format." };
-  }
-
-  try {
-    await dbConnect();
-
-    const targetEmail = email || process.env.OTP_EMAIL_TO!;
-    if (!targetEmail) {
-      throw new Error("Email is required for OTP verification.");
-    }
-
-    const record = await Otp.findOne({ email: targetEmail, otp: validation.data.otp });
-
-    if (!record) {
-      return { success: false, error: "The one-time code is incorrect." };
-    }
-
-    if (new Date() > record.expires) {
-      await Otp.deleteOne({ _id: record._id });
-      return { success: false, error: "The one-time code has expired. Please request a new one." };
-    }
-
-    await Otp.deleteOne({ _id: record._id });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    return { success: false, error: "An unexpected error occurred while verifying the code." };
-  }
-}
 
 // ---------------------------- SUGGEST TAGS ----------------------------
 export async function handleSuggestTags(data: ContentTaggingInput) {
@@ -205,67 +132,10 @@ export async function handleGetTaskSuggestions() {
   }
 }
 
-// ---------------------------- ADMIN LOGIN ----------------------------
-export async function handleAdminLogin(email: string, password: string) {
-  try {
-    const { authenticateAdmin, generateAdminToken } = await import('@/lib/auth/admin-auth');
-
-    const authResult = await authenticateAdmin(email, password);
-
-    if (!authResult.success) {
-      return { success: false, error: authResult.error || "Authentication failed" };
-    }
-
-    // Prevent system admin from logging in through regular login page
-    if (authResult.admin.role === 'system_admin') {
-      return { success: false, error: "System administrators must login through the dedicated admin portal" };
-    }
-
-    // Generate JWT token
-    const token = generateAdminToken(authResult.admin._id);
-
-    return {
-      success: true,
-      token,
-      admin: {
-        _id: authResult.admin._id,
-        email: authResult.admin.email,
-        name: authResult.admin.name,
-        role: authResult.admin.role
-      }
-    };
-  } catch (error) {
-    console.error('Error during admin login:', error);
-    return { success: false, error: "An unexpected error occurred" };
-  }
-}
-
-// ---------------------------- CREATE ADMIN SESSION ----------------------------
-export async function handleCreateAdminSession(username: string, deviceFingerprint: string, ipAddress?: string, userAgent?: string) {
-  try {
-    const { createAdminSession } = await import('@/lib/auth');
-
-    const sessionData = {
-      adminId: 'admin_001', // Fixed admin ID for single admin system
-      username,
-      loginTime: Date.now(),
-      deviceFingerprint,
-      ipAddress,
-      userAgent,
-    };
-
-    const token = await createAdminSession(sessionData);
-
-    return {
-      success: true,
-      token,
-      sessionData: {
-        username: sessionData.username,
-        loginTime: sessionData.loginTime,
-      }
-    };
-  } catch (error) {
-    console.error('Error creating admin session:', error);
-    return { success: false, error: 'Failed to create session.' };
-  }
-}
+// ==================== AUTH FUNCTIONS REMOVED ====================
+// All authentication logic has been migrated to Express backend
+// Use the following endpoints instead:
+// - POST /api/admin/auth/login (regular admins)
+// - POST /api/admin/auth/verify-otp (regular admins)
+// - POST /api/admin/admin-auth/login (system admin)
+// - POST /api/admin/admin-auth/verify-otp (system admin)

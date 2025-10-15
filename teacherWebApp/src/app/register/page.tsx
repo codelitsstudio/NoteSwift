@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { API_ENDPOINTS } from '@/config/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/teacher/auth/register', {
+      const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +95,7 @@ export default function RegisterPage() {
         title: 'Registration Successful',
         description: result.data && result.data.emailSent 
           ? 'Please check your email for verification code.'
-          : 'Registration complete! Please contact support for email verification.',
+          : 'Otp Sent! An OTP has been sent to your email.',
       });
 
       // Redirect to email verification

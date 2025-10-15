@@ -93,13 +93,33 @@ export default function TeacherDetailPage() {
 
   const fetchTeacherDetail = async () => {
     try {
-      const res = await fetch(`/api/teachers/${teacherId}`);
-      if (!res.ok) throw new Error('Failed to fetch teacher details');
+      const { API_ENDPOINTS } = await import('@/config/api');
+      const token = localStorage.getItem('adminToken');
+      
+      if (!token) {
+        toast({ title: 'Authentication required', description: 'Please login to continue' });
+        router.push('/login');
+        return;
+      }
+
+      const res = await fetch(`${API_ENDPOINTS.TEACHERS.GET(teacherId)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to fetch teacher details');
+      }
+      
       const json = await res.json();
       setTeacher(json.data?.teacher || null);
     } catch (err: any) {
-      console.error(err);
-      toast({ title: 'Load failed', description: err.message || 'Could not load teacher details' });
+      console.error('Fetch teacher error:', err);
+      toast({ title: 'Load failed', description: err.message || 'Could not load teacher details', variant: 'destructive' });
     } finally {
       setLoading(false);
     }

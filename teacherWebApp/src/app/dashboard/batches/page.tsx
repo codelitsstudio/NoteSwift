@@ -1,13 +1,30 @@
-import dbConnect from "@/lib/mongoose";
-import Batch from "@/models/Batch";
-import Course from "@/models/Course";
-import Student from "@/models/Student";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  await dbConnect();
-  const batches = await Batch.find({}).populate('course').populate('students').lean();
-  return { batches: JSON.parse(JSON.stringify(batches)) };
+  const teacherEmail = "teacher@example.com";
+  
+  try {
+    const response = await teacherAPI.batches.getAll(teacherEmail);
+    const batches = response.data?.batches || [];
+
+    const transformedBatches = batches.map((b: any) => ({
+      _id: b._id,
+      name: b.name,
+      code: b.code,
+      course: { title: b.courseName },
+      students: (b.students || []).map((s: any) => ({
+        _id: s.studentId,
+        name: s.studentName || 'Student',
+        email: s.studentEmail || 'N/A'
+      }))
+    }));
+
+    return { batches: transformedBatches };
+  } catch (error) {
+    console.error('Error:', error);
+    return { batches: [] };
+  }
 }
 
 export default async function BatchesPage() {

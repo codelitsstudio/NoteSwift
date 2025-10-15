@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { API_ENDPOINTS } from "@/config/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/teacher/auth/login", {
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: username, password })
@@ -33,7 +34,7 @@ export default function LoginPage() {
 
       const result = await response.json();
 
-      if (result.error) {
+      if (!result.success || !result.result) {
         setError(result.message || "Login failed");
         
         // If application is being reviewed, redirect to pending approval page
@@ -67,21 +68,34 @@ export default function LoginPage() {
         return;
       }
 
-      // Store token and teacher info
+      // Store token and teacher info in localStorage
+      console.log('💾 Storing teacher data:', {
+        token: result.result.token.substring(0, 20) + '...',
+        email: result.result.teacher.email,
+        id: result.result.teacher._id
+      });
+      
       localStorage.setItem('teacherToken', result.result.token);
       localStorage.setItem('teacherId', result.result.teacher._id);
+      localStorage.setItem('teacherEmail', result.result.teacher.email);
+      localStorage.setItem('isAuthenticated', 'true'); // Required by dashboard layout
+      
+      console.log('✅ Stored in localStorage:', {
+        hasToken: !!localStorage.getItem('teacherToken'),
+        hasEmail: !!localStorage.getItem('teacherEmail'),
+        isAuthenticated: localStorage.getItem('isAuthenticated'),
+        email: localStorage.getItem('teacherEmail')
+      });
 
       toast({
         title: "Login Successful",
         description: "Welcome back to NoteSwift Teacher!",
       });
 
-      // Check onboarding status
-      if (result.result.teacher.onboardingStep !== 'completed') {
-        router.push('/onboarding');
-      } else {
-        router.push('/dashboard');
-      }
+      // Force reload to dashboard to ensure localStorage is available
+      const redirectPath = result.result.teacher.onboardingStep !== 'completed' ? '/onboarding' : '/dashboard';
+      console.log('🚀 Redirecting to:', redirectPath);
+      window.location.href = redirectPath;
 
     } catch (error: any) {
       console.error('Login error:', error);

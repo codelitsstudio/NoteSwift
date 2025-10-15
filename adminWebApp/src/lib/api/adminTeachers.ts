@@ -1,5 +1,7 @@
 "use client";
 
+import { API_ENDPOINTS, createFetchOptions } from '@/config/api';
+
 export type TeacherSummary = {
   _id: string;
   email: string;
@@ -25,41 +27,49 @@ export type TeacherSummary = {
 };
 
 export async function fetchPendingTeachers(): Promise<TeacherSummary[]> {
-  // Call local admin API which reads the shared teachers collection directly
-  const res = await fetch(`/api/teachers?status=pending_approval`, { cache: 'no-store' });
+  const res = await fetch(`${API_ENDPOINTS.TEACHERS.LIST}?status=pending_approval`, { 
+    ...createFetchOptions('GET'),
+    cache: 'no-store' 
+  });
   if (!res.ok) throw new Error('Failed to fetch pending teachers');
   const json = await res.json();
   return json.data?.teachers || [];
 }
 
 export async function approveTeacher(id: string, notify = true) {
-  const res = await fetch(`/api/teachers/${id}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notify }) });
+  const res = await fetch(API_ENDPOINTS.TEACHERS.APPROVE(id), createFetchOptions('POST', { notify }));
   if (!res.ok) throw new Error('Failed to approve teacher');
   return res.json();
 }
 
 export async function fetchApprovedTeachers(): Promise<TeacherSummary[]> {
-  const res = await fetch(`/api/teachers?status=approved`, { cache: 'no-store' });
+  const res = await fetch(`${API_ENDPOINTS.TEACHERS.LIST}?status=approved`, { 
+    ...createFetchOptions('GET'),
+    cache: 'no-store' 
+  });
   if (!res.ok) throw new Error('Failed to fetch approved teachers');
   const json = await res.json();
   return json.data?.teachers || [];
 }
 
 export async function fetchRejectedTeachers(): Promise<TeacherSummary[]> {
-  const res = await fetch(`/api/teachers?status=rejected`, { cache: 'no-store' });
+  const res = await fetch(`${API_ENDPOINTS.TEACHERS.LIST}?status=rejected`, { 
+    ...createFetchOptions('GET'),
+    cache: 'no-store' 
+  });
   if (!res.ok) throw new Error('Failed to fetch rejected teachers');
   const json = await res.json();
   return json.data?.teachers || [];
 }
 
 export async function removeTeacher(id: string, reason?: string, notify = true) {
-  const res = await fetch(`/api/teachers/${id}/remove`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, notify }) });
+  const res = await fetch(API_ENDPOINTS.TEACHERS.REMOVE(id), createFetchOptions('POST', { reason, notify }));
   if (!res.ok) throw new Error('Failed to remove teacher');
   return res.json();
 }
 
 export async function rejectTeacher(id: string, reason?: string, notify = true) {
-  const res = await fetch(`/api/teachers/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, notify }) });
+  const res = await fetch(API_ENDPOINTS.TEACHERS.REJECT(id), createFetchOptions('POST', { reason, notify }));
   if (!res.ok) throw new Error('Failed to reject teacher');
   return res.json();
 }

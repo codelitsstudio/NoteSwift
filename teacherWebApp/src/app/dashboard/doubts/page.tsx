@@ -1,7 +1,3 @@
-// BACKEND TEMPORARILY DISABLED FOR FRONTEND DEVELOPMENT
-// import dbConnect from "@/lib/mongoose";
-// import Doubt from "@/models/Doubt";
-// import Teacher from "@/models/Teacher";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ReplyAssignForm } from "./reply-assign-form";
 import { Badge } from "@/components/ui/badge";
@@ -10,73 +6,57 @@ import { MessageSquare, CheckCircle, Clock, AlertCircle, Users, BarChart3, Searc
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  // MOCK DATA FOR FRONTEND DEVELOPMENT
-  const now = Date.now();
-  return {
-    doubts: [
-      { 
-        _id: 'd1', 
-        student: { _id: 'st1', name: 'Mike Johnson' }, 
-        subject: 'Mathematics', 
-        topic: 'Quadratic Equations',
-        course: 'Grade 11 Study Package',
-        createdAt: new Date(now - 3600000).toISOString(), 
-        resolved: false, 
-        priority: 'high',
-        assignedTo: null,
-        messages: [
-          { senderType: 'student', text: 'I dont understand how to solve quadratic equations using the formula. Can you explain the discriminant?', timestamp: new Date(now - 3600000).toISOString() }
-        ]
+  const teacherEmail = "teacher@example.com";
+  
+  try {
+    const response = await teacherAPI.questions.getAll(teacherEmail);
+    const questions = response.data?.questions || [];
+    const stats = response.data?.stats || {};
+
+    const transformedDoubts = questions.map((q: any) => ({
+      _id: q._id,
+      student: { _id: q.studentId, name: q.studentName || 'Student' },
+      subject: q.subjectName,
+      topic: q.topicName || 'General',
+      course: q.courseName,
+      createdAt: q.createdAt,
+      resolved: q.status === 'resolved',
+      priority: q.priority,
+      assignedTo: q.assignedTeacherId ? { name: q.assignedTeacherName || 'Teacher' } : null,
+      responseTime: 0,
+      messages: [
+        { senderType: 'student', text: q.questionText, timestamp: q.createdAt },
+        ...(q.answers || []).map((a: any) => ({
+          senderType: 'teacher',
+          text: a.answerText,
+          timestamp: a.createdAt
+        }))
+      ]
+    }));
+
+    return {
+      doubts: transformedDoubts,
+      stats: {
+        totalDoubts: stats.total || 0,
+        openDoubts: stats.open || 0,
+        resolvedToday: stats.resolved || 0,
+        avgResponseTime: 0
       },
-      { 
-        _id: 'd2', 
-        student: { _id: 'st2', name: 'Jane Smith' }, 
-        subject: 'Mathematics', 
-        topic: 'Calculus - Differentiation',
-        course: 'Grade 11 Study Package',
-        createdAt: new Date(now - 7200000).toISOString(), 
-        resolved: true, 
-        priority: 'medium',
-        assignedTo: { name: 'You' },
-        responseTime: 45,
-        messages: [
-          { senderType: 'student', text: 'How do I differentiate composite functions using chain rule?', timestamp: new Date(now - 7200000).toISOString() }, 
-          { senderType: 'teacher', text: 'The chain rule states that if you have f(g(x)), the derivative is f\'(g(x)) × g\'(x). Let me show you with examples...', timestamp: new Date(now - 4800000).toISOString() }
-        ]
-      },
-      { 
-        _id: 'd3', 
-        student: { _id: 'st3', name: 'Emily Davis' }, 
-        subject: 'Mathematics', 
-        topic: 'Trigonometry',
-        course: 'Grade 11 Study Package',
-        createdAt: new Date(now - 14400000).toISOString(), 
-        resolved: true, 
-        priority: 'low',
-        assignedTo: { name: 'You' },
-        responseTime: 30,
-        messages: [
-          { senderType: 'student', text: 'Can you explain trigonometric identities and when to use them?', timestamp: new Date(now - 14400000).toISOString() },
-          { senderType: 'teacher', text: 'Trigonometric identities help simplify expressions. The most common are sin²θ + cos²θ = 1...', timestamp: new Date(now - 10800000).toISOString() }
-        ]
-      }
-    ],
-    stats: {
-      totalDoubts: 8,
-      openDoubts: 1,
-      resolvedToday: 2,
-      avgResponseTime: 38
-    },
-    knowledgeBase: [
-      { _id: 'kb1', topic: 'Quadratic Equations', subject: 'Mathematics', views: 245, helpfulVotes: 182 },
-      { _id: 'kb2', topic: 'Newtons Laws', subject: 'Physics', views: 198, helpfulVotes: 156 },
-      { _id: 'kb3', topic: 'Organic Chemistry Basics', subject: 'Chemistry', views: 167, helpfulVotes: 134 },
-      { _id: 'kb4', topic: 'Triangle Properties', subject: 'Mathematics', views: 143, helpfulVotes: 112 }
-    ],
-    teacherId: 't1'
-  };
+      knowledgeBase: [],
+      teacherId: 't1'
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      doubts: [],
+      stats: { totalDoubts: 0, openDoubts: 0, resolvedToday: 0, avgResponseTime: 0 },
+      knowledgeBase: [],
+      teacherId: 't1'
+    };
+  }
 }
 
 export default async function DoubtsPage() {
@@ -433,7 +413,7 @@ export default async function DoubtsPage() {
                         const count = doubts.filter((d: any) => d.student.name === name).length;
                         return (
                           <div key={idx} className="flex items-center justify-between">
-                            <span className="text-sm">{name}</span>
+                            <span className="text-sm">{String(name)}</span>
                             <Badge variant="outline">{count} doubts</Badge>
                           </div>
                         );

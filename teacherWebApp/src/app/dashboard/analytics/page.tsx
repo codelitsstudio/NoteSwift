@@ -1,8 +1,3 @@
-// BACKEND TEMPORARILY DISABLED FOR FRONTEND DEVELOPMENT
-// import dbConnect from "@/lib/mongoose";
-// import Attendance from "@/models/Attendance";
-// import Assignment from "@/models/Assignment";
-// import Test from "@/models/Test";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,67 +5,60 @@ import { BarChart3, TrendingUp, Users, FileText, Calendar, Download, Eye, CheckC
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AttendanceExport } from "./export-client";
 import { AttendanceCharts, PerformanceCharts, CourseProgressCharts, AssessmentCharts } from "./analytics-charts";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  // MOCK DATA FOR FRONTEND DEVELOPMENT
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    return d;
-  });
+  const teacherEmail = "teacher@example.com"; // TODO: Get from auth
+  
+  try {
+    const response = await teacherAPI.analytics.getAnalytics(teacherEmail);
+    const data = response.data || {};
 
-  return {
-    overview: {
-      totalStudents: 3,
-      totalCourses: 1,
-      totalAssignments: 5,
-      totalTests: 3,
-      attendanceCount: 18,
-      avgAttendance: 95
-    },
-    attendanceByDay: last7Days.map((d, idx) => ({
-      day: d.toLocaleDateString(undefined, { weekday: 'short' }),
-      count: 2 + Math.floor(Math.random() * 2),
-      percentage: 85 + Math.floor(Math.random() * 15)
-    })),
-    performanceBySubject: [
-      { subject: 'Grade 11 Mathematics', avgScore: 88, tests: 3, students: 3 }
-    ],
-    courseProgress: [
-      { course: 'Grade 11 Study Package (Mathematics)', enrolled: 3, avgProgress: 85, completionRate: 78 }
-    ],
-    assignmentStats: {
-      totalAssigned: 5,
-      totalSubmitted: 13,
-      avgSubmissionRate: 87,
-      pendingGrading: 2,
-      avgScore: 88
-    },
-    testStats: {
-      totalTests: 3,
-      totalAttempts: 9,
-      avgScore: 88,
-      passRate: 100,
-      avgCompletionTime: 42
-    },
-    studentEngagement: [
-      { metric: 'Daily Active Users', value: 2, trend: '+10%' },
-      { metric: 'Avg Study Time', value: '3h 15m', trend: '+12%' },
-      { metric: 'Content Views', value: 48, trend: '+15%' },
-      { metric: 'Doubt Resolution Rate', value: '100%', trend: '+8%' }
-    ],
-    topPerformers: [
-      { name: 'Emily Davis', course: 'Grade 11 Study Package (Math)', score: 96, rank: 1 },
-      { name: 'Jane Smith', course: 'Grade 11 Study Package (Math)', score: 92, rank: 2 },
-      { name: 'Mike Johnson', course: 'Grade 11 Study Package (Math)', score: 75, rank: 3 }
-    ],
-    recentActivity: [
-      { type: 'Test', description: 'Calculus Quiz completed by 3 students', time: '2 hours ago' },
-      { type: 'Assignment', description: 'Algebra Assignment submitted by 2 students', time: '4 hours ago' },
-      { type: 'Content', description: 'New video uploaded: Advanced Trigonometry', time: '5 hours ago' },
-      { type: 'Announcement', description: 'Grade 11 Math mid-term scheduled', time: '1 day ago' }
-    ]
-  };
+    return {
+      overview: data.overview || {},
+      attendanceByDay: data.attendanceByDay || [],
+      performanceBySubject: data.performanceBySubject || [],
+      courseProgress: data.courseProgress || [],
+      assignmentStats: data.assignmentStats || {},
+      testStats: data.testStats || {},
+      studentEngagement: data.studentEngagement || [],
+      topPerformers: data.topPerformers || [],
+      recentActivity: data.recentActivity || []
+    };
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    // Return empty data structure
+    return {
+      overview: {
+        totalStudents: 0,
+        totalCourses: 0,
+        totalAssignments: 0,
+        totalTests: 0,
+        attendanceCount: 0,
+        avgAttendance: 0
+      },
+      attendanceByDay: [],
+      performanceBySubject: [],
+      courseProgress: [],
+      assignmentStats: {
+        totalAssigned: 0,
+        totalSubmitted: 0,
+        avgSubmissionRate: 0,
+        pendingGrading: 0,
+        avgScore: 0
+      },
+      testStats: {
+        totalTests: 0,
+        totalAttempts: 0,
+        avgScore: 0,
+        passRate: 0,
+        avgCompletionTime: 0
+      },
+      studentEngagement: [],
+      topPerformers: [],
+      recentActivity: []
+    };
+  }
 }
 
 export default async function AnalyticsPage() {
@@ -96,7 +84,7 @@ export default async function AnalyticsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <AttendanceExport rows={attendanceByDay.map(d => ({ day: d.day, count: d.count }))} />
+          <AttendanceExport rows={attendanceByDay.map((d: any) => ({ day: d.day, count: d.count }))} />
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export All Reports
@@ -194,7 +182,7 @@ export default async function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {studentEngagement.map((item, idx) => (
+              {studentEngagement.map((item: any, idx: number) => (
                 <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div>
                     <p className="text-sm text-muted-foreground">{item.metric}</p>
@@ -217,7 +205,7 @@ export default async function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {topPerformers.map((student) => (
+              {topPerformers.map((student: any) => (
                 <div key={student.rank} className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-gray-700 font-bold text-sm">
                     {student.rank}
@@ -273,11 +261,11 @@ export default async function AnalyticsPage() {
                     </div>
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-1">Best Attendance Day</p>
-                      <p className="text-2xl font-bold text-blue-600">{attendanceByDay.reduce((max, day) => day.percentage > max.percentage ? day : max).day}</p>
+                      <p className="text-2xl font-bold text-blue-600">{attendanceByDay.length > 0 ? attendanceByDay.reduce((max: any, day: any) => day.percentage > max.percentage ? day : max).day : 'N/A'}</p>
                     </div>
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-1">Total Student-Days</p>
-                      <p className="text-2xl font-bold text-blue-600">{attendanceByDay.reduce((sum, day) => sum + day.count, 0)}</p>
+                      <p className="text-2xl font-bold text-blue-600">{attendanceByDay.reduce((sum: number, day: any) => sum + day.count, 0)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -308,7 +296,7 @@ export default async function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {recentActivity.map((activity, idx) => (
+                    {recentActivity.map((activity: any, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 border rounded-lg">
                         <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
                           <Eye className="h-5 w-5 text-blue-600" />

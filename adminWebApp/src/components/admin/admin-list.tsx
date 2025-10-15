@@ -29,7 +29,8 @@ export function AdminList() {
 
   const fetchAdmins = async () => {
     try {
-      const response = await adminApi.get('/api/admin/admins');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.LIST, createFetchOptions('GET'));
       const data = await response.json();
       setAdmins(data.admins || []);
     } catch (error) {
@@ -41,7 +42,8 @@ export function AdminList() {
 
   const setSuperAdmin = async (adminId: string) => {
     try {
-      const response = await adminApi.post('/api/admin/admins/set-super-admin', { adminId });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.SET_SUPER_ADMIN, createFetchOptions('POST', { adminId }));
       if (response.ok) {
         fetchAdmins();
       }
@@ -52,7 +54,8 @@ export function AdminList() {
 
   const demoteSuperAdmin = async (adminId: string) => {
     try {
-      const response = await adminApi.post('/api/admin/admins/demote-super-admin', { adminId });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.DEMOTE_SUPER_ADMIN, createFetchOptions('POST', { adminId }));
       if (response.ok) {
         fetchAdmins();
       }
@@ -65,7 +68,8 @@ export function AdminList() {
     if (!confirm('Are you sure you want to remove this admin?')) return;
 
     try {
-      const response = await adminApi.post('/api/admin/admins/remove', { adminId });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.REMOVE, createFetchOptions('POST', { adminId }));
       if (response.ok) {
         fetchAdmins();
       }

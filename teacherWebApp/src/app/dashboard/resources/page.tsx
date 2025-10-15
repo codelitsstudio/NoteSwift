@@ -1,109 +1,61 @@
 import { ResourcesClient } from "./resources-client";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  // Mock data for frontend development
-  const now = Date.now();
+  const teacherEmail = "teacher@example.com";
   
-  return {
-    resources: [
-      {
-        _id: 'r1',
-        title: 'Quadratic Equations Formula Sheet',
-        description: 'Complete formula reference for solving quadratic equations',
-        type: 'pdf',
-        fileUrl: '/resources/quadratic-formulas.pdf',
-        fileSize: '2.5 MB',
-        chapter: 'Quadratic Equations',
-        topic: 'Formula Reference',
-        uploadedAt: new Date(now - 86400000).toISOString(),
-        sharedWith: 'all',
-        viewCount: 12,
-        downloadCount: 8
-      },
-      {
-        _id: 'r2',
-        title: 'Calculus Basics Video Lecture',
-        description: 'Introduction to derivatives and differentiation',
-        type: 'video',
-        fileUrl: '/resources/calculus-basics.mp4',
-        fileSize: '145 MB',
-        duration: '28:45',
-        chapter: 'Calculus',
-        topic: 'Differentiation Basics',
-        uploadedAt: new Date(now - 172800000).toISOString(),
-        sharedWith: 'team',
-        teamName: 'Advanced Group',
-        viewCount: 8,
-        downloadCount: 3
-      },
-      {
-        _id: 'r3',
-        title: 'Trigonometry Practice Problems',
-        description: '50 problems with solutions for exam preparation',
-        type: 'pdf',
-        fileUrl: '/resources/trig-practice.pdf',
-        fileSize: '1.8 MB',
-        chapter: 'Trigonometry',
-        topic: 'Problem Solving',
-        uploadedAt: new Date(now - 259200000).toISOString(),
-        sharedWith: 'selected',
-        studentCount: 2,
-        viewCount: 15,
-        downloadCount: 12
-      },
-      {
-        _id: 'r4',
-        title: 'Coordinate Geometry Notes',
-        description: 'Comprehensive notes covering all topics',
-        type: 'notes',
-        fileUrl: '/resources/coordinate-notes.pdf',
-        fileSize: '3.2 MB',
-        chapter: 'Coordinate Geometry',
-        topic: 'Complete Notes',
-        uploadedAt: new Date(now - 345600000).toISOString(),
-        sharedWith: 'all',
-        viewCount: 20,
-        downloadCount: 18
-      },
-      {
-        _id: 'r5',
-        title: 'Statistics Flowchart',
-        description: 'Visual guide to statistical formulas',
-        type: 'image',
-        fileUrl: '/resources/stats-flowchart.png',
-        fileSize: '890 KB',
-        chapter: 'Statistics',
-        topic: 'Visual Reference',
-        uploadedAt: new Date(now - 432000000).toISOString(),
-        sharedWith: 'all',
-        viewCount: 10,
-        downloadCount: 7
+  try {
+    const response = await teacherAPI.resources.getAll(teacherEmail);
+    const resources = response.data?.resources || [];
+    const stats = response.data?.stats || {};
+
+    const formatFileSize = (bytes: number) => {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const transformedResources = resources.map((r: any) => ({
+      _id: r._id,
+      title: r.title,
+      description: r.description,
+      type: r.type,
+      fileUrl: r.fileUrl,
+      fileSize: formatFileSize(r.fileSize || 0),
+      chapter: r.moduleName || 'General',
+      topic: r.topicName || 'Reference',
+      uploadedAt: r.createdAt,
+      sharedWith: r.targetAudience === 'all' ? 'all' : r.targetAudience === 'batch' ? 'team' : 'selected',
+      teamName: r.batchIds?.length ? `${r.batchIds.length} batches` : undefined,
+      studentCount: r.studentIds?.length || 0,
+      viewCount: r.viewCount || 0,
+      downloadCount: r.downloadCount || 0
+    }));
+
+    const uniqueChapters = [...new Set(resources.map((r: any) => r.moduleName).filter(Boolean))] as string[];
+
+    return {
+      resources: transformedResources,
+      chapters: uniqueChapters,
+      students: [],
+      teams: [],
+      stats: {
+        totalResources: stats.total || 0,
+        totalSize: `${((stats.totalDownloads || 0) / 1000).toFixed(1)} MB`,
+        totalViews: stats.totalViews || 0,
+        totalDownloads: stats.totalDownloads || 0
       }
-    ],
-    chapters: [
-      'Quadratic Equations',
-      'Calculus',
-      'Trigonometry',
-      'Coordinate Geometry',
-      'Statistics'
-    ],
-    students: [
-      { _id: 's1', name: 'Jane Smith', email: 'jane@example.com' },
-      { _id: 's2', name: 'Mike Johnson', email: 'mike@example.com' },
-      { _id: 's3', name: 'Emily Davis', email: 'emily@example.com' }
-    ],
-    teams: [
-      { _id: 'team1', name: 'Full Class', studentCount: 3 },
-      { _id: 'team2', name: 'Advanced Group', studentCount: 2 },
-      { _id: 'team3', name: 'Support Group', studentCount: 1 }
-    ],
-    stats: {
-      totalResources: 5,
-      totalSize: '153.4 MB',
-      totalViews: 65,
-      totalDownloads: 48
-    }
-  };
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      resources: [],
+      chapters: [],
+      students: [],
+      teams: [],
+      stats: { totalResources: 0, totalSize: '0 MB', totalViews: 0, totalDownloads: 0 }
+    };
+  }
 }
 
 export default async function ResourcesPage() {

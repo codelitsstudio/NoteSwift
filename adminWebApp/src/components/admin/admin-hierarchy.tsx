@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Crown, Shield, User, Trash2, Star } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
 import { useAdmin } from "@/context/admin-context";
+import { RemoveAdminDialog } from "./remove-admin-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Admin {
   _id: string;
@@ -20,7 +22,10 @@ interface Admin {
 export function AdminHierarchy() {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [adminToRemove, setAdminToRemove] = useState<Admin | null>(null);
   const { admin: currentAdmin, canDeleteAdmin, canPromoteToSuperAdmin } = useAdmin();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchAdmins();
@@ -28,7 +33,8 @@ export function AdminHierarchy() {
 
   const fetchAdmins = async () => {
     try {
-      const response = await adminApi.get('/api/admin/admins');
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.LIST, createFetchOptions('GET'));
       const data = await response.json();
       setAdmins(data.admins || []);
     } catch (error) {
@@ -40,7 +46,8 @@ export function AdminHierarchy() {
 
   const setSuperAdmin = async (adminId: string) => {
     try {
-      const response = await adminApi.post('/api/admin/admins/set-super-admin', { adminId });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.SET_SUPER_ADMIN, createFetchOptions('POST', { adminId }));
       if (response.ok) {
         fetchAdmins();
       }
@@ -49,16 +56,33 @@ export function AdminHierarchy() {
     }
   };
 
-  const removeAdmin = async (adminId: string) => {
-    if (!confirm('Are you sure you want to remove this admin?')) return;
+  const openRemoveDialog = (admin: Admin) => {
+    setAdminToRemove(admin);
+    setRemoveDialogOpen(true);
+  };
 
+  const handleRemoveAdmin = async (adminId: string, reason: string) => {
     try {
-      const response = await adminApi.post('/api/admin/admins/remove', { adminId });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(API_ENDPOINTS.ADMINS.REMOVE, createFetchOptions('POST', { adminId, reason }));
+      const data = await response.json();
+      
       if (response.ok) {
+        toast({
+          title: "Admin Removed",
+          description: data.message || "The administrator has been removed and notified via email.",
+        });
         fetchAdmins();
+      } else {
+        throw new Error(data.error || 'Failed to remove admin');
       }
-    } catch (error) {
-      console.error('Error removing admin:', error);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove admin. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
@@ -144,7 +168,7 @@ export function AdminHierarchy() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => removeAdmin(superAdmin._id)}
+                      onClick={() => openRemoveDialog(superAdmin)}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -196,7 +220,7 @@ export function AdminHierarchy() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => removeAdmin(admin._id)}
+                          onClick={() => openRemoveDialog(admin)}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -214,6 +238,14 @@ export function AdminHierarchy() {
           </div>
         )}
       </div>
+
+      {/* Remove Admin Dialog */}
+      <RemoveAdminDialog
+        open={removeDialogOpen}
+        onOpenChange={setRemoveDialogOpen}
+        admin={adminToRemove}
+        onConfirm={handleRemoveAdmin}
+      />
     </div>
   );
 }

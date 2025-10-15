@@ -41,11 +41,8 @@ export type CourseData = {
 };
 
 export async function createCourse(courseData: CourseData): Promise<CourseData> {
-  const res = await fetch('/api/courses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(courseData)
-  });
+  const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+  const res = await fetch(API_ENDPOINTS.COURSES.CREATE, createFetchOptions('POST', courseData));
 
   if (!res.ok) {
     const error = await res.json();
@@ -57,11 +54,8 @@ export async function createCourse(courseData: CourseData): Promise<CourseData> 
 }
 
 export async function updateCourse(id: string, courseData: Partial<CourseData>): Promise<CourseData> {
-  const res = await fetch(`/api/courses/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(courseData)
-  });
+  const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+  const res = await fetch(API_ENDPOINTS.COURSES.UPDATE(id), createFetchOptions('PUT', courseData));
 
   if (!res.ok) {
     const error = await res.json();
@@ -73,7 +67,8 @@ export async function updateCourse(id: string, courseData: Partial<CourseData>):
 }
 
 export async function getCourse(id: string): Promise<CourseData> {
-  const res = await fetch(`/api/courses/${id}`);
+  const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+  const res = await fetch(API_ENDPOINTS.COURSES.GET(id), createFetchOptions('GET'));
 
   if (!res.ok) {
     const error = await res.json();

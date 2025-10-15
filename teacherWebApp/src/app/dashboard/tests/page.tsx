@@ -1,8 +1,3 @@
-// BACKEND TEMPORARILY DISABLED FOR FRONTEND DEVELOPMENT
-// import dbConnect from "@/lib/mongoose";
-// import Test from "@/models/Test";
-// import Course from "@/models/Course";
-// import Chapter from "@/models/Chapter";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ImportExportQuestions } from "./import-export";
 import { CreateTestForm } from "./create-test-form";
@@ -12,83 +7,68 @@ import { Button } from "@/components/ui/button";
 import { FileText, CheckCircle, Clock, Users, BarChart3, TrendingUp, AlertCircle, Star } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import teacherAPI from "@/lib/api/teacher-api";
 
 async function getData() {
-  // MOCK DATA FOR FRONTEND DEVELOPMENT
-  const now = Date.now();
-  return {
-    tests: [
-      { 
-        _id: 't1', 
-        title: 'Calculus Mid-term Test', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Calculus - Differentiation',
-        description: 'Differentiation and integration basics', 
-        scheduledAt: new Date(now + 86400000).toISOString(),
-        duration: 60,
-        totalMarks: 100,
-        totalQuestions: 20,
-        status: 'scheduled',
-        enrolledStudents: 3,
-        type: 'MCQ + Descriptive',
-        difficulty: 'medium'
+  const teacherEmail = "teacher@example.com";
+  
+  try {
+    const response = await teacherAPI.tests.getAll(teacherEmail);
+    const tests = response.data?.tests || [];
+    const stats = response.data?.stats || {};
+
+    const transformedTests = tests.map((t: any) => ({
+      _id: t._id,
+      title: t.title,
+      course: t.courseName,
+      chapter: `${t.subjectName} - ${t.moduleName || ''}`,
+      description: t.description,
+      scheduledAt: t.scheduledAt || t.createdAt,
+      duration: t.duration,
+      totalMarks: t.totalMarks,
+      totalQuestions: t.questions?.length || 0,
+      status: t.status,
+      enrolledStudents: t.totalStudents || 0,
+      submittedCount: t.totalAttempts || 0,
+      avgScore: t.avgScore || 0,
+      type: t.testType,
+      difficulty: 'medium'
+    }));
+
+    const questionBank = tests.flatMap((t: any) => 
+      (t.questions || []).map((q: any, idx: number) => ({
+        _id: q._id || `q${idx}`,
+        subject: t.subjectName,
+        topic: t.topicName || 'General',
+        difficulty: q.difficulty || 'medium',
+        type: q.questionType,
+        usageCount: 1
+      }))
+    );
+
+    return {
+      tests: transformedTests,
+      questionBank,
+      stats: {
+        totalTests: stats.total || 0,
+        activeTests: stats.active || 0,
+        completedTests: stats.completed || 0,
+        totalQuestions: questionBank.length,
+        avgCompletionRate: stats.avgPassRate || 0
       },
-      { 
-        _id: 't2', 
-        title: 'Algebra Quiz - Quadratic Equations', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Algebra - Quadratic Equations',
-        description: 'Solving quadratic equations and applications',
-        scheduledAt: new Date(now - 86400000).toISOString(),
-        duration: 30,
-        totalMarks: 50,
-        totalQuestions: 15,
-        status: 'completed',
-        enrolledStudents: 3,
-        submittedCount: 3,
-        avgScore: 44,
-        type: 'MCQ',
-        difficulty: 'easy'
-      },
-      { 
-        _id: 't3', 
-        title: 'Trigonometry Final Exam', 
-        course: 'Grade 11 Study Package',
-        chapter: 'Trigonometry - Advanced',
-        description: 'Comprehensive trigonometry examination',
-        scheduledAt: new Date(now + 172800000).toISOString(),
-        duration: 90,
-        totalMarks: 150,
-        totalQuestions: 30,
-        status: 'scheduled',
-        enrolledStudents: 3,
-        type: 'Mixed',
-        difficulty: 'hard'
-      }
-    ],
-    questionBank: [
-      { _id: 'q1', subject: 'Mathematics', topic: 'Algebra', difficulty: 'easy', type: 'MCQ', usageCount: 5 },
-      { _id: 'q2', subject: 'Mathematics', topic: 'Calculus', difficulty: 'medium', type: 'Descriptive', usageCount: 3 },
-      { _id: 'q3', subject: 'Mathematics', topic: 'Trigonometry', difficulty: 'hard', type: 'MCQ', usageCount: 4 }
-    ],
-    stats: {
-      totalTests: 3,
-      activeTests: 2,
-      completedTests: 1,
-      totalQuestions: 65,
-      avgCompletionRate: 100
-    },
-    courses: [
-      { _id: '1', title: 'Grade 11 Study Package' }
-    ],
-    chapters: [
-      { _id: 'ch1', course: '1', title: 'Algebra - Quadratic Equations' },
-      { _id: 'ch2', course: '1', title: 'Calculus - Differentiation' },
-      { _id: 'ch3', course: '1', title: 'Trigonometry - Advanced' },
-      { _id: 'ch4', course: '1', title: 'Coordinate Geometry' },
-      { _id: 'ch5', course: '1', title: 'Statistics and Probability' }
-    ]
-  };
+      courses: [],
+      chapters: []
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      tests: [],
+      questionBank: [],
+      stats: { totalTests: 0, activeTests: 0, completedTests: 0, totalQuestions: 0, avgCompletionRate: 0 },
+      courses: [],
+      chapters: []
+    };
+  }
 }
 
 export default async function TestsPage() {

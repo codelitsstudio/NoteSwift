@@ -33,11 +33,11 @@ export default function AdminSignupPage() {
 
   const verifyInvitation = async () => {
     try {
-      const response = await fetch('/api/admin/verify-invitation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.ADMIN_AUTH.VERIFY_INVITATION,
+        createFetchOptions('POST', { token })
+      );
 
       const data = await response.json();
 
@@ -95,15 +95,15 @@ export default function AdminSignupPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/complete-signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const response = await fetch(
+        API_ENDPOINTS.ADMIN_AUTH.COMPLETE_SIGNUP,
+        createFetchOptions('POST', {
           token,
           name: name.trim(),
           password,
-        }),
-      });
+        })
+      );
 
       const data = await response.json();
 

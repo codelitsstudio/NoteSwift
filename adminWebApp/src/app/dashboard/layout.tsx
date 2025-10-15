@@ -30,8 +30,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !admin && !error) {
-      // No admin data and not loading, redirect to login
-      router.push('/admin/login');
+      // No admin data and not loading, redirect to regular login
+      router.push('/login');
     }
   }, [admin, loading, error, router]);
 
@@ -51,14 +51,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       // Small delay for smooth transition
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Redirect to admin login
-      router.push('/admin/login');
+      // Redirect to regular login page
+      router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
       // Force logout even if clearing fails
       localStorage.clear();
       document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      router.push('/admin/login');
+      router.push('/login');
     }
   };
 
@@ -67,7 +67,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4">
           <img
-            src="/assets/logo.jpg"
+            src="/assets/logo.png"
             alt="NoteSwift Logo"
             className="h-14 w-14 object-contain animate-pulse"
           />
@@ -96,7 +96,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           {/* Sidebar */}
           <Sidebar className="h-full">
             <SidebarHeader>
-              <div className="flex items-center gap-2">
+              <div className="flex mt-2 items-center gap-2">
                 <img
                   src="/assets/logo2.png"
                   alt="NoteSwift Logo"

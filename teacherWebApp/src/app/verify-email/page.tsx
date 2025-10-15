@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { API_ENDPOINTS } from '@/config/api';
 
 function VerifyEmailContent(): JSX.Element {
   const router = useRouter();
@@ -59,7 +60,7 @@ function VerifyEmailContent(): JSX.Element {
     setError('');
 
     try {
-      const response = await fetch('/api/teacher/auth/verify-email', {
+      const response = await fetch(API_ENDPOINTS.AUTH.VERIFY_EMAIL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,7 +106,7 @@ function VerifyEmailContent(): JSX.Element {
     setError('');
 
     try {
-      const response = await fetch('/api/teacher/auth/resend-code', {
+      const response = await fetch(API_ENDPOINTS.AUTH.RESEND_OTP, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

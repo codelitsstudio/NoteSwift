@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { handleAdminLogin, handleSendOtp } from "@/app/actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,43 +20,59 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setIsLoading(true);
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-  const loginResult = await handleAdminLogin(username, password);
+    try {
+      // Call Express backend for authentication
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      
+      // Step 1: Authenticate with backend (validates credentials and sends OTP)
+      // Use AUTH.LOGIN for regular admins (super_admin, admin)
+      const loginResponse = await fetch(
+        API_ENDPOINTS.AUTH.LOGIN,
+        createFetchOptions('POST', { email: username, password })
+      );
 
-  if (loginResult.success) {
-    // Store the email and password for OTP verification
-    localStorage.setItem('adminLoginEmail', username);
-    localStorage.setItem('adminLoginPassword', password);
-    const result = await handleSendOtp(username);
-    if (result.success) {
-      localStorage.setItem("isPasswordVerified", "true");
-      toast({
-        title: "Code Sent",
-        description: "A one-time code has been sent to your email.",
-      });
-      router.push("/login/otp");
-    } else {
-      setError(result.error || "Failed to send login code. Please try again.");
+      const loginData = await loginResponse.json();
+
+      if (loginResponse.ok && loginData.requiresOtp) {
+        // Store email and password for OTP verification
+        localStorage.setItem('adminLoginEmail', username);
+        localStorage.setItem('adminLoginPassword', password);
+        localStorage.setItem("isPasswordVerified", "true");
+        
+        toast({
+          title: "Code Sent",
+          description: loginData.message || "A one-time code has been sent to your email.",
+        });
+        router.push("/login/otp");
+      } else if (loginResponse.ok && loginData.token) {
+        // Direct login without OTP (shouldn't happen for regular flow)
+        localStorage.setItem('adminToken', loginData.token);
+        document.cookie = `admin_token=${loginData.token}; path=/; max-age=86400; samesite=lax`;
+        router.push("/dashboard");
+      } else {
+        setError(loginData.error || "Invalid username or password. Please try again.");
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: loginData.error || "Invalid credentials.",
+        });
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError("An unexpected error occurred. Please try again.");
       toast({
         variant: "destructive",
-        title: "Failed to Send Code",
-        description: result.error || "An unexpected error occurred.",
+        title: "Error",
+        description: "An unexpected error occurred.",
       });
+    } finally {
+      setIsLoading(false);
     }
-  } else {
-    setError("Invalid username or password. Please try again.");
-    toast({
-      variant: "destructive",
-      title: "Login Failed",
-      description: loginResult.error || "Invalid credentials.",
-    });
-  }
-
-  setIsLoading(false);
-};
+  };
 
 
   return (
@@ -66,7 +81,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center justify-center">
                            <img
-      src="/assets/logo.jpg"
+      src="/assets/logo.png"
       alt="NoteSwift Logo"
       className="h-16 w-16 object-contain"
     />

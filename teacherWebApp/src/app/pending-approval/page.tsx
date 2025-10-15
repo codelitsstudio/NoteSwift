@@ -14,15 +14,19 @@ export default function PendingApprovalPage() {
   useEffect(() => {
     // Check if user is authenticated
     const token = localStorage.getItem('teacherToken');
-    const teacherId = localStorage.getItem('teacherId');
 
-    if (!token || !teacherId) {
+    if (!token) {
       router.push('/login');
       return;
     }
 
     // Get email from localStorage or decode from token
-    // For now, we'll just show a generic message
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setEmail(payload.email || '');
+    } catch (e) {
+      console.error('Failed to decode token:', e);
+    }
   }, [router]);
 
   return (

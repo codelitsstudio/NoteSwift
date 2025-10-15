@@ -11,6 +11,7 @@ import ProfessionalInfoStep from './steps/ProfessionalInfoStep';
 import QualificationsStep from './steps/QualificationsStep';
 import VerificationStep from './steps/VerificationStep';
 import { useToast } from '@/hooks/use-toast';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface OnboardingData {
   personalInfo: {
@@ -193,11 +194,33 @@ export default function OnboardingPage() {
           if (!stepData.institution.name || !stepData.institution.type) {
             toast({
               title: 'Missing Institution Info',
-              description: `Please enter both institution name and type.\nname: ${stepData.institution.name}\ntype: ${stepData.institution.type}`,
+              description: `Please enter both institution name and type.`,
               variant: 'destructive',
             });
             setIsLoading(false);
             return;
+          }
+          // Validate subjects array
+          if (!Array.isArray(stepData.subjects) || stepData.subjects.length === 0) {
+            toast({
+              title: 'Missing Subjects',
+              description: 'Please add at least one subject you can teach.',
+              variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
+          }
+          // Check required fields in each subject
+          for (const subject of stepData.subjects) {
+            if (!subject.name || !subject.level) {
+              toast({
+                title: 'Incomplete Subject',
+                description: 'Please fill subject name and level for all subjects.',
+                variant: 'destructive',
+              });
+              setIsLoading(false);
+              return;
+            }
           }
           break;
         case 'qualifications':
@@ -229,12 +252,40 @@ export default function OnboardingPage() {
           break;
         case 'verification':
           stepData = onboardingData.verification;
+          // Validate profile photo is uploaded
+          if (!stepData.profilePhoto) {
+            toast({
+              title: 'Missing Profile Photo',
+              description: 'Please upload your profile photo to continue.',
+              variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
+          }
+          // Validate agreement is accepted
+          if (!stepData.agreementAccepted) {
+            toast({
+              title: 'Agreement Required',
+              description: 'Please accept the terms and agreement to continue.',
+              variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
+          }
           break;
       }
 
       // Debug log payload
       if (step.id === 'professional_info') {
         console.log('Submitting professional_info:', stepData);
+      }
+      if (step.id === 'verification' && stepData) {
+        const verificationData = stepData as OnboardingData['verification'];
+        console.log('Submitting verification with photo:', {
+          hasPhoto: !!verificationData.profilePhoto,
+          photoName: verificationData.profilePhoto?.name,
+          agreementAccepted: verificationData.agreementAccepted
+        });
       }
 
       // If verification step includes profile photo, upload it and include in payload
@@ -259,7 +310,7 @@ export default function OnboardingPage() {
             } catch (e) {}
 
             // get sign data once
-            const signRes = await fetch(`/api/upload/sign`, {
+            const signRes = await fetch(`${API_ENDPOINTS.BASE}/api/teacher/upload/sign`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ folder: `teacher_profiles/${teacherId}` }),
@@ -304,20 +355,32 @@ export default function OnboardingPage() {
               publicId: uploadResult.public_id,
               uploadedAt: new Date().toISOString(),
             };
+            console.log('✅ Photo uploaded to Cloudinary:', {
+              url: uploadedPhoto.url,
+              publicId: uploadedPhoto.publicId,
+              size: uploadedPhoto.size
+            });
             setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
           } catch (err: any) {
-            console.error('Upload error', err);
+            console.error('❌ Upload error', err);
             setUploadErrors(prev => ({ ...prev, [verification.profilePhoto.name]: err.message || 'Upload failed' }));
             throw err;
           }
+        } else {
+          console.warn('⚠️  No profile photo selected for upload');
         }
 
         payloadData = { profilePhoto: uploadedPhoto, agreementAccepted: verification.agreementAccepted };
+        console.log('📤 Sending verification payload:', {
+          hasPhoto: !!payloadData.profilePhoto,
+          photoUrl: payloadData.profilePhoto?.url,
+          agreementAccepted: payloadData.agreementAccepted
+        });
       } else {
         payloadData = step.id === 'qualifications' ? { qualifications: stepData } : stepData;
       }
 
-      const response = await fetch('/api/teacher/auth/onboarding', {
+      const response = await fetch(API_ENDPOINTS.AUTH.ONBOARDING, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
