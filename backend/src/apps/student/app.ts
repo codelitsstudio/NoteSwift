@@ -1,5 +1,4 @@
 import Express from "express";
-import mongoose from "mongoose";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import "dotenv/config";
@@ -16,25 +15,14 @@ const app = Express();
 
 //CONSANTS
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || "";
 
 
-// CONNECTIONS
-mongoose.connect(MONGO_URI)
-    .then(async () => {
-        console.log("✔️ Connected to MongoDB");
+// CONNECTIONS - Database connection now handled in main index.ts
+initializeDatabase();
 
-        // Initialize database on startup
-        await initializeDatabase();
+// Setup routes after database initialization
+setupRoutes();
 
-        // console.log('🔧 Registering student routes...');
-        setupRoutes();
-        // console.log('🔧 Student routes registered successfully');
-    })
-    .catch(err => {
-        console.error("❌ Failed to connect to MongoDB:", err);
-        process.exit(1); // Exit if connection fails
-    });
 
 /**
  * Initialize database with seeding and maintenance

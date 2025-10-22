@@ -1,6 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
-import connectDB from '@core/lib/mongoose';
 import adminRoutes from './routes/adminRoutes';
 
 const app = express();

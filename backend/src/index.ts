@@ -4,6 +4,7 @@ import adminApp from './apps/admin/app';
 import teacherApp from './apps/teacher/app';
 import studentApp from './apps/student/app';
 import { MaintenanceScheduler } from './apps/student/middlewares/maintenanceMiddleware';
+import connectDB from './core/lib/mongoose';
 import "dotenv/config";
 
 
@@ -97,17 +98,23 @@ app.use((req, res) => {
 
 const PORT = Number(process.env.PORT) || 5000;
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Unified NoteSwift Backend Server Started!`);
-  console.log(`📍 Port: ${PORT}`);
-  console.log(`🌐 Local: http://localhost:${PORT}`);
-  console.log(`🔌 Admin API: http://localhost:${PORT}/api/admin`);
-  console.log(`🔌 Teacher API: http://localhost:${PORT}/api/teacher`);
-  console.log(`🔌 Student API: http://localhost:${PORT}/api/student`);
-  console.log(`💚 Health: http://localhost:${PORT}/ping\n`);
+// Connect to database before starting server
+connectDB().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Unified NoteSwift Backend Server Started!`);
+    console.log(`📍 Port: ${PORT}`);
+    console.log(`🌐 Local: http://localhost:${PORT}`);
+    console.log(`🔌 Admin API: http://localhost:${PORT}/api/admin`);
+    console.log(`🔌 Teacher API: http://localhost:${PORT}/api/teacher`);
+    console.log(`🔌 Student API: http://localhost:${PORT}/api/student`);
+    console.log(`💚 Health: http://localhost:${PORT}/ping\n`);
 
-  // Start periodic maintenance
-  MaintenanceScheduler.startPeriodicMaintenance();
+    // Start periodic maintenance
+    MaintenanceScheduler.startPeriodicMaintenance();
+  });
+}).catch((error) => {
+  console.error('❌ Failed to connect to database:', error);
+  process.exit(1);
 });
 
 export default app;
