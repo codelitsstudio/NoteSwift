@@ -2,7 +2,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon -r tsconfig-paths/register src/index.ts",
-    "start": "node compiled/backend/src/index.js",
+    "start": "node compiled/index.js",
     "build": "npx tsc && tsc-alias",
     "db:health": "curl -X GET http://localhost:5000/api/admin/database/health",
     "db:maintenance": "curl -X POST http://localhost:5000/api/admin/database/maintenance",
