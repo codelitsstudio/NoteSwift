@@ -32,10 +32,10 @@ const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
     href: "/dashboard/courses",
-    label: "My Courses",
+    label: "My Chapters",
     icon: BookCopy,
     children: [
-      { href: "/dashboard/courses/new-chapter", label: "Create Chapter/Topic" },
+      { href: "/dashboard/courses/new-chapter", label: "Create Chapter/Module" },
       { href: "/dashboard/courses/upload-content", label: "Upload Content" },
     ]
   },

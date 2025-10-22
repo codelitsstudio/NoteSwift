@@ -6,19 +6,43 @@ import { Bell, Send, Calendar, Users, BarChart3, Eye, CheckCircle, Clock } from 
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import teacherAPI from "@/lib/api/teacher-api";
+import { getTeacherEmail } from "@/lib/auth";
 
 async function getData() {
-  const teacherEmail = "teacher@example.com"; // TODO: Get from auth
+  const teacherEmail = await getTeacherEmail();
+  
+  if (!teacherEmail) {
+    return {
+      announcements: [],
+      templates: [],
+      stats: { totalAnnouncements: 0, sentThisMonth: 0, avgReadRate: 0, scheduledUpcoming: 0 },
+      courses: [],
+      batches: [],
+      teachers: []
+    };
+  }
   
   try {
-    const response = await teacherAPI.announcements.getAll(teacherEmail);
+    // Fetch announcements, courses, and batches in parallel
+    const [announcementsRes, coursesRes, batchesRes] = await Promise.all([
+      teacherAPI.announcements.getAll(teacherEmail),
+      teacherAPI.courses.getSubjectContent(teacherEmail),
+      teacherAPI.batches.getAll(teacherEmail)
+    ]);
     
-    if (!response.success || !response.data) {
+    if (!announcementsRes.success || !announcementsRes.data) {
       throw new Error('Failed to fetch announcements');
     }
 
-    const announcements = response.data.announcements || [];
-    const stats = response.data.stats || {};
+    const announcements = announcementsRes.data.announcements || [];
+    const stats = announcementsRes.data.stats || {};
+    const courses = coursesRes.data?.subjectContent || [];
+    const batches = batchesRes.data?.batches || [];
+
+    const sentAnnouncements = announcements.filter((a: any) => a.sentAt);
+    const avgReadRate = sentAnnouncements.length > 0 
+      ? Math.round(sentAnnouncements.reduce((sum: number, a: any) => sum + (a.recipientCount > 0 ? (a.readBy?.length || 0) / a.recipientCount * 100 : 0), 0) / sentAnnouncements.length)
+      : 0;
 
     return {
       announcements: announcements.map((a: any) => ({
@@ -40,11 +64,21 @@ async function getData() {
       stats: {
         totalAnnouncements: stats.total || 0,
         sentThisMonth: stats.sent || 0,
-        avgReadRate: 0, // TODO: Calculate
+        avgReadRate,
         scheduledUpcoming: stats.scheduled || 0
       },
-      courses: [], // TODO: Fetch teacher's courses
-      batches: [], // TODO: Fetch from batch API
+      courses: courses.map((course: any) => ({
+        _id: course._id,
+        name: course.subjectName || course.name,
+        code: course.subjectCode || course.code,
+        grade: course.grade || '11'
+      })), // Now populated with teacher's courses
+      batches: batches.map((batch: any) => ({
+        _id: batch._id,
+        name: batch.name,
+        courseId: batch.courseId,
+        studentCount: batch.students?.length || 0
+      })), // Now populated with batch data
       teachers: [] // Not needed for teacher's own page
     };
   } catch (error) {
@@ -86,52 +120,44 @@ export default async function AnnouncementsPage() {
 
       {/* Announcement Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-blue-500 hover:border-blue-600 transition-colors shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Announcements</CardTitle>
+            <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2 ">
-              <Bell className="h-6 w-6 text-blue-600" />
-              {stats.totalAnnouncements}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">All time</p>
+            <div className="text-2xl font-bold">{stats.totalAnnouncements}</div>
+            <p className="text-xs mt-2 text-muted-foreground">All time</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white relative overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/90">Sent This Month</CardTitle>
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Sent This Month</CardTitle>
+            <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Send className="h-6 w-6" />
-              {stats.sentThisMonth}
-            </div>
-            <p className="text-xs text-white/80 mt-1">Last 30 days</p>
+            <div className="text-2xl font-bold">{stats.sentThisMonth}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm hover:shadow-lg transition-all">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Avg Read Rate</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Eye className="h-6 w-6 text-blue-600" />
-              {stats.avgReadRate}%
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Engagement rate</p>
+            <div className="text-2xl font-bold">{stats.avgReadRate}%</div>
+            <p className="text-xs mt-2 text-muted-foreground">Engagement rate</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 hover:shadow-lg transition-all">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Clock className="h-6 w-6 text-blue-600" />
-              {stats.scheduledUpcoming}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Upcoming</p>
+            <div className="text-2xl font-bold">{stats.scheduledUpcoming}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Upcoming</p>
           </CardContent>
         </Card>
       </div>

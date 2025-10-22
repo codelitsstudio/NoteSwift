@@ -1,150 +1,256 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, FileText, Video, CheckCircle, Edit, Trash2 } from "lucide-react";
 import teacherAPI from "@/lib/api/teacher-api";
 import Link from "next/link";
+import { useTeacher } from "@/context/teacher-context";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { API_ENDPOINTS } from "@/config/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-async function getData() {
-  const teacherEmail = "teacher@example.com"; // TODO: Get from auth
-  
-  try {
-    const response = await teacherAPI.courses.getSubjectContent(teacherEmail);
-    const { subjectContent, course, stats } = response.data || {};
+export default function CoursesPage() {
+  const { assignedSubjects, assignedCourses, isLoading: contextLoading, refreshAssignments, teacherEmail } = useTeacher();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [moduleToDelete, setModuleToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
 
-    if (!subjectContent || !course) {
-      return {
-        course: null,
-        modules: [],
-        stats: {
-          totalModules: 0,
-          completedModules: 0,
-          totalContent: 0,
-          videosUploaded: 0,
-          notesUploaded: 0,
-          testsCreated: 0,
-          liveClassesScheduled: 0
-        }
-      };
+  const [fallbackSubjects, setFallbackSubjects] = useState<any[]>([]);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
+
+  useEffect(() => {
+    if (contextLoading) return;
+    
+    if (!teacherEmail) {
+      return;
     }
 
-    return {
-      course: {
-        _id: course._id,
-        title: course.title,
-        subject: course.subjectName,
-        description: course.description,
-        program: course.program
-      },
-      modules: subjectContent.modules.map((mod: any) => ({
-        _id: mod._id || mod.moduleNumber,
-        moduleNumber: mod.moduleNumber,
-        title: mod.moduleName,
-        order: mod.order,
-        hasVideo: mod.hasVideo,
-        hasNotes: mod.hasNotes,
-        hasTest: mod.hasTest,
-        hasLiveClass: mod.hasLiveClass,
-        videoUrl: mod.videoUrl,
-        videoTitle: mod.videoTitle,
-        notesUrl: mod.notesUrl,
-        notesTitle: mod.notesTitle,
-        isActive: mod.isActive
-      })),
-      stats: stats || {}
-    };
-  } catch (error) {
-    console.error('Error fetching course data:', error);
-    return {
-      course: null,
-      modules: [],
-      stats: {
-        totalModules: 0,
-        completedModules: 0,
-        totalContent: 0,
-        videosUploaded: 0,
-        notesUploaded: 0,
-        testsCreated: 0,
-        liveClassesScheduled: 0
+    // If TeacherContext has no assigned subjects, try direct fetch from all-subject-content
+    if (!contextLoading && (!assignedSubjects || assignedSubjects.length === 0)) {
+      const fetchFromAllSubjects = async () => {
+        try {
+          setFallbackLoading(true);
+          const token = localStorage.getItem('teacherToken');
+          if (!token) return;
+
+          const response = await fetch(`${API_ENDPOINTS.COURSES}/all-subject-content`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.result?.subjects) {
+              setFallbackSubjects(data.result.subjects);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching fallback subjects:', error);
+        } finally {
+          setFallbackLoading(false);
+        }
+      };
+
+      fetchFromAllSubjects();
+    }
+  }, [teacherEmail, contextLoading, assignedSubjects]);
+
+  const handleDeleteModule = async () => {
+    if (!moduleToDelete || !teacherEmail) return;
+
+    setDeleting(true);
+    try {
+      const response = await teacherAPI.courses.deleteModule(teacherEmail, moduleToDelete.moduleNumber);
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Module deleted successfully!",
+        });
+
+        // Refresh assignments to get updated data
+        await refreshAssignments();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: response.message || "Failed to delete module",
+        });
       }
-    };
+    } catch (error: any) {
+      console.error("Error deleting module:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete module",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setModuleToDelete(null);
+    }
+  };
+
+  if (contextLoading || fallbackLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading subjects...</p>
+        </div>
+      </div>
+    );
   }
-}
 
-export default async function CoursesPage() {
-  const { course, modules, stats } = await getData();
+  // Use assignedSubjects from context, or assignedCourses if subjects is empty, or fallback subjects
+  const subjectsToUse = assignedSubjects && assignedSubjects.length > 0 
+    ? assignedSubjects 
+    : assignedCourses && assignedCourses.length > 0 
+      ? assignedCourses.map(course => ({
+          _id: course.courseId,
+          courseId: course.courseId,
+          courseName: course.courseName,
+          courseProgram: '',
+          courseThumbnail: '',
+          subjectName: course.subject,
+          description: '',
+          syllabus: '',
+          objectives: '',
+          modules: [],
+          lastUpdated: course.assignedAt,
+          assignedAt: course.assignedAt,
+          totalModules: 0,
+          modulesWithVideo: 0,
+          modulesWithNotes: 0,
+          scheduledLiveClasses: 0,
+        }))
+      : fallbackSubjects;
 
-  if (!course) {
+  // Debug logging
+  console.log('Courses Page Debug:');
+  console.log('assignedSubjects:', assignedSubjects);
+  console.log('assignedCourses:', assignedCourses);
+  console.log('fallbackSubjects:', fallbackSubjects);
+  console.log('subjectsToUse:', subjectsToUse);
+  console.log('subjectsToUse[0]?.modules:', subjectsToUse[0]?.modules);
+
+  if (!subjectsToUse || subjectsToUse.length === 0) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">My Course</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">No course assigned yet</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">My Course Modules</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">No subjects assigned yet</p>
         </div>
         <Card>
           <CardContent className="py-12 text-center">
             <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">You haven't been assigned to any course yet. Contact your administrator.</p>
+            <p className="text-muted-foreground">You haven't been assigned to any subject yet. Contact your administrator.</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Use the first assigned subject (assuming single assignment for now)
+  const currentSubject = subjectsToUse[0];
+  const course = {
+    _id: currentSubject._id,
+    title: currentSubject.courseName,
+    subject: currentSubject.subjectName,
+    description: currentSubject.description,
+    program: currentSubject.courseProgram
+  };
+  // Collect ALL modules from ALL assigned subjects
+  const allModules = subjectsToUse.flatMap((subject: any) => 
+    (subject.modules || []).map((module: any) => ({
+      ...module,
+      subjectName: subject.subjectName,
+      courseName: subject.courseName
+    }))
+  );
+  const modules = allModules;
+  const stats = {
+    totalModules: allModules.length,
+    videosUploaded: allModules.filter(m => m.hasVideo).length,
+    notesUploaded: allModules.filter(m => m.hasNotes).length,
+    testsCreated: allModules.filter(m => m.hasTest).length,
+    liveClassesScheduled: allModules.filter(m => m.hasLiveClass).length
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">My Course</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">My Course Modules</h1>
         <p className="text-sm sm:text-base text-muted-foreground">
-          {course.title} - {course.subject}
+          All modules from your assigned subjects
         </p>
       </div>
 
       {/* Content Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Modules</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalModules || 0}</div>
-            <p className="text-xs mt-1 text-muted-foreground">Topics</p>
+            <p className="text-xs mt-2 text-muted-foreground">Topics</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Video Lectures</CardTitle>
+            <Video className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.videosUploaded || 0}</div>
-            <p className="text-xs mt-1 text-muted-foreground">Videos</p>
+            <p className="text-xs mt-2 text-muted-foreground">Videos</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">PDF Notes</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.notesUploaded || 0}</div>
-            <p className="text-xs mt-1 text-muted-foreground">Documents</p>
+            <p className="text-xs mt-2 text-muted-foreground">Documents</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Tests</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.testsCreated || 0}</div>
-            <p className="text-xs mt-1 text-muted-foreground">Created</p>
+            <p className="text-xs mt-2 text-muted-foreground">Created</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Live Classes</CardTitle>
+            <Video className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.liveClassesScheduled || 0}</div>
-            <p className="text-xs mt-1 text-muted-foreground">Scheduled</p>
+            <p className="text-xs mt-2 text-muted-foreground">Scheduled</p>
           </CardContent>
         </Card>
       </div>
@@ -206,13 +312,16 @@ export default async function CoursesPage() {
           ) : (
             <div className="space-y-4">
               {modules.map((module: any) => (
-                <Card key={module._id} className="border-l-4 border-blue-500">
+                <Card key={module._id} className="bg-blue-50/60 border-blue-100">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <CardTitle className="text-lg">
                           Module {module.moduleNumber}: {module.title}
                         </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {module.subjectName} - {module.courseName}
+                        </p>
                         <div className="flex gap-2 mt-2">
                           {module.hasVideo && (
                             <Badge variant="secondary" className="gap-1">
@@ -244,11 +353,21 @@ export default async function CoursesPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/dashboard/courses/edit-module/${module.moduleNumber}`}>
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => {
+                            setModuleToDelete(module);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -290,6 +409,29 @@ export default async function CoursesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Module</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "Module {moduleToDelete?.moduleNumber}: {moduleToDelete?.title}"?
+              This action cannot be undone and will permanently remove all associated content.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteModule}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Deleting..." : "Delete Module"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

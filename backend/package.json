@@ -1,8 +1,8 @@
 {
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon -r tsconfig-paths/register src/app.ts",
-    "start": "node compiled/backend/src/app.js",
+    "dev": "nodemon -r tsconfig-paths/register src/index.ts",
+    "start": "node compiled/backend/src/index.js",
     "build": "npx tsc && tsc-alias",
     "db:health": "curl -X GET http://localhost:5000/api/admin/database/health",
     "db:maintenance": "curl -X POST http://localhost:5000/api/admin/database/maintenance",
@@ -10,6 +10,7 @@
     "db:optimize": "curl -X POST http://localhost:5000/api/admin/database/optimize"
   },
   "dependencies": {
+    "@genkit-ai/googleai": "^1.21.0",
     "@types/bcrypt": "^5.0.2",
     "@types/body-parser": "^1.19.6",
     "@types/cookie-parser": "^1.4.9",
@@ -19,12 +20,15 @@
     "@types/multer": "^2.0.0",
     "@types/twilio": "^3.19.2",
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
     "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "genkit": "^1.21.0",
+    "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.0",
     "multer": "^2.0.2",

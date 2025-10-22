@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Minus, Eye, Save, X, Star, BookOpen, PlayCircle, Award, Upload } from 'lucide-react';
+import { Plus, Minus, Eye, Save, X, Star, BookOpen, PlayCircle, Award, Upload, Lock, Clock, Users } from 'lucide-react';
 import { createCourse, updateCourse, getCourse } from '@/lib/api/adminCourses';
 import { toast } from '@/hooks/use-toast';
 import { v2 as cloudinary } from 'cloudinary';
@@ -107,7 +107,7 @@ export default function CourseEditorPage() {
     };
   });
 
-  const [showPreview, setShowPreview] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -483,6 +483,16 @@ export default function CourseEditorPage() {
               <Eye className="w-4 h-4" />
               {showPreview ? 'Hide Preview' : 'Show Preview'}
             </Button>
+            {formData.status === 'Published' && (
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/dashboard/courses/${courseId}/subjects`)}
+                className="flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              >
+                <BookOpen className="w-4 h-4" />
+                Edit Subjects
+              </Button>
+            )}
             <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={handlePublishCourse} disabled={isPublishing || isSaving}>
               <Upload className="w-4 h-4" />
               {isPublishing ? 'Publishing...' : 'Publish Course'}
@@ -494,7 +504,7 @@ export default function CourseEditorPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+        <div className={`grid ${showPreview ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-8 h-full`}>
           {/* Editor Panel */}
           <div className="space-y-6 overflow-y-auto">
             {/* Basic Information */}
@@ -884,113 +894,139 @@ export default function CourseEditorPage() {
             {/* Course Content */}
             <Card>
               <CardHeader>
-                <CardTitle>Course Content</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Course Content</span>
+                  {formData.status === 'Published' && (
+                    <Badge variant="secondary" className="text-xs">
+                      Locked after publish - use "Edit Subjects" button
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {formData.subjects?.map((subject, subjectIndex) => (
-                  <div key={subjectIndex} className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold">Subject {subjectIndex + 1}</h4>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeFromArray('subjects', subjectIndex)}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                    </div>
+                {formData.status === 'Published' ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium mb-2">Content Locked</p>
+                    <p className="text-sm mb-4">
+                      Subjects and modules are locked after publishing to maintain data integrity.
+                    </p>
+                    <Button
+                      onClick={() => router.push(`/dashboard/courses/${courseId}/subjects`)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Edit Subjects & Modules
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {formData.subjects?.map((subject, subjectIndex) => (
+                      <div key={subjectIndex} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold">Subject {subjectIndex + 1}</h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeFromArray('subjects', subjectIndex)}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                        </div>
 
-                    <div className="grid grid-cols-1 gap-4">
-                      <Input
-                        value={subject.name}
-                        onChange={(e) => updateArrayItem('subjects', subjectIndex, {
-                          ...subject,
-                          name: e.target.value
-                        })}
-                        placeholder="Subject name"
-                      />
-                      <Textarea
-                        value={subject.description || ''}
-                        onChange={(e) => updateArrayItem('subjects', subjectIndex, {
-                          ...subject,
-                          description: e.target.value
-                        })}
-                        placeholder="Subject description"
-                        rows={2}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Modules</Label>
-                      {subject.modules?.map((module, moduleIndex) => (
-                        <div key={moduleIndex} className="pl-4 border-l-2 border-gray-200 space-y-2 p-3 bg-gray-50 rounded">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={module.name}
-                              onChange={(e) => {
-                                const newModules = [...subject.modules!];
-                                newModules[moduleIndex] = { ...newModules[moduleIndex], name: e.target.value };
-                                updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
-                              }}
-                              placeholder="Module name"
-                              className="flex-1"
-                            />
-                            <Input
-                              value={module.duration || ''}
-                              onChange={(e) => {
-                                const newModules = [...subject.modules!];
-                                newModules[moduleIndex] = { ...newModules[moduleIndex], duration: e.target.value };
-                                updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
-                              }}
-                              placeholder="Duration"
-                              className="w-24"
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const newModules = subject.modules!.filter((_, i) => i !== moduleIndex);
-                                updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
-                              }}
-                            >
-                              <Minus className="w-4 h-4" />
-                            </Button>
-                          </div>
+                        <div className="grid grid-cols-1 gap-4">
+                          <Input
+                            value={subject.name}
+                            onChange={(e) => updateArrayItem('subjects', subjectIndex, {
+                              ...subject,
+                              name: e.target.value
+                            })}
+                            placeholder="Subject name"
+                          />
                           <Textarea
-                            value={module.description}
-                            onChange={(e) => {
-                              const newModules = [...subject.modules!];
-                              newModules[moduleIndex] = { ...newModules[moduleIndex], description: e.target.value };
-                              updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
-                            }}
-                            placeholder="Module description"
+                            value={subject.description || ''}
+                            onChange={(e) => updateArrayItem('subjects', subjectIndex, {
+                              ...subject,
+                              description: e.target.value
+                            })}
+                            placeholder="Subject description"
                             rows={2}
                           />
                         </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newModules = [...(subject.modules || []), { name: '', description: '', duration: '' }];
-                          updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
-                        }}
-                        className="ml-4"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Module
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                <Button
-                  variant="outline"
-                  onClick={() => addToArray('subjects', { name: '', description: '', modules: [{ name: '', description: '', duration: '' }] })}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Subject
-                </Button>
+
+                        <div className="space-y-2">
+                          <Label>Modules</Label>
+                          {subject.modules?.map((module, moduleIndex) => (
+                            <div key={moduleIndex} className="pl-4 border-l-2 border-gray-200 space-y-2 p-3 bg-gray-50 rounded">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={module.name}
+                                  onChange={(e) => {
+                                    const newModules = [...subject.modules!];
+                                    newModules[moduleIndex] = { ...newModules[moduleIndex], name: e.target.value };
+                                    updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
+                                  }}
+                                  placeholder="Module name"
+                                  className="flex-1"
+                                />
+                                <Input
+                                  value={module.duration || ''}
+                                  onChange={(e) => {
+                                    const newModules = [...subject.modules!];
+                                    newModules[moduleIndex] = { ...newModules[moduleIndex], duration: e.target.value };
+                                    updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
+                                  }}
+                                  placeholder="Duration"
+                                  className="w-24"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newModules = subject.modules!.filter((_, i) => i !== moduleIndex);
+                                    updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
+                                  }}
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <Textarea
+                                value={module.description}
+                                onChange={(e) => {
+                                  const newModules = [...subject.modules!];
+                                  newModules[moduleIndex] = { ...newModules[moduleIndex], description: e.target.value };
+                                  updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
+                                }}
+                                placeholder="Module description"
+                                rows={2}
+                              />
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newModules = [...(subject.modules || []), { name: '', description: '', duration: '' }];
+                              updateArrayItem('subjects', subjectIndex, { ...subject, modules: newModules });
+                            }}
+                            className="ml-4"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add Module
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      onClick={() => addToArray('subjects', { name: '', description: '', modules: [{ name: '', description: '', duration: '' }] })}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Subject
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -1076,16 +1112,28 @@ export default function CourseEditorPage() {
                       {/* Program, Duration, Rating */}
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         {formData.program && (
-                          <span>📚 {formData.program}</span>
+                          <span className="flex items-center gap-1">
+                            <BookOpen className="w-4 h-4" />
+                            {formData.program}
+                          </span>
                         )}
                         {formData.duration && (
-                          <span>⏱️ {formData.duration}</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {formData.duration}
+                          </span>
                         )}
                         {formData.rating && formData.rating > 0 && (
-                          <span>⭐ {formData.rating}/5</span>
+                          <span className="flex items-center gap-1">
+                            <Star className="w-4 h-4" />
+                            {formData.rating}/5
+                          </span>
                         )}
                         {formData.enrolledCount && formData.enrolledCount > 0 && (
-                          <span>👥 {formData.enrolledCount} enrolled</span>
+                          <span className="flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            {formData.enrolledCount} enrolled
+                          </span>
                         )}
                       </div>
 
@@ -1187,22 +1235,36 @@ export default function CourseEditorPage() {
                       {/* Course Content */}
                       {formData.subjects && formData.subjects.length > 0 && (
                         <div>
-                          <h3 className="text-lg font-bold mb-4">Course Content</h3>
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold">Course Content</h3>
+                            {formData.status === 'Published' && (
+                              <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800 border-orange-200">
+                                <Lock className="w-3 h-3" />
+                                Subjects Locked
+                              </Badge>
+                            )}
+                          </div>
                           <div className="space-y-3">
                             {formData.subjects.map((subject, subjectIndex) => (
-                              <div key={subjectIndex} className="border rounded-lg p-4">
+                              <div key={subjectIndex} className={`border rounded-lg p-4 ${formData.status === 'Published' ? 'bg-gray-50 border-gray-200' : ''}`}>
                                 <div className="flex items-center gap-2 mb-2">
                                   <Badge variant="outline">Subject {subjectIndex + 1}</Badge>
                                   <span className="text-sm text-gray-500">
                                     • {subject.modules?.length || 0} modules
                                   </span>
+                                  {formData.status === 'Published' && (
+                                    <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                                      <Lock className="w-3 h-3 mr-1" />
+                                      Locked
+                                    </Badge>
+                                  )}
                                 </div>
                                 <h4 className="font-semibold text-gray-900">{subject.name}</h4>
 
                                 {subject.modules && subject.modules.length > 0 && (
                                   <div className="space-y-2">
                                     {subject.modules.map((module, moduleIndex) => (
-                                      <div key={moduleIndex} className="pl-4 border-l-2 border-gray-200">
+                                      <div key={moduleIndex} className={`pl-4 border-l-2 ${formData.status === 'Published' ? 'border-orange-200 bg-orange-25' : 'border-gray-200'}`}>
                                         <div className="flex items-center justify-between">
                                           <span className="text-sm font-medium text-gray-700">
                                             Module {moduleIndex + 1}
@@ -1218,6 +1280,16 @@ export default function CourseEditorPage() {
                               </div>
                             ))}
                           </div>
+                          {formData.status === 'Published' && (
+                            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                              <div className="flex items-center gap-2 text-orange-800">
+                                <Lock className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                  Course content is locked after publishing. Use "Edit Subjects" button to manage subjects and teacher assignments.
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 

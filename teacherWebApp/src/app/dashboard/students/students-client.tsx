@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ExportCSVButton } from "@/components/ui/export-csv";
 import { ExportPDFButton } from "@/components/ui/export-pdf";
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { teacherAPI } from '@/lib/api/teacher-api';
 
 interface StudentData {
   _id: string;
@@ -29,29 +30,51 @@ interface StudentData {
 }
 
 export function StudentsClient({ allStudents, attendance, allStats, courses }: any) {
-  const { assignedCourses, isLoading } = useTeacher();
+  const { assignedCourses, assignedSubjects, isLoading, teacherEmail } = useTeacher();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [teamName, setTeamName] = useState('');
   const [teamDescription, setTeamDescription] = useState('');
-  const [teams, setTeams] = useState([
-    {
-      _id: 'team1',
-      name: 'Full Class',
-      description: 'All Grade 11 Mathematics students',
-      students: ['Jane Smith', 'Mike Johnson', 'Emily Davis'],
-      studentCount: 3,
-      color: 'blue'
-    },
-    {
-      _id: 'team2',
-      name: 'Advanced Group',
-      description: 'High performers needing challenge',
-      students: ['Jane Smith', 'Emily Davis'],
-      studentCount: 2,
-      color: 'green'
-    }
-  ]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [batchesLoading, setBatchesLoading] = useState(true);
+  const [batchesError, setBatchesError] = useState<string | null>(null);
+
+  // Fetch batches from API
+  useEffect(() => {
+    const fetchBatches = async () => {
+      if (!teacherEmail) return;
+      
+      try {
+        setBatchesLoading(true);
+        setBatchesError(null);
+        const response = await teacherAPI.batches.getAll(teacherEmail);
+        const batches = response.data?.batches || [];
+        
+        // Transform batches to match the expected team format
+        const transformedTeams = batches.map((batch: any, index: number) => ({
+          _id: batch._id,
+          name: batch.name,
+          description: batch.description || `${batch.subjectName} - ${batch.courseName}`,
+          students: batch.students.map((s: any) => s.studentName),
+          studentCount: batch.activeStudents,
+          color: ['blue', 'green', 'yellow', 'purple', 'red'][index % 5],
+          code: batch.code,
+          status: batch.status,
+          subjectName: batch.subjectName,
+          courseName: batch.courseName
+        }));
+        
+        setTeams(transformedTeams);
+      } catch (error: any) {
+        console.error('Error fetching batches:', error);
+        setBatchesError(error.message || 'Failed to load batches');
+      } finally {
+        setBatchesLoading(false);
+      }
+    };
+
+    fetchBatches();
+  }, [teacherEmail]);
 
   // Filter students to only show those enrolled in teacher's assigned courses
   const filteredStudents = useMemo(() => {
@@ -152,52 +175,44 @@ export function StudentsClient({ allStudents, attendance, allStats, courses }: a
 
       {/* Student Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Your Students</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6 text-blue-600" />
-              {stats.totalStudents}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Enrolled in your courses</p>
+            <div className="text-2xl font-bold">{stats.totalStudents}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Enrolled in your courses</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Active Students</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <CheckCircle className="h-6 w-6 text-blue-600" />
-              {stats.activeStudents}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Active this week</p>
+            <div className="text-2xl font-bold">{stats.activeStudents}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Active this week</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Calendar className="h-6 w-6 text-blue-600" />
-              {stats.avgAttendance}%
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Last 30 days</p>
+            <div className="text-2xl font-bold">{stats.avgAttendance}%</div>
+            <p className="text-xs mt-2 text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Avg Progress</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
-              {stats.avgProgress}%
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Course completion</p>
+            <div className="text-2xl font-bold">{stats.avgProgress}%</div>
+            <p className="text-xs mt-2 text-muted-foreground">Course completion</p>
           </CardContent>
         </Card>
       </div>
@@ -276,7 +291,7 @@ export function StudentsClient({ allStudents, attendance, allStats, courses }: a
             <div className="overflow-x-auto">
               <TabsList className="grid w-full grid-cols-5 min-w-max">
                 <TabsTrigger value="directory">Directory ({searchFilteredStudents.length})</TabsTrigger>
-                <TabsTrigger value="teams">Teams ({teams.length})</TabsTrigger>
+                <TabsTrigger value="teams">Teams ({batchesLoading ? '...' : teams.length})</TabsTrigger>
                 <TabsTrigger value="progress">Progress Tracking</TabsTrigger>
                 <TabsTrigger value="attendance">Attendance</TabsTrigger>
                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -359,166 +374,224 @@ export function StudentsClient({ allStudents, attendance, allStats, courses }: a
 
             {/* Teams Tab */}
             <TabsContent value="teams" className="space-y-4 mt-4">
-              {/* Create Team Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    Create New Team
-                  </CardTitle>
-                  <CardDescription>
-                    Select students from your class to create a team for live classes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Team Name</label>
-                      <Input 
-                        placeholder="e.g., Advanced Group, Study Group A" 
-                        value={teamName}
-                        onChange={(e) => setTeamName(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Description</label>
-                      <Input 
-                        placeholder="Brief description of the team" 
-                        value={teamDescription}
-                        onChange={(e) => setTeamDescription(e.target.value)}
-                      />
-                    </div>
+              {batchesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-sm text-muted-foreground">Loading teams...</p>
                   </div>
+                </div>
+              ) : batchesError ? (
+                <Card className="border-red-200 bg-red-50/50">
+                  <CardContent className="py-8">
+                    <div className="text-center">
+                      <p className="text-red-600 mb-2">Failed to load teams</p>
+                      <p className="text-sm text-muted-foreground">{batchesError}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Create Team Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <UserPlus className="h-5 w-5" />
+                        Create New Team
+                      </CardTitle>
+                      <CardDescription>
+                        Select students from your class to create a team for live classes
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Team Name</label>
+                          <Input 
+                            placeholder="e.g., Advanced Group, Study Group A" 
+                            value={teamName}
+                            onChange={(e) => setTeamName(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Description</label>
+                          <Input 
+                            placeholder="Brief description of the team" 
+                            value={teamDescription}
+                            onChange={(e) => setTeamDescription(e.target.value)}
+                          />
+                        </div>
+                      </div>
 
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Select Students</label>
-                    <div className="space-y-2 border rounded-lg p-3 max-h-60 overflow-y-auto">
-                      {filteredStudents.length > 0 ? (
-                        filteredStudents.map((student: StudentData) => (
-                          <div key={student._id} className="flex items-center gap-2 p-2 hover:bg-muted rounded">
-                            <Checkbox 
-                              checked={selectedStudents.includes(student.name)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedStudents([...selectedStudents, student.name]);
-                                } else {
-                                  setSelectedStudents(selectedStudents.filter(s => s !== student.name));
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Select Students</label>
+                        <div className="space-y-2 border rounded-lg p-3 max-h-60 overflow-y-auto">
+                          {filteredStudents.length > 0 ? (
+                            filteredStudents.map((student: StudentData) => (
+                              <div key={student._id} className="flex items-center gap-2 p-2 hover:bg-muted rounded">
+                                <Checkbox 
+                                  checked={selectedStudents.includes(student._id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedStudents([...selectedStudents, student._id]);
+                                    } else {
+                                      setSelectedStudents(selectedStudents.filter(s => s !== student._id));
+                                    }
+                                  }}
+                                />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{student.name}</p>
+                                  <p className="text-xs text-muted-foreground">{student.email}</p>
+                                </div>
+                                <Badge variant="secondary">{student.averageScore}%</Badge>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              No students available
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {selectedStudents.length > 0 && (
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <span className="text-sm font-medium">
+                            {selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected
+                          </span>
+                          <Button 
+                            onClick={async () => {
+                              if (teamName.trim() && teacherEmail) {
+                                try {
+                                  // Create batch via API
+                                  const batchData = {
+                                    name: teamName,
+                                    code: `${teamName.replace(/\s+/g, '').toUpperCase()}${Date.now().toString().slice(-4)}`,
+                                    description: teamDescription || 'No description',
+                                    subjectContentId: assignedSubjects[0]?._id, // Use first assigned subject content ID
+                                    teacherEmail,
+                                    studentIds: selectedStudents
+                                  };
+                                  
+                                  await teacherAPI.batches.create(batchData);
+                                  
+                                  // Refresh batches
+                                  const response = await teacherAPI.batches.getAll(teacherEmail);
+                                  const batches = response.data?.batches || [];
+                                  const transformedTeams = batches.map((batch: any, index: number) => ({
+                                    _id: batch._id,
+                                    name: batch.name,
+                                    description: batch.description || `${batch.subjectName} - ${batch.courseName}`,
+                                    students: batch.students.map((s: any) => s.studentName),
+                                    studentCount: batch.activeStudents,
+                                    color: ['blue', 'green', 'yellow', 'purple', 'red'][index % 5],
+                                    code: batch.code,
+                                    status: batch.status,
+                                    subjectName: batch.subjectName,
+                                    courseName: batch.courseName
+                                  }));
+                                  setTeams(transformedTeams);
+                                  
+                                  setTeamName('');
+                                  setTeamDescription('');
+                                  setSelectedStudents([]);
+                                } catch (error: any) {
+                                  console.error('Error creating batch:', error);
+                                  setBatchesError(error.message || 'Failed to create team');
                                 }
-                              }}
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{student.name}</p>
-                              <p className="text-xs text-muted-foreground">{student.email}</p>
-                            </div>
-                            <Badge variant="secondary">{student.averageScore}%</Badge>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          No students available
-                        </p>
+                              }
+                            }}
+                            disabled={!teamName.trim()}
+                          >
+                            Create Team
+                          </Button>
+                        </div>
                       )}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
 
-                  {selectedStudents.length > 0 && (
-                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <span className="text-sm font-medium">
-                        {selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected
-                      </span>
-                      <Button 
-                        onClick={() => {
-                          if (teamName.trim()) {
-                            const newTeam = {
-                              _id: `team${teams.length + 1}`,
-                              name: teamName,
-                              description: teamDescription || 'No description',
-                              students: selectedStudents,
-                              studentCount: selectedStudents.length,
-                              color: ['blue', 'green', 'yellow', 'purple', 'red'][teams.length % 5]
-                            };
-                            setTeams([...teams, newTeam]);
-                            setTeamName('');
-                            setTeamDescription('');
-                            setSelectedStudents([]);
-                          }
-                        }}
-                        disabled={!teamName.trim()}
-                      >
-                        Create Team
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  {/* Existing Teams */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold">Your Teams ({teams.length})</h3>
+                    {teams.length > 0 ? (
+                      teams.map((team) => {
+                        const getTeamColorClass = (color: string) => {
+                          const colors: Record<string, string> = {
+                            'blue': 'bg-blue-50 border-blue-200',
+                            'green': 'bg-green-50 border-green-200',
+                            'yellow': 'bg-yellow-50 border-yellow-200',
+                            'red': 'bg-red-50 border-red-200',
+                            'purple': 'bg-purple-50 border-purple-200'
+                          };
+                          return colors[color] || 'bg-gray-50 border-gray-200';
+                        };
 
-              {/* Existing Teams */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold">Your Teams</h3>
-                {teams.length > 0 ? (
-                  teams.map((team) => {
-                    const getTeamColorClass = (color: string) => {
-                      const colors: Record<string, string> = {
-                        'blue': 'bg-blue-50 border-blue-200',
-                        'green': 'bg-green-50 border-green-200',
-                        'yellow': 'bg-yellow-50 border-yellow-200',
-                        'red': 'bg-red-50 border-red-200',
-                        'purple': 'bg-purple-50 border-purple-200'
-                      };
-                      return colors[color] || 'bg-gray-50 border-gray-200';
-                    };
-
-                    return (
-                      <Card key={team._id} className={getTeamColorClass(team.color)}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <CardTitle className="text-base">{team.name}</CardTitle>
-                              <CardDescription>{team.description}</CardDescription>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => {
-                                  setTeams(teams.filter(t => t._id !== team._id));
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">{team.studentCount} Students</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {team.students.map((studentName: string, idx: number) => (
-                              <Badge key={idx} variant="secondary">
-                                {studentName}
-                              </Badge>
-                            ))}
+                        return (
+                          <Card key={team._id} className={getTeamColorClass(team.color)}>
+                            <CardHeader>
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <CardTitle className="text-base">{team.name}</CardTitle>
+                                  <CardDescription>
+                                    {team.description} • {team.code} • {team.subjectName}
+                                  </CardDescription>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Badge variant={team.status === 'active' ? 'default' : 'secondary'}>
+                                    {team.status}
+                                  </Badge>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={async () => {
+                                      if (teacherEmail) {
+                                        try {
+                                          await teacherAPI.batches.delete(team._id, teacherEmail);
+                                          setTeams(teams.filter(t => t._id !== team._id));
+                                        } catch (error: any) {
+                                          console.error('Error deleting batch:', error);
+                                          setBatchesError(error.message || 'Failed to delete team');
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">{team.studentCount} Students</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {team.students.map((studentName: string, idx: number) => (
+                                  <Badge key={idx} variant="secondary">
+                                    {studentName}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    ) : (
+                      <Card>
+                        <CardContent className="py-8">
+                          <div className="text-center">
+                            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-muted-foreground">No teams created yet</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Create teams to organize students for live classes
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
-                    );
-                  })
-                ) : (
-                  <Card>
-                    <CardContent className="py-8">
-                      <div className="text-center">
-                        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-muted-foreground">No teams created yet</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Create teams to organize students for live classes
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                    )}
+                  </div>
+                </>
+              )}
             </TabsContent>
 
             {/* Other tabs can be similarly implemented */}

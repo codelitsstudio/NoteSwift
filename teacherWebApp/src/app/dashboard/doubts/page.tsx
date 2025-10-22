@@ -86,52 +86,44 @@ export default async function DoubtsPage() {
 
       {/* Doubts Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm hover:shadow-lg transition-all">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Doubts</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <MessageSquare className="h-6 w-6  text-blue-600" />
-              {stats.totalDoubts}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">All time</p>
+            <div className="text-2xl font-bold">{stats.totalDoubts}</div>
+            <p className="text-xs mt-2 text-muted-foreground">All time</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Open Doubts</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
-              {stats.openDoubts}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Need response</p>
+            <div className="text-2xl font-bold">{stats.openDoubts}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Need response</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm hover:shadow-lg transition-all">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Resolved Today</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <CheckCircle className="h-6 w-6  text-blue-600" />
-              {stats.resolvedToday}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Last 24 hours</p>
+            <div className="text-2xl font-bold">{stats.resolvedToday}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Last 24 hours</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white relative overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/90">Avg Response Time</CardTitle>
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Clock className="h-6 w-6" />
-              {stats.avgResponseTime}m
-            </div>
-            <p className="text-xs text-white/80 mt-1">Average minutes</p>
+            <div className="text-2xl font-bold">{stats.avgResponseTime}m</div>
+            <p className="text-xs mt-2 text-muted-foreground">Average minutes</p>
           </CardContent>
         </Card>
       </div>

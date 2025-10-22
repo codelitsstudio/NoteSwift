@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
     BAN: (id: string) => `${API_BASE_URL}/api/admin/teachers/${id}/ban`,
     REMOVE: (id: string) => `${API_BASE_URL}/api/admin/teachers/${id}/remove`,
     ASSIGN: (id: string) => `${API_BASE_URL}/api/admin/teachers/${id}/assign`,
+    REMOVE_ASSIGNMENT: (id: string) => `${API_BASE_URL}/api/admin/teachers/${id}/remove-assignment`,
   },
 
   // ==================== COURSES ====================
@@ -112,6 +113,12 @@ export const API_ENDPOINTS = {
       LIST: `${API_BASE_URL}/api/admin/orders-payments/codes`,
       GET: (id: string) => `${API_BASE_URL}/api/admin/orders-payments/codes/${id}`,
     },
+  },
+
+  // ==================== SUBJECT CONTENT ====================
+  SUBJECT_CONTENT: {
+    GET: `${API_BASE_URL}/api/admin/subject-content`,
+    UPDATE: (id: string) => `${API_BASE_URL}/api/admin/subject-content/${id}`,
   },
 
   // ==================== REPORTS ====================

@@ -435,6 +435,15 @@ const extendedAssignmentAPI = {
   },
 };
 
+// ==================== STUDENT APIs ====================
+export const studentAPI = {
+  getAll: (teacherEmail: string, courseId?: string) => {
+    const params = new URLSearchParams({ teacherEmail });
+    if (courseId) params.append('courseId', courseId);
+    return fetchAPI(`/teacher/students?${params}`);
+  },
+};
+
 // ==================== EXPORT ALL ====================
 export const teacherAPI = {
   announcements: announcementAPI,
@@ -446,6 +455,7 @@ export const teacherAPI = {
   resources: resourceAPI,
   courses: courseAPI,
   analytics: analyticsAPI,
+  students: studentAPI,
 };
 
 export default teacherAPI;

@@ -97,64 +97,54 @@ export default async function TestsPage() {
 
       {/* Tests Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="border-l-4 border-blue-500 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Tests</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <FileText className="h-6 w-6 text-blue-600" />
-              {stats.totalTests}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">All time</p>
+            <div className="text-2xl font-bold">{stats.totalTests}</div>
+            <p className="text-xs mt-2 text-muted-foreground">All time</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50/60 to-transparent">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Active Tests</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Clock className="h-6 w-6  text-blue-600" />
-              {stats.activeTests}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Currently running</p>
+            <div className="text-2xl font-bold">{stats.activeTests}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <CheckCircle className="h-6 w-6  text-blue-600" />
-              {stats.completedTests}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Graded & analyzed</p>
+            <div className="text-2xl font-bold">{stats.completedTests}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Graded & analyzed</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 hover:border-blue-600 transition-colors">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Question Bank</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <FileText className="h-6 w-6  text-blue-600" />
-              {stats.totalQuestions}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Reusable questions</p>
+            <div className="text-2xl font-bold">{stats.totalQuestions}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Reusable questions</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50/60 to-transparent">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-6 w-6  text-blue-600" />
-              {stats.avgCompletionRate}%
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Average</p>
+            <div className="text-2xl font-bold">{stats.avgCompletionRate}%</div>
+            <p className="text-xs mt-2 text-muted-foreground">Average</p>
           </CardContent>
         </Card>
       </div>

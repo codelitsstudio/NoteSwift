@@ -1,8 +1,14 @@
 {
   "compilerOptions": {
     "target": "es5",                               
+    "module": "commonjs",
+    "moduleResolution": "node",
     "baseUrl": "./src",
     "paths": {
+      "@core/*": ["core/*"],
+      "@student/*": ["apps/student/*"],
+      "@teacher/*": ["apps/teacher/*"],
+      "@admin/*": ["apps/admin/*"],
       "controller/*": ["controller/*"],
       "services/*": ["services/*"],
       "models/*": ["models/*"],
@@ -11,7 +17,6 @@
       "routes/*": ["routes/*"],
       "@shared/*": ["../../shared/*"]
     },                       
-    "module": "commonjs",    
     "outDir": "compiled",                            
     "esModuleInterop": true,                            
     "forceConsistentCasingInFileNames": true,           

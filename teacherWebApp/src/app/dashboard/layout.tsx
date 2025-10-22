@@ -21,63 +21,57 @@ import { DashboardGreetingSimple } from "@/components/dashboard-greeting-simple"
 import { LoadingProvider } from "@/context/loading-context";
 import { LoadingBar } from "@/components/ui/loading-bar";
 import { PageNavigationHandler } from "@/components/page-navigation-handler";
-import { TeacherProvider } from "@/context/teacher-context";
+import { TeacherProvider, useTeacher } from "@/context/teacher-context";
+import { DashboardGuard } from "@/components/auth-guard";
+import { useTeacherAuth } from "@/context/teacher-auth-context";
 
-export default function DashboardLayout({
+function SidebarFooterContent() {
+  const { teacherName, teacherEmail, teacherProfilePic } = useTeacher();
+
+  return (
+    <SidebarFooter>
+      <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+        <Avatar className="h-10 w-10">
+          <AvatarImage
+            src={teacherProfilePic || "https://placehold.co/40x40.png"}
+            alt="Teacher"
+            className="object-cover"
+          />
+          <AvatarFallback className="bg-primary text-primary-foreground">T</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+          <span className="font-semibold text-sm">{teacherName}</span>
+          <span className="text-xs text-muted-foreground">
+            {teacherEmail}
+          </span>
+        </div>
+      </div>
+    </SidebarFooter>
+  );
+}
+
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const { toast } = useToast();
-
-  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const { logout } = useTeacherAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hasMounted) return;
-
-    const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (isAuthenticated !== "true") {
-      router.push("/login");
-    } else {
-      setIsAuthenticating(false);
-    }
-  }, [hasMounted, router]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
-    localStorage.removeItem("isAuthenticated");
+
+    logout();
+
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out.",
     });
     router.push("/login");
   };
-
-  // Don't render anything on first server load to avoid hydration mismatch
-  if (!hasMounted) return null;
-
-  if (isAuthenticating) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <img
-            src="/assets/logo.jpg"
-            alt="NoteSwift Logo"
-            className="h-14 w-14 object-contain animate-pulse"
-          />
-          <p className="text-muted-foreground">Authenticating...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <TeacherProvider>
@@ -101,23 +95,7 @@ export default function DashboardLayout({
                 <DashboardNav />
               </SidebarContent>
 
-            <SidebarFooter>
-              <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
-                <Avatar>
-                  <AvatarImage
-                    src="https://placehold.co/40x40.png"
-                    alt="Admin"
-                  />
-                  <AvatarFallback>A</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm">NoteSwift Teacher</span>
-                  <span className="text-xs text-muted-foreground">
-                    teacher@noteswift.com
-                  </span>
-                </div>
-              </div>
-            </SidebarFooter>
+              <SidebarFooterContent />
           </Sidebar>
 
           {/* Right side */}
@@ -146,5 +124,19 @@ export default function DashboardLayout({
       </SidebarProvider>
     </LoadingProvider>
     </TeacherProvider>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <DashboardGuard>
+      <DashboardLayoutContent>
+        {children}
+      </DashboardLayoutContent>
+    </DashboardGuard>
   );
 }

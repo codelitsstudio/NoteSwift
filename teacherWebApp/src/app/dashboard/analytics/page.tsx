@@ -1,14 +1,49 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, Users, FileText, Calendar, Download, Eye, CheckCircle } from "lucide-react";
+import { BarChart3, TrendingUp, Users, FileText, Calendar, Download, Eye, CheckCircle, BookOpen } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AttendanceExport } from "./export-client";
 import { AttendanceCharts, PerformanceCharts, CourseProgressCharts, AssessmentCharts } from "./analytics-charts";
 import teacherAPI from "@/lib/api/teacher-api";
+import { getTeacherEmail } from "@/lib/auth";
 
 async function getData() {
-  const teacherEmail = "teacher@example.com"; // TODO: Get from auth
+  const teacherEmail = await getTeacherEmail();
+  
+  if (!teacherEmail) {
+    // Return empty data structure
+    return {
+      overview: {
+        totalStudents: 0,
+        totalCourses: 0,
+        totalAssignments: 0,
+        totalTests: 0,
+        attendanceCount: 0,
+        avgAttendance: 0
+      },
+      attendanceByDay: [],
+      performanceBySubject: [],
+      courseProgress: [],
+      assignmentStats: {
+        totalAssigned: 0,
+        totalSubmitted: 0,
+        avgSubmissionRate: 0,
+        pendingGrading: 0,
+        avgScore: 0
+      },
+      testStats: {
+        totalTests: 0,
+        totalAttempts: 0,
+        avgScore: 0,
+        passRate: 0,
+        avgCompletionTime: 0
+      },
+      studentEngagement: [],
+      topPerformers: [],
+      recentActivity: []
+    };
+  }
   
   try {
     const response = await teacherAPI.analytics.getAnalytics(teacherEmail);
@@ -108,64 +143,54 @@ export default async function AnalyticsPage() {
           <div className="absolute -right-4 -bottom-4 opacity-10">
           </div>
         </Card>
-        <Card className="border-l-4 border-blue-500 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Courses</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold  flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
-              {overview.totalCourses}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Active</p>
+            <div className="text-2xl font-bold">{overview.totalCourses}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Active</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Assignments</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold  flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-blue-600" />
-              {overview.totalAssignments}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Created</p>
+            <div className="text-2xl font-bold">{overview.totalAssignments}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Created</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Tests</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <FileText className="h-5 w-5  text-blue-600" />
-              {overview.totalTests}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Conducted</p>
+            <div className="text-2xl font-bold">{overview.totalTests}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Conducted</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50/60 to-transparent">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Attendance</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              {overview.avgAttendance}%
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Average</p>
+            <div className="text-2xl font-bold">{overview.avgAttendance}%</div>
+            <p className="text-xs mt-2 text-muted-foreground">Average</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Records</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              {overview.attendanceCount}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Total entries</p>
+            <div className="text-2xl font-bold">{overview.attendanceCount}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Total entries</p>
           </CardContent>
         </Card>
       </div>

@@ -154,52 +154,44 @@ export function ResourcesClient({ resources: initialResources, chapters, student
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Resources</CardTitle>
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <FolderOpen className="h-6 w-6 text-blue-600" />
-              {stats.totalResources}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Files uploaded</p>
+            <div className="text-2xl font-bold">{stats.totalResources}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Files uploaded</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
+            <Upload className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Upload className="h-6 w-6 text-purple-600" />
-              {stats.totalSize}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Total file size</p>
+            <div className="text-2xl font-bold">{stats.totalSize}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Total file size</p>
           </CardContent>
         </Card>
-        <Card className="bg-green-50/60 border-green-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Eye className="h-6 w-6 text-green-600" />
-              {stats.totalViews}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Student views</p>
+            <div className="text-2xl font-bold">{stats.totalViews}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Student views</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-blue-500 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Downloads</CardTitle>
+            <Download className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Download className="h-6 w-6 text-blue-600" />
-              {stats.totalDownloads}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Total downloads</p>
+            <div className="text-2xl font-bold">{stats.totalDownloads}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Total downloads</p>
           </CardContent>
         </Card>
       </div>

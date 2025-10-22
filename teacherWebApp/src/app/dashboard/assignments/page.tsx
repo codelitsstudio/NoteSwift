@@ -6,9 +6,20 @@ import { FileText, CheckCircle, Clock, AlertTriangle, Users, BarChart3, Copy, Se
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import teacherAPI from "@/lib/api/teacher-api";
+import { getTeacherEmail } from "@/lib/auth";
 
 async function getData() {
-  const teacherEmail = "teacher@example.com"; // TODO: Get from auth/session
+  const teacherEmail = await getTeacherEmail();
+  
+  if (!teacherEmail) {
+    return {
+      assignments: [],
+      submissions: [],
+      stats: { totalAssignments: 0, activeAssignments: 0, overdueAssignments: 0, avgSubmissionRate: 0, pendingGrading: 0 },
+      courses: [],
+      chapters: []
+    };
+  }
   try {
     const response = await teacherAPI.assignments.getAll(teacherEmail);
     const assignments = response.data?.assignments || [];
@@ -95,63 +106,53 @@ export default async function AssignmentsPage() {
       </div>      {/* Assignment Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-blue-50/60 border-blue-100">
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-500" />
-              {stats.totalAssignments}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">All time</p>
+            <div className="text-2xl font-bold">{stats.totalAssignments}</div>
+            <p className="text-xs mt-2 text-muted-foreground">All time</p>
           </CardContent>
         </Card>
-        <Card className="bg-secondary/60">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-green-500" />
-              {stats.activeAssignments}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Currently open</p>
+            <div className="text-2xl font-bold">{stats.activeAssignments}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Currently open</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-red-500">
-          <CardHeader className="pb-2">
+        <Card className="bg-red-50/60 border-red-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              {stats.overdueAssignments}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Past deadline</p>
+            <div className="text-2xl font-bold">{stats.overdueAssignments}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Past deadline</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-orange-500">
-          <CardHeader className="pb-2">
+        <Card className="bg-orange-50/60 border-orange-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pending Grading</CardTitle>
+            <FileCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-orange-500" />
-              {stats.pendingGrading}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Need review</p>
+            <div className="text-2xl font-bold">{stats.pendingGrading}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Need review</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50/60 to-transparent">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Submission Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-500" />
-              {stats.avgSubmissionRate}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Average</p>
+            <div className="text-2xl font-bold">{stats.avgSubmissionRate}%</div>
+            <p className="text-xs mt-2 text-muted-foreground">Average</p>
           </CardContent>
         </Card>
       </div>

@@ -12,6 +12,8 @@ import QualificationsStep from './steps/QualificationsStep';
 import VerificationStep from './steps/VerificationStep';
 import { useToast } from '@/hooks/use-toast';
 import { API_ENDPOINTS } from '@/config/api';
+import { OnboardingGuard } from '@/components/auth-guard';
+import { useTeacherAuth } from '@/context/teacher-auth-context';
 
 interface OnboardingData {
   personalInfo: {
@@ -96,6 +98,7 @@ const steps = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { teacher, isOnboardingComplete } = useTeacherAuth();
   
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -141,25 +144,7 @@ export default function OnboardingPage() {
       },
   });
 
-  // Check if user is authenticated and needs onboarding
-  useEffect(() => {
-    // Small delay to ensure localStorage is set after redirect
-    const checkAuth = () => {
-      const token = localStorage.getItem('teacherToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-      // Remove any lingering teacherId
-      localStorage.removeItem('teacherId');
-    };
-
-    // Check immediately and also after a short delay
-    checkAuth();
-    const timeoutId = setTimeout(checkAuth, 200);
-
-    return () => clearTimeout(timeoutId);
-  }, [router]);
+  // OnboardingGuard handles authentication checks
 
   const updateOnboardingData = (stepKey: keyof OnboardingData, data: any) => {
     setOnboardingData(prev => ({
@@ -472,108 +457,110 @@ export default function OnboardingPage() {
   const progressPercentage = ((currentStep + 1) / steps.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to NoteSwift Teacher
-          </h1>
-          <p className="text-gray-600">
-            Complete your profile to start teaching and inspire students
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            {steps.map((step, index) => (
-              <div
-                key={step.id}
-                className={`flex items-center ${
-                  index < steps.length - 1 ? 'flex-1' : ''
-                }`}
-              >
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                      index < currentStep
-                        ? 'bg-green-500 text-white'
-                        : index === currentStep
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {index < currentStep ? (
-                      <CheckCircle className="w-6 h-6" />
-                    ) : (
-                      <Circle className="w-6 h-6" />
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-sm font-medium text-gray-900">
-                      {step.title}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {step.description}
-                    </div>
-                  </div>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`flex-1 h-0.5 mx-4 ${
-                      index < currentStep ? 'bg-green-500' : 'bg-gray-200'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
+    <OnboardingGuard>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+        <div className="container mx-auto px-4 max-w-4xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome to NoteSwift Teacher
+            </h1>
+            <p className="text-gray-600">
+              Complete your profile to start teaching and inspire students
+            </p>
           </div>
-          <Progress value={progressPercentage} className="w-full" />
-        </div>
 
-        {/* Step Content */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>{steps[currentStep].title}</CardTitle>
-            <CardDescription>{steps[currentStep].description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {renderCurrentStep()}
-          </CardContent>
-        </Card>
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              {steps.map((step, index) => (
+                <div
+                  key={step.id}
+                  className={`flex items-center ${
+                    index < steps.length - 1 ? 'flex-1' : ''
+                  }`}
+                >
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                        index < currentStep
+                          ? 'bg-green-500 text-white'
+                          : index === currentStep
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-500'
+                      }`}
+                    >
+                      {index < currentStep ? (
+                        <CheckCircle className="w-6 h-6" />
+                      ) : (
+                        <Circle className="w-6 h-6" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium text-gray-900">
+                        {step.title}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {step.description}
+                      </div>
+                    </div>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div
+                      className={`flex-1 h-0.5 mx-4 ${
+                        index < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                      }`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <Progress value={progressPercentage} className="w-full" />
+          </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 0}
-            className="flex items-center"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-          
-          <Button
-            onClick={handleNext}
-            disabled={isLoading}
-            className="flex items-center"
-          >
-            {currentStep === steps.length - 1 ? (
-              <>
-                {isLoading ? 'Submitting...' : 'Complete Setup'}
-                <CheckCircle className="w-4 h-4 ml-2" />
-              </>
-            ) : (
-              <>
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
-            )}
-          </Button>
+          {/* Step Content */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>{steps[currentStep].title}</CardTitle>
+              <CardDescription>{steps[currentStep].description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderCurrentStep()}
+            </CardContent>
+          </Card>
+
+          {/* Navigation */}
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+              className="flex items-center"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+            
+            <Button
+              onClick={handleNext}
+              disabled={isLoading}
+              className="flex items-center"
+            >
+              {currentStep === steps.length - 1 ? (
+                <>
+                  {isLoading ? 'Submitting...' : 'Complete Setup'}
+                  <CheckCircle className="w-4 h-4 ml-2" />
+                </>
+              ) : (
+                <>
+                  Next
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </OnboardingGuard>
   );
 }

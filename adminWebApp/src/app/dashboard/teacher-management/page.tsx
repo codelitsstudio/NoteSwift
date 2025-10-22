@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Eye, UserCheck, UserX, Shield, BookOpen, Plus, Edit, CheckCircle, User, Users } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, UserCheck, UserX, Shield, BookOpen, Plus, Edit, CheckCircle, User, Users, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +54,8 @@ export default function TeachersManagementPage() {
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [isRemoveAssignmentDialogOpen, setIsRemoveAssignmentDialogOpen] = useState(false);
+  const [assignmentToRemove, setAssignmentToRemove] = useState<{ teacherId: string; courseId: string; subject: string; courseName: string } | null>(null);
   const { toast } = useToast();
 
   const load = async () => {
@@ -183,6 +185,23 @@ export default function TeachersManagementPage() {
 
     try {
       const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      
+      // Check if teacher already has an assignment
+      const currentAssignments = (selectedTeacher as any).assignedCourses || [];
+      const hasExistingAssignment = currentAssignments.length > 0;
+      
+      if (hasExistingAssignment) {
+        // Confirm replacement
+        const confirmReplace = window.confirm(
+          `This teacher is already assigned to "${currentAssignments[0].subject}" in "${currentAssignments[0].courseName}". ` +
+          `Do you want to replace this assignment with "${selectedSubject}" in the selected course?`
+        );
+        
+        if (!confirmReplace) {
+          return;
+        }
+      }
+
       const res = await fetch(API_ENDPOINTS.TEACHERS.ASSIGN(selectedTeacher._id), createFetchOptions('POST', {
         courseId: selectedCourse,
         subjectName: selectedSubject,
@@ -196,7 +215,9 @@ export default function TeachersManagementPage() {
       const data = await res.json();
       toast({ 
         title: 'Success', 
-        description: `Teacher assigned to ${data.data.subjectName} in ${data.data.courseName}` 
+        description: hasExistingAssignment 
+          ? `Teacher assignment replaced! Now assigned to ${data.data.subjectName} in ${data.data.courseName}`
+          : `Teacher assigned to ${data.data.subjectName} in ${data.data.courseName}` 
       });
       setIsAssignDialogOpen(false);
       setSelectedCourse('');
@@ -218,6 +239,55 @@ export default function TeachersManagementPage() {
     setSelectedCourse('');
     setSelectedSubject('');
     setIsAssignDialogOpen(true);
+  };
+
+  const openRemoveAssignmentDialog = (teacherId: string, courseId: string, subject: string, courseName: string) => {
+    setAssignmentToRemove({ teacherId, courseId, subject, courseName });
+    setIsRemoveAssignmentDialogOpen(true);
+  };
+
+  const handleRemoveAssignment = async () => {
+    if (!assignmentToRemove) return;
+
+    try {
+      const { API_ENDPOINTS, createFetchOptions } = await import('@/config/api');
+      const res = await fetch(API_ENDPOINTS.TEACHERS.REMOVE_ASSIGNMENT(assignmentToRemove.teacherId), createFetchOptions('POST', {
+        courseId: assignmentToRemove.courseId,
+        subject: assignmentToRemove.subject,
+      }));
+
+      if (!res.ok) {
+        let errorMessage = 'Failed to remove assignment';
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response, use the status text
+          errorMessage = `Failed to remove assignment: ${res.status} ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await res.json();
+      toast({ 
+        title: 'Success', 
+        description: `Assignment removed! Teacher no longer assigned to ${assignmentToRemove.subject}` 
+      });
+      
+      // Close dialog and reset state
+      setIsRemoveAssignmentDialogOpen(false);
+      setAssignmentToRemove(null);
+      
+      // Refresh the data
+      load();
+    } catch (err: any) {
+      console.error('Remove assignment error:', err);
+      toast({ 
+        title: 'Error', 
+        description: err.message || 'Failed to remove assignment',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (loading) {
@@ -657,8 +727,16 @@ export default function TeachersManagementPage() {
                     <p className="text-sm font-medium text-blue-900 mb-2">Currently Assigned:</p>
                     <div className="space-y-1">
                       {(selectedTeacher as any).assignedCourses.map((ac: any, idx: number) => (
-                        <div key={idx} className="text-sm text-blue-700">
-                          • {ac.subject} in {ac.courseName}
+                        <div key={idx} className="flex items-center justify-between text-sm text-blue-700">
+                          <span>• {ac.subject} in {ac.courseName}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openRemoveAssignmentDialog(selectedTeacher._id, ac.courseId, ac.subject, ac.courseName)}
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -767,6 +845,50 @@ export default function TeachersManagementPage() {
           } : null}
           onConfirm={handleRemoveTeacher}
         />
+
+        {/* Remove Assignment Dialog */}
+        <Dialog open={isRemoveAssignmentDialogOpen} onOpenChange={setIsRemoveAssignmentDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Assignment</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove this assignment? The teacher will no longer have access to manage this subject.
+              </DialogDescription>
+            </DialogHeader>
+
+            {assignmentToRemove && (
+              <div className="py-4">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm font-medium text-red-900">Assignment to Remove:</p>
+                  <p className="text-sm text-red-700 mt-1">
+                    <strong>{assignmentToRemove.subject}</strong> in <strong>{assignmentToRemove.courseName}</strong>
+                  </p>
+                  <p className="text-xs text-red-600 mt-2">
+                    This action cannot be undone. The teacher will lose access to all content, modules, and assessments for this subject.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsRemoveAssignmentDialogOpen(false);
+                  setAssignmentToRemove(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleRemoveAssignment}
+              >
+                Remove Assignment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </Tabs>
     </div>
   );

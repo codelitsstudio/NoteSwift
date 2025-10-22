@@ -5,13 +5,30 @@ export type CourseData = {
   title: string;
   description: string;
   subjects?: {
+    _id?: string;
     name: string;
-    description?: string;  // Added missing description field
+    description?: string;
     modules?: {
+      _id?: string;
       name: string;
       description: string;
       duration?: string;
+      hasVideo?: boolean;
+      hasNotes?: boolean;
+      liveClassSchedule?: any[];
+      createdAt?: string;
+      updatedAt?: string;
     }[];
+    assignedTeacher?: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+      fullName: string;
+      email: string;
+      profilePhoto?: string;
+    };
+    createdAt?: string;
+    updatedAt?: string;
   }[];
   tags: string[];
   status: string;
@@ -36,8 +53,9 @@ export type CourseData = {
     answer: string;
   }[];
   icon?: string;
+  thumbnail?: string;
   isFeatured?: boolean;
-  keyFeatures?: string[];  // Added missing keyFeatures field
+  keyFeatures?: string[];
 };
 
 export async function createCourse(courseData: CourseData): Promise<CourseData> {

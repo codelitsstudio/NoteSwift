@@ -5,9 +5,19 @@ import { Video, Calendar, Clock, Users, PlayCircle, UserPlus, Settings, Plus, Vi
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import teacherAPI from "@/lib/api/teacher-api";
+import { getTeacherEmail } from "@/lib/auth";
 
 async function getData() {
-  const teacherEmail = "teacher@example.com";
+  const teacherEmail = await getTeacherEmail();
+  
+  if (!teacherEmail) {
+    return {
+      studentTeams: [],
+      upcomingClasses: [],
+      pastClasses: [],
+      stats: { totalClassesThisMonth: 0, averageAttendance: 0, totalRecordingViews: 0, totalLiveHours: 0 }
+    };
+  }
   
   try {
     const response = await teacherAPI.liveClasses.getAll(teacherEmail);
@@ -133,52 +143,44 @@ export default async function LiveClassesPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Classes This Month</CardTitle>
+            <Video className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Video className="h-6 w-6 text-blue-600" />
-              {stats.totalClassesThisMonth}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Active teaching</p>
+            <div className="text-2xl font-bold">{stats.totalClassesThisMonth}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Active teaching</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6 text-green-600" />
-              {stats.averageAttendance}%
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Excellent!</p>
+            <div className="text-2xl font-bold">{stats.averageAttendance}%</div>
+            <p className="text-xs mt-2 text-muted-foreground">Excellent!</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Recording Views</CardTitle>
+            <PlayCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <PlayCircle className="h-6 w-6 text-purple-600" />
-              {stats.totalRecordingViews}
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">Students reviewing</p>
+            <div className="text-2xl font-bold">{stats.totalRecordingViews}</div>
+            <p className="text-xs mt-2 text-muted-foreground">Students reviewing</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50/60 border-blue-100 shadow-sm">
-          <CardHeader className="pb-2">
+        <Card className="bg-blue-50/60 border-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Live Hours</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Clock className="h-6 w-6 text-orange-600" />
-              {stats.totalLiveHours}h
-            </div>
-            <p className="text-xs mt-1 text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">{stats.totalLiveHours}h</div>
+            <p className="text-xs mt-2 text-muted-foreground">This month</p>
           </CardContent>
         </Card>
       </div>

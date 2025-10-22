@@ -24,6 +24,12 @@ export type TeacherSummary = {
   verificationDocuments?: {
     profile?: Array<{ name?: string; mimeType?: string; url?: string; publicId?: string; size?: number; uploadedAt?: string; }>;
   };
+  assignedCourses?: Array<{
+    courseId: string;
+    courseName: string;
+    subject: string;
+    assignedAt?: string;
+  }>;
 };
 
 export async function fetchPendingTeachers(): Promise<TeacherSummary[]> {
@@ -48,6 +54,16 @@ export async function fetchApprovedTeachers(): Promise<TeacherSummary[]> {
     cache: 'no-store' 
   });
   if (!res.ok) throw new Error('Failed to fetch approved teachers');
+  const json = await res.json();
+  return json.data?.teachers || [];
+}
+
+export async function fetchAllTeachers(): Promise<TeacherSummary[]> {
+  const res = await fetch(API_ENDPOINTS.TEACHERS.LIST, { 
+    ...createFetchOptions('GET'),
+    cache: 'no-store' 
+  });
+  if (!res.ok) throw new Error('Failed to fetch all teachers');
   const json = await res.json();
   return json.data?.teachers || [];
 }

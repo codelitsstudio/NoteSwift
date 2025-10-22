@@ -4,7 +4,7 @@
  */
 
 // Base API URL - Change this for production deployment
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002';
 
 // API Endpoints
 export const API_ENDPOINTS = {

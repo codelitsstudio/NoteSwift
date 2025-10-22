@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_ENDPOINTS } from "@/config/api";
+import { LoginGuard } from "@/components/auth-guard";
+import { useTeacherAuth } from "@/context/teacher-auth-context";
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { login, isAuthenticated, needsOnboarding, isApproved } = useTeacherAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -26,18 +28,12 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: username, password })
-      });
+      const result = await login(username, password);
 
-      const result = await response.json();
-
-      if (!result.success || !result.result) {
+      if (!result.success) {
         setError(result.message || "Login failed");
         
-        // If application is being reviewed, redirect to pending approval page
+        // Handle specific error cases
         if (result.message && result.message.includes('application is being reviewed')) {
           toast({
             title: "Application Under Review",
@@ -68,34 +64,12 @@ export default function LoginPage() {
         return;
       }
 
-      // Store token and teacher info in localStorage
-      console.log('💾 Storing teacher data:', {
-        token: result.result.token.substring(0, 20) + '...',
-        email: result.result.teacher.email,
-        id: result.result.teacher._id
-      });
-      
-      localStorage.setItem('teacherToken', result.result.token);
-      localStorage.setItem('teacherId', result.result.teacher._id);
-      localStorage.setItem('teacherEmail', result.result.teacher.email);
-      localStorage.setItem('isAuthenticated', 'true'); // Required by dashboard layout
-      
-      console.log('✅ Stored in localStorage:', {
-        hasToken: !!localStorage.getItem('teacherToken'),
-        hasEmail: !!localStorage.getItem('teacherEmail'),
-        isAuthenticated: localStorage.getItem('isAuthenticated'),
-        email: localStorage.getItem('teacherEmail')
-      });
-
       toast({
         title: "Login Successful",
         description: "Welcome back to NoteSwift Teacher!",
       });
 
-      // Force reload to dashboard to ensure localStorage is available
-      const redirectPath = result.result.teacher.onboardingStep !== 'completed' ? '/onboarding' : '/dashboard';
-      console.log('🚀 Redirecting to:', redirectPath);
-      window.location.href = redirectPath;
+      // LoginGuard will handle the redirect automatically
 
     } catch (error: any) {
       console.error('Login error:', error);
@@ -112,7 +86,8 @@ export default function LoginPage() {
 
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-blue-50">
+    <LoginGuard>
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-blue-50">
       
       {/* Decorative Geometric Elements */}
       {/* Top-left corner - Line box (half rectangle outline) */}
@@ -240,5 +215,6 @@ export default function LoginPage() {
       </div>
       </div>
     </main>
+    </LoginGuard>
   );
 }
