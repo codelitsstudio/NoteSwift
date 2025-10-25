@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { RequestHandler } from 'express';
+import path from 'path';
 import adminApp from './apps/admin/app';
 import teacherApp from './apps/teacher/app';
 import studentApp from './apps/student/app';
@@ -85,6 +86,9 @@ app.use(fallbackMiddleware);
 app.use('/api/admin', adminApp);
 app.use('/api/teacher', teacherApp);
 app.use('/api/student', studentApp);
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Health check for the unified backend
 app.get('/ping', (req, res) => {

@@ -7,7 +7,7 @@ const courseSchema = new Schema<TCourse>({
   subjects: [{
     name: { type: String, required: true },
     description: { type: String },
-    modules: [{
+    modules: new Schema({
       name: { type: String, required: true },
       description: { type: String, required: true },
       duration: { type: String },
@@ -22,7 +22,7 @@ const courseSchema = new Schema<TCourse>({
       liveClassSchedule: { type: [Object], default: [] },
       order: { type: Number },
       isActive: { type: Boolean, default: true }
-    }]
+    }, { strict: false })
   }],
   tags: { type: [String], default: [] },
   status: { type: String, default: 'Draft' },

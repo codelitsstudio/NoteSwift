@@ -2,6 +2,7 @@ import mongoose, { Schema, models } from 'mongoose';
 import { TUnlockCode } from '@core/models/common/UnlockCode';
 
 const unlockCodeSchema = new Schema<TUnlockCode>({
+  code: { type: String }, // Plain text code for admin visibility
   codeHash: { type: String, required: true, unique: true },
   courseId: { type: String, required: true },
   issuedTo: { type: String },

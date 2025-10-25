@@ -13,6 +13,7 @@ import * as revenueController from '../controllers/revenueController';
 import * as adminManagementController from '../controllers/adminManagementController';
 import * as ordersPaymentsController from '../controllers/ordersPaymentsController';
 import * as subjectContentController from '../controllers/subjectContentController';
+import * as reportsController from '../controllers/reportsController';
 import { verifyAdminAuth } from '../middlewares/adminAuth.middleware';
 
 const router = express.Router();
@@ -102,5 +103,8 @@ router.post('/orders-payments/transaction', verifyAdminAuth, ordersPaymentsContr
 // ==================== SUBJECT CONTENT ROUTES ====================
 router.get('/subject-content', verifyAdminAuth, subjectContentController.getSubjectContent);
 router.put('/subject-content/:id', verifyAdminAuth, subjectContentController.updateSubjectContent);
+
+// ==================== REPORTS ROUTES ====================
+router.get('/reports/overview', verifyAdminAuth, reportsController.getReportsOverview);
 
 export default router;

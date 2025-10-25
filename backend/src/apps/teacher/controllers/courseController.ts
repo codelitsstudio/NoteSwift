@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import Course from "../models/Course.model";
 import CourseEnrollment from "../models/CourseEnrollment";
 import HomepageSettings from "@core/models/HomepageSettings";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import auditLogger from '@core/lib/audit-logger';
 
 // Extend Express Request to include user injected by auth middleware
@@ -1049,6 +1049,7 @@ export const getTeacherSubjectContent = async (req: Request, res: Response) => {
           modules: subject.modules.map((mod: any, idx: number) => ({
             moduleNumber: idx + 1,
             moduleName: mod.name,
+            description: mod.description || '',
             hasVideo: false,
             hasNotes: false,
             hasLiveClass: false,
@@ -1150,32 +1151,32 @@ export const getAllTeacherSubjectContent = async (req: Request, res: Response) =
     for (const assignment of assignedCourses) {
       console.log('🎯 ALL-SUBJECT-CONTENT: Processing assignment:', assignment);
       try {
-        // Fetch directly from Course collection (same as admin page)
-        const course = await Course.findById(assignment.courseId);
-        console.log('🎯 ALL-SUBJECT-CONTENT: Course found:', !!course, 'Course ID:', assignment.courseId);
+        // Fetch directly from Course collection using raw MongoDB query to avoid Mongoose schema issues
+        const courseDoc = mongoose.connection.db ? await mongoose.connection.db.collection('courses').findOne({_id: new mongoose.Types.ObjectId(assignment.courseId)}) : null;
+        console.log('🎯 ALL-SUBJECT-CONTENT: Course found:', !!courseDoc, 'Course ID:', assignment.courseId);
         
-        if (course) {
-          console.log('🎯 ALL-SUBJECT-CONTENT: Course title:', course.title);
-          // Find the subject in the course (same as admin page)
-          const subjectData = course.subjects?.find((s: any) => s.name === assignment.subject);
+        if (courseDoc) {
+          console.log('🎯 ALL-SUBJECT-CONTENT: Course title:', courseDoc.title);
+          // Find the subject in the course
+          const subjectData = courseDoc.subjects?.find((s: any) => s.name === assignment.subject);
           console.log('🎯 ALL-SUBJECT-CONTENT: Subject data found:', !!subjectData, 'Subject name:', assignment.subject);
-          console.log('🎯 ALL-SUBJECT-CONTENT: Available subjects in course:', course.subjects?.map((s: any) => s.name));
+          console.log('🎯 ALL-SUBJECT-CONTENT: Available subjects in course:', courseDoc.subjects?.map((s: any) => s.name));
           
           if (subjectData) {
             console.log('🎯 ALL-SUBJECT-CONTENT: Subject modules:', subjectData.modules?.length || 0);
 
             subjects.push({
-              _id: `${course._id}_${subjectData.name}`, // Generate a composite ID
-              courseId: course._id,
-              courseName: course.title,
-              courseProgram: course.program || '',
-              courseThumbnail: course.thumbnail,
+              _id: `${courseDoc._id}_${subjectData.name}`,
+              courseId: courseDoc._id,
+              courseName: courseDoc.title,
+              courseProgram: courseDoc.program || '',
+              courseThumbnail: courseDoc.thumbnail,
               subjectName: subjectData.name,
               description: subjectData.description,
               syllabus: subjectData.syllabus,
               objectives: subjectData.objectives,
               modules: subjectData.modules?.map((module: any, index: number) => ({
-                _id: `${course._id}_${subjectData.name}_${index}`, // Generate module ID
+                _id: `${courseDoc._id}_${subjectData.name}_${index}`,
                 moduleNumber: index + 1,
                 title: module.name || `Module ${index + 1}`,
                 description: module.description || '',
@@ -1191,7 +1192,7 @@ export const getAllTeacherSubjectContent = async (req: Request, res: Response) =
                 order: module.order || index + 1,
                 isActive: module.isActive !== false
               })) || [],
-              lastUpdated: course.updatedAt || new Date(),
+              lastUpdated: courseDoc.updatedAt || new Date(),
               assignedAt: assignment.assignedAt,
               totalModules: subjectData.modules?.length || 0,
               modulesWithVideo: subjectData.modules?.filter((m: any) => m.hasVideo).length || 0,
@@ -1201,10 +1202,10 @@ export const getAllTeacherSubjectContent = async (req: Request, res: Response) =
             });
 
             courses.push({
-              _id: course._id,
-              title: course.title,
-              program: course.program,
-              thumbnail: course.thumbnail
+              _id: courseDoc._id,
+              title: courseDoc.title,
+              program: courseDoc.program,
+              thumbnail: courseDoc.thumbnail
             });
           } else {
             console.log('🎯 ALL-SUBJECT-CONTENT: Subject not found in course');
@@ -1408,22 +1409,23 @@ export const updateModule = async (req: Request, res: Response) => {
       if (course) {
         const subject = course.subjects?.find((s: any) => s.name === subjectContent.subjectName);
         if (subject && Array.isArray(subject.modules)) {
-          const mod = subject.modules.find((m: any) => (m.order || m.moduleNumber || 0) === subjectContent.modules[moduleIndex].order || subjectContent.modules[moduleIndex].moduleNumber);
-          // Fallback: update by index
-          if (!mod) {
-            const idx = subject.modules.findIndex((m: any, i: number) => i === moduleIndex);
-            if (idx !== -1) {
-              subject.modules[idx] = {
-                ...subject.modules[idx],
-                name: subjectContent.modules[moduleIndex].moduleName || subjectContent.modules[moduleIndex].moduleName,
-                description: subjectContent.modules[moduleIndex].description || subjectContent.modules[moduleIndex].description,
-                order: subjectContent.modules[moduleIndex].order || subjectContent.modules[moduleIndex].moduleNumber
-              };
-            }
-          } else {
-            mod.name = subjectContent.modules[moduleIndex].moduleName || mod.name;
-            mod.description = subjectContent.modules[moduleIndex].description || mod.description;
-            mod.order = subjectContent.modules[moduleIndex].order || mod.order;
+          // Find module by matching name or by position (moduleNumber - 1)
+          const moduleNumber = subjectContent.modules[moduleIndex].moduleNumber;
+          let modIndex = subject.modules.findIndex((m: any, idx: number) => 
+            m.name === subjectContent.modules[moduleIndex].moduleName || 
+            idx === (moduleNumber - 1)
+          );
+
+          if (modIndex !== -1) {
+            const moduleDescription = subjectContent.modules[moduleIndex].description?.trim() || 
+                                    subjectContent.modules[moduleIndex].moduleName || 
+                                    'No description available';
+            subject.modules[modIndex] = {
+              ...subject.modules[modIndex],
+              name: subjectContent.modules[moduleIndex].moduleName,
+              description: moduleDescription,
+              order: subjectContent.modules[moduleIndex].order || subjectContent.modules[moduleIndex].moduleNumber
+            };
           }
           await course.save();
         }
@@ -1431,7 +1433,6 @@ export const updateModule = async (req: Request, res: Response) => {
     } catch (err) {
       console.error('Failed to sync updated module to Course document:', err);
     }
-
     return res.status(200).json({ success: true, message: 'Module updated successfully', data: { 
       module: subjectContent.modules[moduleIndex],
       subjectContent 
@@ -1506,14 +1507,19 @@ export const deleteModule = async (req: Request, res: Response) => {
   }
 };
 
-// Upload video to module
+// Upload video to module (Firebase Storage)
 export const uploadVideo = async (req: Request, res: Response) => {
   try {
     const { teacherEmail } = req.query;
-    const { moduleNumber, videoUrl, videoTitle, videoDuration } = req.body;
+    const { moduleNumber, videoTitle, videoDuration } = req.body;
 
-    if (!teacherEmail || !moduleNumber || !videoUrl) {
+    if (!teacherEmail || !moduleNumber) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Check if video file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file uploaded' });
     }
 
     // Get teacher and subject content
@@ -1525,15 +1531,59 @@ export const uploadVideo = async (req: Request, res: Response) => {
     // Get the assigned course and subject
     const assignedCourse = teacher.assignedCourses[0];
 
-    const subjectContent = await SubjectContent.findOne({
+    // Get course details
+    const course = await Course.findById(assignedCourse.courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Assigned course not found' });
+    }
+
+    let subjectContent = await SubjectContent.findOne({
       teacherId: teacher._id,
       courseId: assignedCourse.courseId,
       subjectName: assignedCourse.subject,
       isActive: true
     });
 
+    // If no subject content exists, create initial structure from course
     if (!subjectContent) {
-      return res.status(404).json({ success: false, message: 'Subject content not found for assigned subject' });
+      const subject = course.subjects?.find((s: any) => s.name === assignedCourse.subject);
+
+      if (subject && subject.modules) {
+        subjectContent = await SubjectContent.create({
+          courseId: assignedCourse.courseId,
+          courseName: course.title,
+          subjectName: assignedCourse.subject,
+          teacherId: teacher._id,
+          teacherName: teacher.fullName || `${teacher.firstName} ${teacher.lastName}`,
+          teacherEmail: teacher.email,
+          modules: subject.modules.map((mod: any, idx: number) => ({
+            moduleNumber: idx + 1,
+            moduleName: mod.name,
+            description: mod.description || '',
+            hasVideo: false,
+            hasNotes: false,
+            hasLiveClass: false,
+            hasTest: false,
+            hasQuestions: false,
+            order: idx + 1,
+            isActive: true
+          })),
+          description: subject.description,
+          isActive: true
+        });
+      } else {
+        // Create empty structure
+        subjectContent = await SubjectContent.create({
+          courseId: assignedCourse.courseId,
+          courseName: course.title,
+          subjectName: assignedCourse.subject,
+          teacherId: teacher._id,
+          teacherName: teacher.fullName || `${teacher.firstName} ${teacher.lastName}`,
+          teacherEmail: teacher.email,
+          modules: [],
+          isActive: true
+        });
+      }
     }
 
     // Find module and update
@@ -1542,11 +1592,28 @@ export const uploadVideo = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Module not found' });
     }
 
+    // Import FirebaseService dynamically to avoid circular imports
+    const FirebaseService = (await import('../../../services/firebaseService')).default;
+
+    // Upload video to Firebase Storage
+    const uploadResult = await FirebaseService.uploadVideo(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+      assignedCourse.subject,
+      {
+        title: videoTitle,
+        duration: videoDuration,
+        teacherId: (teacher._id as any).toString(),
+        courseId: assignedCourse.courseId,
+      }
+    );
+
     module.hasVideo = true;
-    module.videoUrl = videoUrl;
-    module.videoTitle = videoTitle;
+    module.videoUrl = uploadResult.storagePath; // Store storage path, not download URL
+    module.videoTitle = videoTitle || req.file.originalname;
     module.videoDuration = videoDuration;
-    module.videoUploadedAt = new Date();
+    module.videoUploadedAt = uploadResult.uploadedAt;
 
     await subjectContent.save();
 
@@ -1559,10 +1626,10 @@ export const uploadVideo = async (req: Request, res: Response) => {
           const idx = subjectContent.modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleNumber));
           if (idx !== -1 && subject.modules[idx]) {
             subject.modules[idx].hasVideo = true;
-            subject.modules[idx].videoUrl = videoUrl;
-            subject.modules[idx].videoTitle = videoTitle || subject.modules[idx].videoTitle;
-            subject.modules[idx].videoDuration = videoDuration || subject.modules[idx].videoDuration;
-            subject.modules[idx].videoUploadedAt = new Date();
+            subject.modules[idx].videoUrl = uploadResult.storagePath;
+            subject.modules[idx].videoTitle = videoTitle || req.file.originalname;
+            subject.modules[idx].videoDuration = videoDuration;
+            subject.modules[idx].videoUploadedAt = uploadResult.uploadedAt;
             await course.save();
           }
         }
@@ -1571,7 +1638,19 @@ export const uploadVideo = async (req: Request, res: Response) => {
       console.error('Failed to sync uploaded video to Course document:', err);
     }
 
-    return res.status(200).json({ success: true, message: 'Video uploaded successfully', data: { module, subjectContent }});
+    return res.status(200).json({
+      success: true,
+      message: 'Video uploaded successfully',
+      data: {
+        module,
+        subjectContent,
+        uploadResult: {
+          fileName: uploadResult.fileName,
+          size: uploadResult.size,
+          uploadedAt: uploadResult.uploadedAt,
+        }
+      }
+    });
 
   } catch (error: any) {
     console.error('Upload video error:', error);
@@ -1579,14 +1658,19 @@ export const uploadVideo = async (req: Request, res: Response) => {
   }
 };
 
-// Upload notes to module
+// Upload notes to module (Firebase Storage)
 export const uploadNotes = async (req: Request, res: Response) => {
   try {
     const { teacherEmail } = req.query;
-    const { moduleNumber, notesUrl, notesTitle } = req.body;
+    const { moduleNumber, notesTitle } = req.body;
 
-    if (!teacherEmail || !moduleNumber || !notesUrl) {
+    if (!teacherEmail || !moduleNumber) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Check if notes file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No notes file uploaded' });
     }
 
     // Get teacher and subject content
@@ -1598,15 +1682,59 @@ export const uploadNotes = async (req: Request, res: Response) => {
     // Get the assigned course and subject
     const assignedCourse = teacher.assignedCourses[0];
 
-    const subjectContent = await SubjectContent.findOne({
+    // Get course details
+    const course = await Course.findById(assignedCourse.courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Assigned course not found' });
+    }
+
+    let subjectContent = await SubjectContent.findOne({
       teacherId: teacher._id,
       courseId: assignedCourse.courseId,
       subjectName: assignedCourse.subject,
       isActive: true
     });
 
+    // If no subject content exists, create initial structure from course
     if (!subjectContent) {
-      return res.status(404).json({ success: false, message: 'Subject content not found for assigned subject' });
+      const subject = course.subjects?.find((s: any) => s.name === assignedCourse.subject);
+
+      if (subject && subject.modules) {
+        subjectContent = await SubjectContent.create({
+          courseId: assignedCourse.courseId,
+          courseName: course.title,
+          subjectName: assignedCourse.subject,
+          teacherId: teacher._id,
+          teacherName: teacher.fullName || `${teacher.firstName} ${teacher.lastName}`,
+          teacherEmail: teacher.email,
+          modules: subject.modules.map((mod: any, idx: number) => ({
+            moduleNumber: idx + 1,
+            moduleName: mod.name,
+            description: mod.description || '',
+            hasVideo: false,
+            hasNotes: false,
+            hasLiveClass: false,
+            hasTest: false,
+            hasQuestions: false,
+            order: idx + 1,
+            isActive: true
+          })),
+          description: subject.description,
+          isActive: true
+        });
+      } else {
+        // Create empty structure
+        subjectContent = await SubjectContent.create({
+          courseId: assignedCourse.courseId,
+          courseName: course.title,
+          subjectName: assignedCourse.subject,
+          teacherId: teacher._id,
+          teacherName: teacher.fullName || `${teacher.firstName} ${teacher.lastName}`,
+          teacherEmail: teacher.email,
+          modules: [],
+          isActive: true
+        });
+      }
     }
 
     // Find module and update
@@ -1615,10 +1743,26 @@ export const uploadNotes = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Module not found' });
     }
 
+    // Import FirebaseService dynamically to avoid circular imports
+    const FirebaseService = (await import('../../../services/firebaseService')).default;
+
+    // Upload notes to Firebase Storage
+    const uploadResult = await FirebaseService.uploadNotes(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+      assignedCourse.subject,
+      {
+        title: notesTitle,
+        teacherId: (teacher._id as any).toString(),
+        courseId: assignedCourse.courseId,
+      }
+    );
+
     module.hasNotes = true;
-    module.notesUrl = notesUrl;
-    module.notesTitle = notesTitle;
-    module.notesUploadedAt = new Date();
+    module.notesUrl = uploadResult.storagePath; // Store storage path, not download URL
+    module.notesTitle = notesTitle || req.file.originalname;
+    module.notesUploadedAt = uploadResult.uploadedAt;
 
     await subjectContent.save();
 
@@ -1631,9 +1775,9 @@ export const uploadNotes = async (req: Request, res: Response) => {
           const idx = subjectContent.modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleNumber));
           if (idx !== -1 && subject.modules[idx]) {
             subject.modules[idx].hasNotes = true;
-            subject.modules[idx].notesUrl = notesUrl;
-            subject.modules[idx].notesTitle = notesTitle || subject.modules[idx].notesTitle;
-            subject.modules[idx].notesUploadedAt = new Date();
+            subject.modules[idx].notesUrl = uploadResult.storagePath;
+            subject.modules[idx].notesTitle = notesTitle || req.file.originalname;
+            subject.modules[idx].notesUploadedAt = uploadResult.uploadedAt;
             await course.save();
           }
         }
@@ -1642,11 +1786,22 @@ export const uploadNotes = async (req: Request, res: Response) => {
       console.error('Failed to sync uploaded notes to Course document:', err);
     }
 
-    return res.status(200).json({ success: true, message: 'Notes uploaded successfully', data: { module, subjectContent }});
+    return res.status(200).json({
+      success: true,
+      message: 'Notes uploaded successfully',
+      data: {
+        module,
+        subjectContent,
+        uploadResult: {
+          fileName: uploadResult.fileName,
+          size: uploadResult.size,
+          uploadedAt: uploadResult.uploadedAt,
+        }
+      }
+    });
 
   } catch (error: any) {
     console.error('Upload notes error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Failed to upload notes' });
   }
 };
-

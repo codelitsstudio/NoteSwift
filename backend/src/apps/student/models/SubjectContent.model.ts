@@ -4,6 +4,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IModuleContent {
   moduleNumber: number;
   moduleName: string;
+  description?: string; // Description of the module content
   hasVideo: boolean;
   videoUrl?: string;
   videoTitle?: string;
@@ -60,6 +61,7 @@ export interface ISubjectContent extends Document {
 const moduleContentSchema = new Schema<IModuleContent>({
   moduleNumber: { type: Number, required: true },
   moduleName: { type: String, required: true },
+  description: { type: String }, // Description of the module content
   
   hasVideo: { type: Boolean, default: false },
   videoUrl: { type: String },

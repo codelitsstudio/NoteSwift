@@ -10,9 +10,44 @@ import * as courseController from '../controllers/courseController';
 import * as analyticsController from '../controllers/analyticsController';
 import * as authController from '../controllers/authController';
 import * as uploadController from '../controllers/uploadController';
+import * as userController from '../controllers/userController';
 import { authenticateTeacher } from '../middlewares/auth';
+import multer from 'multer';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage(); // Store files in memory for Firebase upload
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB limit for videos
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow video files
+    if (file.fieldname === 'video' && !file.mimetype.startsWith('video/')) {
+      return cb(new Error('Only video files are allowed for video uploads'));
+    }
+    // Allow document files for notes
+    if (file.fieldname === 'notes') {
+      const allowedMimes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'image/jpeg',
+        'image/png',
+        'image/gif'
+      ];
+      if (!allowedMimes.includes(file.mimetype)) {
+        return cb(new Error('Invalid file type for notes upload'));
+      }
+    }
+    cb(null, true);
+  }
+});
 
 // ==================== AUTH ROUTES ====================
 router.post('/auth/register', authController.register as any);
@@ -25,6 +60,8 @@ router.patch('/auth/profile', authenticateTeacher, authController.updateProfile 
 
 // ==================== UPLOAD ROUTES ====================
 router.post('/upload/sign', uploadController.generateSignature as any);
+router.post('/upload/video', authenticateTeacher, upload.single('video'), courseController.uploadVideo as any);
+router.post('/upload/notes', authenticateTeacher, upload.single('notes'), courseController.uploadNotes as any);
 
 // ==================== ANNOUNCEMENT ROUTES ====================
 router.get('/announcements', announcementController.getTeacherAnnouncements as any);
@@ -98,5 +135,8 @@ router.post('/courses/modules/upload-notes', courseController.uploadNotes as any
 // ==================== ANALYTICS ROUTES ====================
 router.get('/analytics', analyticsController.getTeacherAnalytics as any);
 router.get('/analytics/weekly-activity', analyticsController.getWeeklyActivity as any);
+
+// ==================== STUDENT ROUTES ====================
+router.get('/students', userController.getTeacherStudents as any);
 
 export default router;

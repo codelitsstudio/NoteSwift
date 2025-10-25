@@ -11,7 +11,8 @@ import {
   getPersonalizedRecommendations,
   getHomepageFeaturedCourses,
   getHomepageUpcomingCourses,
-  getCourseContent, getSubjectContent
+  getCourseContent, getSubjectContent, getCourseTeachers, getTeacherProfile,
+  getVideoSignedUrl, getNotesSignedUrl
 } from '../controllers/controller/courseContentController';
 import { authenticateStudent } from '../middlewares/student.middleware';
 
@@ -55,5 +56,11 @@ router.post('/progress/:courseId/module', authenticateStudent, updateModuleProgr
 // Course content endpoints (with teacher-managed content)
 router.get('/:courseId/content', authenticateStudent, getCourseContent);
 router.get('/:courseId/subject/:subjectName', authenticateStudent, getSubjectContent);
+router.get('/:courseId/teachers', getCourseTeachers);
+router.get('/teacher/:teacherId/profile', getTeacherProfile);
+
+// Media access endpoints (signed URLs)
+router.get('/:courseId/subject/:subjectName/module/:moduleNumber/video', authenticateStudent, getVideoSignedUrl);
+router.get('/:courseId/subject/:subjectName/module/:moduleNumber/notes', authenticateStudent, getNotesSignedUrl);
 
 export default router;

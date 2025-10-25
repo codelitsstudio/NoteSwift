@@ -26,7 +26,7 @@ export const signUpStudent: Controller = async (req, res, next) => {
         const body: SignupStudent.Req = req.body;
         const secret = process.env.SESSION_SECRET;
         const salt = await bcrypt.genSalt(10);
-        const existingStudent = await Student.findOne({ email: body.email });
+        const existingStudent = await Student.findOne({ email: body.email.toLowerCase() });
         if (existingStudent) {
             jsonResponse.clientError("Email address already registered");
             return;
@@ -74,7 +74,7 @@ export const signUpStudent: Controller = async (req, res, next) => {
             full_name: body.full_name,
             grade: body.grade,
             password: encrypted_password,
-            email: body.email,
+            email: body.email.toLowerCase(),
             avatarEmoji: avatarEmoji, // Permanent emoji assigned at registration
         });
 
@@ -211,7 +211,7 @@ export const loginStudent: Controller = async (req, res, next) => {
 
         // Find student
         console.log('🔍 Searching for student with email:', body.email);
-        const student = await Student.findOne({ email: body.email });
+        const student = await Student.findOne({ email: body.email.toLowerCase() });
         if (!student) {
             console.log('❌ Student not found for email:', body.email);
             // Log failed login attempt
@@ -232,26 +232,59 @@ export const loginStudent: Controller = async (req, res, next) => {
         }
 
         console.log('✅ Student found:', student._id);
+        console.log('🔍 Student object keys:', Object.keys(student));
+        console.log('🔍 Student _doc keys:', Object.keys(student._doc || {}));
+        console.log('🔍 Student password in _doc:', !!(student._doc && student._doc.password));
+        console.log('🔍 Student password exists:', !!student.password);
+        console.log('🔍 Student password type:', typeof student.password);
+        console.log('🔍 Student password length:', student.password ? student.password.length : 'N/A');
+
+        // Try accessing password directly from _doc if needed
+        const passwordField = student.password || (student._doc && student._doc.password);
+
+        console.log('🔍 Password field value exists:', !!passwordField);
+        console.log('🔍 Password field type:', typeof passwordField);
+        console.log('🔍 Password field length:', passwordField ? passwordField.length : 'N/A');
+        console.log('🔍 Password field starts with $2:', passwordField ? passwordField.startsWith('$2') : 'N/A');
+
+        // Check if student has a password field
+        if (!passwordField) {
+            console.log('❌ Student has no password field - account may need password reset');
+            jsonResponse.clientError("Account setup incomplete. Please use 'Forgot Password' to set up your password.");
+            return;
+        }
 
         // Compare password
         console.log('🔐 Comparing password...');
-        const match = await bcrypt.compare(body.password, student.password);
-        if (!match) {
-            console.log('❌ Password mismatch');
-            // Log failed login attempt
-            await auditLogger.logLogin(
-                student._id.toString(),
-                'student',
-                student.full_name || student.email,
-                student.email,
-                false,
-                {
-                    ipAddress: req.ip || req.connection.remoteAddress,
-                    userAgent: req.get('User-Agent'),
-                    reason: 'Invalid password'
-                }
-            );
-            jsonResponse.clientError("Invalid password");
+        console.log('🔐 Request password exists:', !!body.password);
+        console.log('🔐 Request password type:', typeof body.password);
+        console.log('🔐 Request password length:', body.password ? body.password.length : 'N/A');
+
+        try {
+            const match = await bcrypt.compare(body.password, passwordField);
+            console.log('🔐 Bcrypt compare result:', match);
+
+            if (!match) {
+                console.log('❌ Password mismatch');
+                // Log failed login attempt
+                await auditLogger.logLogin(
+                    student._id.toString(),
+                    'student',
+                    student.full_name || student.email,
+                    student.email,
+                    false,
+                    {
+                        ipAddress: req.ip || req.connection.remoteAddress,
+                        userAgent: req.get('User-Agent'),
+                        reason: 'Invalid password'
+                    }
+                );
+                jsonResponse.clientError("Invalid password");
+                return;
+            }
+        } catch (bcryptError) {
+            console.log('🚨 Bcrypt compare error:', bcryptError);
+            jsonResponse.serverError("Authentication error");
             return;
         }
 
@@ -315,7 +348,7 @@ export const sendEmailRegistrationOTP: Controller = async (req, res, next) => {
         }
 
         // Check if email already exists
-        const existingStudent = await Student.findOne({ email });
+        const existingStudent = await Student.findOne({ email: email.toLowerCase() });
         console.log("📊 Existing student found:", !!existingStudent);
         if (existingStudent) {
             console.log("❌ Email already registered, returning error");
@@ -428,14 +461,14 @@ export const updateStudent: Controller = async (req, res, next) => {
             }
             // Check if email is already taken by another user
             const existingStudent = await Student.findOne({ 
-                email: email, 
+                email: email.toLowerCase(), 
                 _id: { $ne: student._id } 
             });
             if (existingStudent) {
                 jsonResponse.clientError("Email address already in use");
                 return;
             }
-            updateData.email = email;
+            updateData.email = email.toLowerCase();
         }
 
         // Validate and update address if provided
@@ -1195,5 +1228,173 @@ export const sendReportEmail: Controller = async (req, res, next) => {
     } catch (error) {
         console.error("Error sending report email:", error);
         jsonResponse.serverError("Failed to send report. Please try again.");
+    }
+};
+
+// Unauthenticated Password Reset Controllers (for users who can't log in)
+
+// Step 1: Send password reset OTP (unauthenticated)
+export const sendPasswordResetOTP: Controller = async (req, res, next) => {
+    const jsonResponse = new JsonResponse(res);
+
+    try {
+        const { email } = req.body;
+
+        if (!email || email.trim().length === 0) {
+            jsonResponse.clientError("Email address is required");
+            return;
+        }
+
+        // Normalize email to lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+
+        console.log('📧 Sending password reset OTP to:', normalizedEmail);
+
+        // Check if student exists
+        const student = await Student.findOne({ email: normalizedEmail });
+        if (!student) {
+            // Don't reveal if email exists or not for security
+            jsonResponse.success({
+                message: "If an account with this email exists, a password reset code has been sent."
+            });
+            return;
+        }
+
+        // Send OTP to the email
+        const result = await emailOTPService.sendEmailOTP(normalizedEmail);
+
+        if (result.success) {
+            jsonResponse.success({
+                message: "If an account with this email exists, a password reset code has been sent."
+            });
+        } else {
+            // Still return success for security (don't reveal email existence)
+            console.error("Failed to send password reset OTP:", result.message);
+            jsonResponse.success({
+                message: "If an account with this email exists, a password reset code has been sent."
+            });
+        }
+
+    } catch (error) {
+        console.error("Error sending password reset OTP:", error);
+        // Return success for security reasons
+        jsonResponse.success({
+            message: "If an account with this email exists, a password reset code has been sent."
+        });
+    }
+};
+
+// Step 2: Verify password reset OTP (unauthenticated)
+export const verifyPasswordResetOTP: Controller = async (req, res, next) => {
+    const jsonResponse = new JsonResponse(res);
+
+    try {
+        const { email, otp_code } = req.body;
+
+        if (!email || email.trim().length === 0) {
+            jsonResponse.clientError("Email address is required");
+            return;
+        }
+
+        if (!otp_code) {
+            jsonResponse.clientError("Verification code is required");
+            return;
+        }
+
+        // Normalize email to lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+
+        console.log('🔐 Verifying password reset OTP for email:', normalizedEmail);
+
+        // Verify OTP
+        const otpResult = await emailOTPService.verifyEmailOTP(normalizedEmail, otp_code);
+
+        if (otpResult.success) {
+            jsonResponse.success({
+                message: "Code verified successfully. You can now set a new password.",
+                verified: true
+            });
+        } else {
+            jsonResponse.clientError(otpResult.message);
+        }
+
+    } catch (error) {
+        console.error("Error verifying password reset OTP:", error);
+        jsonResponse.serverError("Failed to verify code. Please try again.");
+    }
+};
+
+// Step 3: Reset password with OTP (unauthenticated)
+export const resetPasswordWithResetOTP: Controller = async (req, res, next) => {
+    const jsonResponse = new JsonResponse(res);
+
+    try {
+        const { email, otp_code, newPassword } = req.body;
+
+        if (!email || email.trim().length === 0) {
+            jsonResponse.clientError("Email address is required");
+            return;
+        }
+
+        if (!otp_code) {
+            jsonResponse.clientError("Verification code is required");
+            return;
+        }
+
+        if (!newPassword) {
+            jsonResponse.clientError("New password is required");
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            jsonResponse.clientError("New password must be at least 6 characters long");
+            return;
+        }
+
+        if (newPassword.length > 50) {
+            jsonResponse.clientError("Password is too long (maximum 50 characters)");
+            return;
+        }
+
+        // Normalize email to lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+
+        console.log('🔒 Resetting password with OTP for email:', normalizedEmail);
+
+        // Verify OTP first
+        const otpResult = await emailOTPService.verifyEmailOTP(normalizedEmail, otp_code);
+
+        if (!otpResult.success) {
+            jsonResponse.clientError(otpResult.message);
+            return;
+        }
+
+        // Find student
+        const student = await Student.findOne({ email: normalizedEmail });
+        if (!student) {
+            jsonResponse.clientError("Account not found");
+            return;
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update password by setting it directly and saving
+        student.password = hashedNewPassword;
+        const updatedStudent = await student.save();
+
+        console.log('✅ Password reset successfully for email:', normalizedEmail);
+        console.log('🔍 Updated student password exists:', !!updatedStudent.password);
+        console.log('🔍 Updated student password type:', typeof updatedStudent.password);
+        console.log('🔍 Updated student password length:', updatedStudent.password ? updatedStudent.password.length : 'N/A');
+
+        jsonResponse.success({
+            message: "Password reset successfully. You can now log in with your new password."
+        });
+
+    } catch (error) {
+        console.error("Error resetting password with OTP:", error);
+        jsonResponse.serverError("Failed to reset password. Please try again.");
     }
 };

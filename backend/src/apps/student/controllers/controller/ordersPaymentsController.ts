@@ -149,69 +149,137 @@ export const getUnlockCodes = async (req: Request, res: Response, next: NextFunc
 export const redeemUnlockCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { code, courseId, deviceHash } = req.body;
-    const userId = req.user?.id;
+    const student = res.locals.student;
 
-    if (!code || !courseId || !userId) {
+    console.log('🎫 REDEEM CODE REQUEST:', {
+      code: code ? 'provided' : 'missing',
+      courseId: courseId ? 'provided' : 'missing',
+      deviceHash: deviceHash ? 'provided' : 'missing',
+      studentId: student ? student._id : 'missing'
+    });
+
+    if (!code || !courseId || !student) {
+      console.log('❌ Missing required fields for redeem code');
       res.status(400).json({ success: false, message: "Code, course ID, and user authentication required" });
       return;
     }
 
-    const codeHash = hashCode(code.toUpperCase().replace(/-/g, ''));
+    const userId = student._id; // Keep as ObjectId
 
-    const unlockCode = await UnlockCode.findOne({ codeHash, courseId });
+    const courseIdObj = Types.ObjectId.isValid(courseId) ? new Types.ObjectId(courseId) : courseId;
+
+    const codeHash = hashCode(code.toUpperCase().replace(/-/g, ''));
+    console.log('🔍 Looking for unlock code with hash:', codeHash.substring(0, 10) + '...', 'for course:', courseId);
+    console.log('🔍 Code format check - original:', code, 'normalized:', code.toUpperCase().replace(/-/g, ''));
+
+    let unlockCode = await UnlockCode.findOne({ codeHash, courseId: courseIdObj });
+    
+    // If not found by hash, try to find by plain code if it exists
+    let foundByPlainCode = false;
     if (!unlockCode) {
+      console.log('🔍 Code not found by hash, trying plain code lookup...');
+      const plainCodeLookup = await UnlockCode.findOne({ 
+        $or: [
+          { code: code.toUpperCase().replace(/-/g, '') },
+          { code: code.toUpperCase() }
+        ],
+        courseId: courseIdObj
+      });
+      if (plainCodeLookup) {
+        console.log('✅ Found code by plain text lookup');
+        unlockCode = plainCodeLookup;
+        foundByPlainCode = true;
+      }
+    }
+    if (!unlockCode) {
+      console.log('❌ Unlock code not found in database');
+      // Debug: Show all codes for this course
+      const allCodesForCourse = await UnlockCode.find({ courseId: courseIdObj });
+      console.log('🔍 Debug: Found', allCodesForCourse.length, 'total codes for course', courseId);
+      allCodesForCourse.forEach((c, i) => {
+        console.log(`  ${i+1}. Hash: ${c.codeHash.substring(0, 16)}... Plain code: ${(c as any).code || 'N/A'} Used: ${c.isUsed}`);
+      });
       res.status(404).json({ success: false, message: "Invalid code or code doesn't match this course" });
       return;
     }
 
+    console.log('✅ Found unlock code:', {
+      id: unlockCode._id,
+      foundBy: foundByPlainCode ? 'plain_code' : 'hash',
+      isUsed: unlockCode.isUsed,
+      expiresOn: unlockCode.expiresOn,
+      courseId: unlockCode.courseId
+    });
+
     if (unlockCode.isUsed) {
+      console.log('❌ Code already used');
       res.status(400).json({ success: false, message: "This code has already been redeemed" });
       return;
     }
 
     if (unlockCode.expiresOn && unlockCode.expiresOn < new Date()) {
+      console.log('❌ Code expired:', unlockCode.expiresOn);
       res.status(400).json({ success: false, message: "This code has expired" });
       return;
     }
 
     // Check if user already enrolled in this course
-    const existingEnrollment = await CourseEnrollment.findOne({ courseId, studentId: userId });
+    const existingEnrollment = await CourseEnrollment.findOne({ courseId: courseIdObj, studentId: userId });
     if (existingEnrollment) {
+      console.log('❌ User already enrolled in course');
       res.status(400).json({ success: false, message: "You are already enrolled in this course" });
       return;
     }
 
     // Mark code as used
     unlockCode.isUsed = true;
-    unlockCode.usedByUserId = userId;
+    unlockCode.usedByUserId = userId.toString();
     unlockCode.usedDeviceHash = deviceHash;
     unlockCode.usedTimestamp = new Date();
     await unlockCode.save();
+    console.log('✅ Code marked as used');
 
     // Create enrollment
-    const enrollment = new CourseEnrollment({
+    console.log('🔄 Attempting to create enrollment with data:', {
       courseId,
+      studentId: userId,
+      enrolledAt: new Date(),
+      progress: 0
+    });
+    
+    const enrollment = new CourseEnrollment({
+      courseId: Types.ObjectId.isValid(courseId) ? new Types.ObjectId(courseId) : courseId,
       studentId: userId,
       enrolledAt: new Date(),
       progress: 0,
       completedLessons: [],
-      moduleProgress: {},
+      moduleProgress: [],
     });
-    await enrollment.save();
+    
+    try {
+      await enrollment.save();
+      console.log('✅ Enrollment created successfully:', enrollment._id);
+    } catch (enrollmentError) {
+      console.error('❌ Failed to save enrollment:', enrollmentError);
+      // Don't return here, continue with the rest but mark that enrollment failed
+      res.status(500).json({ success: false, message: "Code redeemed but enrollment creation failed" });
+      return;
+    }
 
     // Update course enrolled count
     await Course.findByIdAndUpdate(courseId, { $inc: { enrolledCount: 1 } });
+    console.log('✅ Course enrolled count updated');
 
     // Get course and user details for logging
     const course = await Course.findById(courseId);
-    // Note: We don't have direct access to user details here, so we'll use generic info
+    console.log('✅ Course found for logging:', course?.title || 'Unknown');
 
     // Log code redemption and enrollment
     await auditLogger.logPayment(
       unlockCode.transactionId.toString(),
-      userId,
+      userId.toString(),
       'student',
-      'Unknown Student', // We don't have student name
+      student.full_name || 'Unknown Student',
       0, // Amount not available in this context
       'USD',
       'success',
@@ -225,13 +293,15 @@ export const redeemUnlockCode = async (req: Request, res: Response, next: NextFu
       }
     );
 
+    console.log('✅ Code redemption logged successfully');
+
     res.json({
       success: true,
       message: "Code redeemed successfully. You are now enrolled in the course.",
       data: { enrollment }
     });
   } catch (error) {
-    console.error("Error redeeming unlock code:", error);
+    console.error("❌ Error redeeming unlock code:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
