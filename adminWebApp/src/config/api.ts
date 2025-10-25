@@ -3,7 +3,7 @@
  * All API endpoints point to the Express backend
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:5002';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
   BASE: API_BASE_URL,

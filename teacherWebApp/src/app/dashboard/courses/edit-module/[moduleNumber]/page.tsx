@@ -38,6 +38,8 @@ export default function EditModulePage() {
             (m: any) => m.moduleNumber === moduleNumber
           );
           if (foundModule) {
+            console.log('Found module:', foundModule);
+            console.log('Module description:', foundModule.description);
             setModule(foundModule);
           } else {
             router.push('/dashboard/courses');

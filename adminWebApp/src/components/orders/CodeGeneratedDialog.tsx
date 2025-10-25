@@ -17,15 +17,15 @@ export function CodeGeneratedDialog({ open, onOpenChange, code }: CodeGeneratedD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-green-600">✅ Unlock Code Generated Successfully!</DialogTitle>
+          <DialogTitle className="text-blue-600">Unlock Code Generated Successfully!</DialogTitle>
           <DialogDescription>
             Transaction created and unlock code generated. Please copy and securely store this code.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="p-6 bg-green-50 border-2 border-green-200 rounded-lg text-center">
-            <Label className="text-sm font-medium text-green-800 mb-2 block">Your Unlock Code</Label>
-            <p className="text-2xl font-mono font-bold text-green-700 tracking-wider mb-4">
+          <div className="p-6 bg-blue-50 border-2 border-blue-200 rounded-lg text-center">
+            <Label className="text-sm font-medium text-blue-800 mb-2 block">Your Unlock Code</Label>
+            <p className="text-2xl font-mono font-bold text-blue-700 tracking-wider mb-4">
               {code}
             </p>
             <Button

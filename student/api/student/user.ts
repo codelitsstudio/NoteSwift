@@ -1,5 +1,5 @@
 import api from "../axios"
-import { TStudentWithNoSensitive } from "@shared/model/students/Student"
+import { TStudentWithNoSensitive } from "@core/models/students/Student"
 
 export const getFetchCurrentUser = async() => {
     const res = await api.get("/student/user/me");
@@ -199,6 +199,66 @@ export const resetPasswordWithOTP = async (otpCode: string, newPassword: string)
   try {
     console.log('🔒 Resetting password with OTP...');
     const response = await api.post('/student/user/password-change/reset-with-otp', { 
+      otp_code: otpCode, 
+      newPassword 
+    });
+    console.log('✅ Password reset successfully:', response.data);
+    
+    // Check if the response indicates an error
+    if (response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to reset password');
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Reset password error:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to reset password');
+  }
+};
+
+// Unauthenticated Password Reset APIs (for users who can't log in)
+
+export const sendPasswordResetOTP = async (email: string) => {
+  try {
+    console.log('📧 Sending password reset OTP to:', email);
+    const response = await api.post('/student/auth/password-reset/send-otp', { email });
+    console.log('✅ Password reset OTP sent:', response.data);
+    
+    // Check if the response indicates an error
+    if (response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to send verification code');
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Send password reset OTP error:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to send verification code');
+  }
+};
+
+export const verifyPasswordResetOTP = async (email: string, otpCode: string) => {
+  try {
+    console.log('🔐 Verifying password reset OTP for:', email);
+    const response = await api.post('/student/auth/password-reset/verify-otp', { email, otp_code: otpCode });
+    console.log('✅ Password reset OTP verified:', response.data);
+    
+    // Check if the response indicates an error
+    if (response.data.error === true) {
+      throw new Error(response.data.message || 'OTP verification failed');
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Verify password reset OTP error:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to verify OTP');
+  }
+};
+
+export const resetPasswordWithResetOTP = async (email: string, otpCode: string, newPassword: string) => {
+  try {
+    console.log('🔒 Resetting password with reset OTP for:', email);
+    const response = await api.post('/student/auth/password-reset/reset', { 
+      email,
       otp_code: otpCode, 
       newPassword 
     });

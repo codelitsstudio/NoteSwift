@@ -8,9 +8,10 @@ interface ChapterCardProps {
   tags?: { type: "live" | "video" | "notes"; label: string; count?: number }[];
   onPress?: () => void;
   isActive?: boolean;
+  hasNotes?: boolean; // Add hasNotes prop
 }
 
-const ChapterCard: React.FC<ChapterCardProps> = ({ title, subtitle, tags = [], onPress, isActive }) => {
+const ChapterCard: React.FC<ChapterCardProps> = ({ title, subtitle, tags = [], onPress, isActive, hasNotes }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -22,6 +23,7 @@ const ChapterCard: React.FC<ChapterCardProps> = ({ title, subtitle, tags = [], o
         {subtitle && (
           <Text className="text-xs text-gray-500 mb-1">{subtitle}</Text>
         )}
+       
         <View className="flex-row flex-wrap">
           {tags.map((tag, index) => {
             return (

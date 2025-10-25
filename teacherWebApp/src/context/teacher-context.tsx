@@ -137,7 +137,8 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
               // Fetch all subject content for assigned courses
               let subjects: AssignedSubject[] = [];
               try {
-                const subjectResponse = await fetch(`${API_ENDPOINTS.COURSES}/all-subject-content`, {
+                // Use the correct endpoint that returns SubjectContent data with uploaded materials
+                const subjectResponse = await fetch(`${API_ENDPOINTS.COURSES}/subject-content?teacherEmail=${encodeURIComponent(teacher.email)}`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -146,8 +147,26 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
 
                 if (subjectResponse.ok) {
                   const subjectData = await subjectResponse.json();
-                  if (subjectData.success && subjectData.result?.subjects) {
-                    subjects = subjectData.result.subjects;
+                  if (subjectData.success && subjectData.data.subjectContent) {
+                    const subjectContent = subjectData.data.subjectContent;
+                    subjects = [{
+                      _id: subjectContent._id,
+                      courseId: subjectContent.courseId,
+                      courseName: subjectContent.courseName,
+                      courseProgram: subjectData.data.course?.program || '',
+                      courseThumbnail: '',
+                      subjectName: subjectContent.subjectName,
+                      description: subjectContent.description,
+                      syllabus: '',
+                      objectives: [],
+                      modules: subjectContent.modules || [],
+                      lastUpdated: subjectContent.lastUpdated,
+                      assignedAt: subjectContent.createdAt,
+                      totalModules: subjectContent.modules?.length || 0,
+                      modulesWithVideo: subjectContent.modules?.filter((m: any) => m.hasVideo).length || 0,
+                      modulesWithNotes: subjectContent.modules?.filter((m: any) => m.hasNotes).length || 0,
+                      scheduledLiveClasses: 0,
+                    }];
                     console.log('Subject content fetched:', subjects.length, 'subjects with modules');
                     console.log('First subject modules:', subjects[0]?.modules?.length || 0);
                   }
@@ -161,7 +180,7 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
                 teacherEmail: teacher.email,
                 teacherProfilePic: profilePic,
                 assignedCourses: courses,
-                assignedSubjects: subjects,
+                assignedSubjects: [...subjects],
                 isLoading: false,
               }));
               
@@ -225,7 +244,7 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
               teacherEmail: subjectContent.teacherEmail,
               teacherProfilePic: profilePic,
               assignedCourses: courses,
-              assignedSubjects: subjects,
+              assignedSubjects: [subjects[0]], // Wrap in array since it's a single subject
               isLoading: false,
             }));
           }

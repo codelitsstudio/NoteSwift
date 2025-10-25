@@ -25,7 +25,7 @@ export default function OtpInput({ length = 6, onComplete }: OtpInputProps) {
   useEffect(() => {
     if (code.length === length) {
       onComplete(code);
-      router.push("/onboarding/Login/Success"); // dev fallback navigation
+      // Navigation handled by parent component
     }
   }, [code, length, onComplete]);
 

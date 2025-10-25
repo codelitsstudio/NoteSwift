@@ -1,26 +1,62 @@
 
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import AttachmentViewerBottomSheet from "./AttachmentViewerBottomSheet";
+import api from "@/api/axios";
 
-const attachments = [
-  {
-    name: 'Study Fundamentals.Pdf',
-    type: 'PDF',
-    size: '1.2 MB',
-    note: 'This PDF covers the basics you need for the lesson.'
-  },
-  // Add more attachments here in the future
-];
+interface AttachmentPageProps {
+  courseId: string;
+  subjectName: string;
+  moduleNumber: number;
+  notesTitle?: string;
+}
 
-const AttachmentPage: React.FC = () => {
-  const hasAttachments = attachments.length > 0;
+const AttachmentPage: React.FC<AttachmentPageProps> = ({ courseId, subjectName, moduleNumber, notesTitle }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<{ name: string; uri: string } | null>(null);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Remote PDF URL
-  const pdfUri = "http://noteswift.in/wp-content/uploads/2025/09/Learn-How-To-Actually-Study-Before-Its-Too-Late.pdf";
+  // Fetch signed URL for notes on component mount
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/notes`);
+        if (response.data.success && response.data.signedUrl) {
+          setSignedUrl(response.data.signedUrl);
+        } else {
+          throw new Error('Failed to get signed URL');
+        }
+      } catch (err) {
+        console.error('Error fetching notes signed URL:', err);
+        setError('Failed to load notes. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSignedUrl();
+  }, [courseId, subjectName, moduleNumber]);
+
+  // Use dynamic notes URL or fallback to default
+  const pdfUri = signedUrl || "http://noteswift.in/wp-content/uploads/2025/09/Learn-How-To-Actually-Study-Before-Its-Too-Late.pdf";
+  const pdfTitle = notesTitle || "Study Fundamentals.Pdf";
+
+  // Dynamic attachments based on provided notes
+  const attachments = signedUrl ? [
+    {
+      name: pdfTitle,
+      type: 'PDF',
+      size: '1.2 MB',
+      note: 'This PDF covers the lesson content provided by your instructor.'
+    }
+  ] : [];
+
+  const hasAttachments = attachments.length > 0;
 
   // Handler to open attachment viewer
   function handleOpenAttachment(att: { name: string; type: string; size: string; note?: string }) {
@@ -35,7 +71,42 @@ const AttachmentPage: React.FC = () => {
         Here you can download and view all lesson resources, such as PDFs, slides, and other files provided by your instructor. Tap the view button to open a file.
       </Text>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 0, paddingHorizontal: 0 }}>
-        {hasAttachments ? (
+        {loading ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center', minHeight: 120, marginTop: 32 }}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={{ color: '#6b7280', fontSize: 13, marginTop: 8 }}>Loading notes...</Text>
+          </View>
+        ) : error ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center', minHeight: 120, marginTop: 32 }}>
+            <Icon name="error-outline" size={40} color="#EF4444" style={{ marginBottom: 10 }} />
+            <Text style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', paddingHorizontal: 20 }}>{error}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setError(null);
+                setLoading(true);
+                // Re-fetch signed URL
+                const fetchSignedUrl = async () => {
+                  try {
+                    const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/notes`);
+                    if (response.data.success && response.data.signedUrl) {
+                      setSignedUrl(response.data.signedUrl);
+                    } else {
+                      throw new Error('Failed to get signed URL');
+                    }
+                  } catch (err) {
+                    setError('Failed to load notes. Please try again.');
+                  } finally {
+                    setLoading(false);
+                  }
+                };
+                fetchSignedUrl();
+              }}
+              style={{ marginTop: 16, backgroundColor: '#3B82F6', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : hasAttachments ? (
           attachments.map((att, idx) => (
             <View key={att.name}>
               <View

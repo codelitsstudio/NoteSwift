@@ -24,7 +24,7 @@ export interface Subject {
   image: string;
   modules: Module[];
   totalLessons: number;
-  estimatedHours: number;
+  estimatedHours?: number;
 }
 
 export interface Course {

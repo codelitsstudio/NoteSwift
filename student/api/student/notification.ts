@@ -1,6 +1,6 @@
 import api from "../axios";
 import { NotificationData } from "../../components/Picker/NotificationSheet";
-import { Notification } from "@shared/model/common/Notification";
+import { Notification } from "@core/models/common/Notification";
 
 export const fetchActiveHomepageNotification = async (): Promise<NotificationData | null> => {
   try {

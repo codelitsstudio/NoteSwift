@@ -54,6 +54,43 @@ async function fetchAPI<T = any>(
   }
 }
 
+async function uploadFileAPI<T = any>(
+  endpoint: string,
+  formData: FormData,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  try {
+    // Get the JWT token from localStorage
+    const token = typeof window !== 'undefined' ? localStorage.getItem('teacherToken') : null;
+    const headers: Record<string, string> = {};
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      body: formData,
+      headers,
+      ...options,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'File upload failed');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error(`Upload Error [${endpoint}]:`, error);
+    return {
+      success: false,
+      error: error.message || 'Upload error occurred',
+    };
+  }
+}
+
 // ==================== ANNOUNCEMENT APIs ====================
 export const announcementAPI = {
   getAll: (teacherEmail: string, subjectContentId?: string) => {
@@ -398,18 +435,23 @@ export const courseAPI = {
     });
   },
 
-  uploadVideo: (teacherEmail: string, data: any) => {
-    return fetchAPI(`/teacher/courses/modules/upload-video?teacherEmail=${teacherEmail}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  uploadVideo: (teacherEmail: string, moduleNumber: number, videoFile: File, videoTitle: string, videoDuration?: number) => {
+    const formData = new FormData();
+    formData.append('video', videoFile);
+    formData.append('moduleNumber', moduleNumber.toString());
+    formData.append('videoTitle', videoTitle);
+    if (videoDuration) {
+      formData.append('videoDuration', videoDuration.toString());
+    }
+    return uploadFileAPI(`/teacher/upload/video?teacherEmail=${teacherEmail}`, formData);
   },
 
-  uploadNotes: (teacherEmail: string, data: any) => {
-    return fetchAPI(`/teacher/courses/modules/upload-notes?teacherEmail=${teacherEmail}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  uploadNotes: (teacherEmail: string, moduleNumber: number, notesFile: File, notesTitle: string) => {
+    const formData = new FormData();
+    formData.append('notes', notesFile);
+    formData.append('moduleNumber', moduleNumber.toString());
+    formData.append('notesTitle', notesTitle);
+    return uploadFileAPI(`/teacher/upload/notes?teacherEmail=${teacherEmail}`, formData);
   },
 };
 

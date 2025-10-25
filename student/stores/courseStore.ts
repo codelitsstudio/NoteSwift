@@ -76,6 +76,14 @@ interface CourseState extends ApiState {
   enrolledCourses: string[]; // Array of enrolled course IDs
   enrollments: CourseEnrollment[]; // Array of full enrollment objects with progress
   
+  // Course Selection
+  selectedCourse: Course | null; // Currently selected course for learning
+  
+  // Subject Content
+  currentSubjectContent: any; // Currently loaded subject content with modules
+  subjectContentLoading: boolean;
+  subjectContentError: string | null;
+  
   // Popup state
   hasShownPopupToday: boolean;
   lastPopupDate: string | null;
@@ -88,6 +96,14 @@ interface CourseState extends ApiState {
   checkAndShowPopup: (userId: string) => boolean;
   markPopupShown: () => void;
   fetchUserEnrollments: (userId: string) => Promise<void>;
+  
+  // Course Selection Actions
+  selectCourse: (course: Course | null) => void;
+  getSelectedCourse: () => Course | null;
+  
+  // Subject Content Actions
+  fetchSubjectContent: (courseId: string, subjectName: string) => Promise<void>;
+  clearSubjectContent: () => void;
   
   // Legacy methods for backward compatibility
   enrollCourse: (courseId: string) => Promise<void>;
@@ -104,6 +120,10 @@ const initialState = {
   featuredCourse: null,
   enrolledCourses: [],
   enrollments: [],
+  selectedCourse: null,
+  currentSubjectContent: null,
+  subjectContentLoading: false,
+  subjectContentError: null,
   hasShownPopupToday: false,
   lastPopupDate: null,
 };
@@ -331,6 +351,16 @@ export const useCourseStore = create<CourseState>()(
         });
       },
 
+      // Course Selection Actions
+      selectCourse: (course: Course | null) => {
+        console.log('🎯 Selecting course:', course?.title || 'None');
+        set({ selectedCourse: course });
+      },
+
+      getSelectedCourse: () => {
+        return get().selectedCourse;
+      },
+
       // Legacy methods for backward compatibility
       enrollCourse: async (courseId: string) => {
         const success = await get().enrollInCourse(courseId);
@@ -341,6 +371,41 @@ export const useCourseStore = create<CourseState>()(
 
       fetchEnrolledCourses: async () => {
         console.warn('fetchEnrolledCourses called without userId - use fetchUserEnrollments instead');
+      },
+
+      // Subject Content Actions
+      fetchSubjectContent: async (courseId: string, subjectName: string) => {
+        try {
+          console.log('📚 Fetching subject content:', { courseId, subjectName });
+          set({ subjectContentLoading: true, subjectContentError: null });
+          
+          const response = await axios.get(`/courses/${courseId}/subject/${encodeURIComponent(subjectName)}`);
+          
+          if (response.data.success) {
+            console.log('✅ Subject content fetched:', response.data.data.subjectName);
+            set({ 
+              currentSubjectContent: response.data.data,
+              subjectContentLoading: false 
+            });
+          } else {
+            throw new Error(response.data.message || 'Failed to fetch subject content');
+          }
+        } catch (error: any) {
+          console.error('❌ Error fetching subject content:', error);
+          set({ 
+            subjectContentError: error.response?.data?.message || error.message || 'Failed to load subject content',
+            subjectContentLoading: false,
+            currentSubjectContent: null
+          });
+        }
+      },
+
+      clearSubjectContent: () => {
+        set({ 
+          currentSubjectContent: null,
+          subjectContentLoading: false,
+          subjectContentError: null
+        });
       },
 
       reset: () => {

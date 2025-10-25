@@ -1,4 +1,4 @@
-import { TCourse } from "@shared/model/common/Course";
+import { TCourse } from "@core/models/common/Course";
 import { ApiState } from "./common";
 import { create } from "zustand";
 import { getLearnFeed } from "@/api/student/learn";

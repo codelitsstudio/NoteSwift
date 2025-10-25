@@ -93,7 +93,14 @@ export default function FeaturedClasses() {
             teacher={course.offeredBy || "NoteSwift"}
             time="Anytime"
             image={course.thumbnail ? { uri: course.thumbnail } : require("../../../assets/images/onb-5.png")}
-            onPress={() => router.push(`/Home/Components/PackageDetails?packageData=${encodeURIComponent(JSON.stringify({ ...course, type: course.type }))}`)}
+            onPress={() => {
+              // Ensure id field exists for consistency
+              const courseData = { ...course, type: course.type };
+              if (!(courseData as any).id && courseData._id) {
+                (courseData as any).id = courseData._id;
+              }
+              router.push(`/Home/Components/PackageDetails?packageData=${encodeURIComponent(JSON.stringify(courseData))}`)
+            }}
           />
         ))}
       </ScrollView>

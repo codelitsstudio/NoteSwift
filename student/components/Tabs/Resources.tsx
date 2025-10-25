@@ -41,8 +41,21 @@ const resources = [
   },
 ];
 
-const Resources: React.FC = () => {
-  const hasResources = resources.length > 0;
+const Resources: React.FC<{ modules?: any[] }> = ({ modules = [] }) => {
+  // If modules are provided, use them to generate resources
+  const moduleResources = modules
+    .filter(module => module.hasNotes && module.notesUrl)
+    .map(module => ({
+      name: module.notesTitle || `${module.moduleName} Notes`,
+      type: 'PDF',
+      size: 'N/A', // Size not available from backend
+      note: module.description || 'Module notes and study materials',
+      uri: module.notesUrl
+    }));
+
+  // Use module resources if available, otherwise fall back to default resources
+  const resourcesToShow = moduleResources.length > 0 ? moduleResources : resources;
+  const hasResources = resourcesToShow.length > 0;
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<{ name: string; uri: string } | null>(null);
 
@@ -61,7 +74,7 @@ const Resources: React.FC = () => {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 0, paddingHorizontal: 0 }}>
         {hasResources ? (
-          resources.map((resource, idx) => (
+          resourcesToShow.map((resource, idx) => (
             <View key={resource.name}>
               <View
                 style={{

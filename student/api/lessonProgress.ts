@@ -33,3 +33,9 @@ export const updateModuleProgress = async (
   });
   return res.data;
 };
+
+// Get subject content with real modules
+export const getSubjectContent = async (courseId: string, subjectName: string) => {
+  const res = await api.get(`/courses/${courseId}/subject/${encodeURIComponent(subjectName)}`);
+  return res.data;
+};

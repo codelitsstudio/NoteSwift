@@ -11,6 +11,7 @@ type ModuleShape = { id?: string; title: string; subtitle?: string; tags?: any[]
 type DataShape = {
   id?: string;
   _id?: string;
+  name?: string; // Add name property
   modules?: ModuleShape[];
   tests?: any[];
   notes?: any[];
@@ -37,6 +38,10 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
   const [currentLesson, setCurrentLesson] = useState<string | null>(completedLessons.length > 0 ? completedLessons[completedLessons.length-1] : (data.modules?.[0]?.id ?? null));
   const router = useRouter();
 
+  console.log('🎯 ChapterTabs received data:', data);
+  console.log('🎯 ChapterTabs modules:', data.modules);
+  console.log('🎯 ChapterTabs modules length:', data.modules?.length);
+
   // Prevent infinite refresh: only call onRefreshProgress once per focus, not on every render
   // Only refresh progress when screen is focused, not on every render or callback change
   useFocusEffect(
@@ -58,28 +63,18 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
 
     // Always use MongoDB ObjectId for courseId
     const mongoCourseId = (data._id) ? data._id : courseId;
-    // Check if this is an "Up Next" module (not the first module)
-    const moduleIndex = data.modules?.findIndex((module: ModuleShape) => module.id === lessonId) ?? -1;
-    if (moduleIndex > 0) {
-      // Navigate to NotesAndReadable with the corresponding module number
-      const moduleNumber = moduleIndex + 1;
-      router.push({
-        pathname: "/Chapter/ChapterDetail/NotesAndReadable",
-        params: { module: moduleNumber.toString(), courseId: mongoCourseId },
-      });
-    } else {
-      // Navigate to chapter detail
-      console.log('🚀 ChapterTabs navigation to [chapterDetail]:', {
-        lessonId,
-        mongoCourseId,
-        subjectId: data.id,
-        pathname: "/Chapter/[chapterDetail]"
-      });
-      router.push({
-        pathname: "/Chapter/[chapterDetail]",
-        params: { chapterDetail: lessonId, lesson: lessonId, courseId: mongoCourseId, subjectId: data.id },
-      });
-    }
+    
+    // Navigate to chapter detail for all modules (using backend data)
+    console.log('🚀 ChapterTabs navigation to [chapterDetail]:', {
+      lessonId,
+      mongoCourseId,
+      subjectId: data.id,
+      pathname: "/Chapter/[chapterDetail]"
+    });
+    router.push({
+      pathname: "/Chapter/[chapterDetail]",
+      params: { chapterDetail: lessonId, lesson: lessonId, courseId: mongoCourseId, subjectId: data.id },
+    });
   };
 
 
@@ -118,6 +113,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                         subtitle={data.modules[0].subtitle}
                         onPress={() => openLesson(data.modules?.[0]?.id)}
                         isActive={currentLesson === data.modules[0].id}
+                        hasNotes={(data.modules[0] as any).hasNotes}
                       />
                       {/* Completion percentage above progress bar */}
                       <View className="mx-8 mt-2 mb-1">
@@ -146,7 +142,8 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                   {data.modules.slice(1).map((module: ModuleShape, i: number) => {
                     // Only show Notes tag for non-first modules
                     const notesTag = (module.tags || []).find((t: any) => t.type === 'notes');
-                    const moduleNumber = i + 2; // Module 2, 3, 4, 5 for modules 1, 2, 3, 4
+                    // Use the real module number from the API data
+                    const moduleNumber = (module as any).moduleNumber || (i + 2);
                     // Use backend-calculated module progress only
                     const moduleProgressValue = moduleProgress && typeof moduleProgress[moduleNumber] === 'number' && !isNaN(moduleProgress[moduleNumber])
                       ? Math.round(moduleProgress[moduleNumber])
@@ -159,6 +156,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                           subtitle={module.subtitle}
                           onPress={() => openLesson(module.id)}
                           isActive={currentLesson === module.id}
+                          hasNotes={(module as any).hasNotes}
                         />
                       {/* Progress bar with real percentage */}
                       <View className="mx-8 mb-1">
@@ -227,7 +225,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
 
       {/* Resources */}
       {active === "Resources" && (
-        <Resources />
+        <Resources modules={data.modules} />
       )}
 
       {/* Info */}

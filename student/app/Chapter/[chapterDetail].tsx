@@ -8,12 +8,14 @@ import { courses, Module } from "../../utils/courseData";
 import FooterNav from "./ChapterDetail/FooterNav";
 import { updateModuleProgress, getModuleProgress } from "../../api/lessonProgress";
 import { useAuthStore } from "../../stores/authStore";
+import { useCourseStore } from "../../stores/courseStore";
 
 export default function ChapterDetailPage() {
   const router = useRouter();
   const { chapterDetail, courseId, subjectId } = useLocalSearchParams(); // chapterDetail can be moduleId or subjectId
   const lesson = chapterDetail; // For backward compatibility
   const { user } = useAuthStore();
+  const { currentSubjectContent, subjectContentLoading, subjectContentError, fetchSubjectContent } = useCourseStore();
 
   console.log('🔍 [chapterDetail].tsx DEBUG:', {
     receivedChapterDetail: chapterDetail,
@@ -22,104 +24,85 @@ export default function ChapterDetailPage() {
     receivedSubjectId: subjectId,
   });
 
-  // Check if chapterDetail is actually a subject ID (wrong navigation)
-  const isSubjectId = chapterDetail && typeof chapterDetail === 'string' && 
-                     chapterDetail.includes('-') && !chapterDetail.includes('-module-');
-  
-  // If it's a subject ID, find the subject and show subject page
-  if (isSubjectId) {
-    console.log('📚 Treating chapterDetail as subject ID:', chapterDetail);
-    
-    // Find the subject from courseData
-    let subjectData;
-    for (const courseKey in courses) {
-      const course = courses[courseKey];
-      subjectData = course.subjects.find(s => s.id === chapterDetail);
-      if (subjectData) break;
-    }
-    
-    if (subjectData) {
-      // Import ChapterTabs here to avoid circular imports
-      const ChapterTabs = require('./ChapterTabs').default;
-      
-      return (
-        <View className="flex-1 bg-[#FAFAFA]">
-          <View className="bg-white p-4">
-            <Text className="text-xl font-bold">{subjectData.name}</Text>
-            <Text className="text-gray-600 mt-2">{subjectData.description}</Text>
-          </View>
-          
-          <ChapterTabs
-            data={subjectData}
-            progress={0}
-            completedLessons={[]}
-            onLessonProgress={() => {}}
-            loading={false}
-            courseId={subjectData.id}
-            moduleProgress={{}}
-            onRefreshProgress={() => {}}
-          />
-        </View>
-      );
-    }
-  }
-
-  // Find the chapter (module) from courseData
-  let chapterData: Module | undefined;
-  let foundSubject;
-  for (const courseKey in courses) {
-    const course = courses[courseKey];
-    foundSubject = course.subjects.find(s => s.id === subjectId);
-    if (foundSubject) {
-      console.log('📚 Found subject:', foundSubject.name, 'with modules:', foundSubject.modules.map(m => m.id));
-      chapterData = foundSubject.modules.find(m => m.id === lesson);
-      console.log('🎯 Looking for module:', lesson, 'Found:', !!chapterData);
-      break;
-    }
-  }
-
-  const data = chapterData;
-  const [videoCompleted, setVideoCompleted] = useState(false);
-
-  // Check backend for video completion status on mount
+  // Fetch subject content if not already loaded
   useEffect(() => {
-    const checkVideoCompletion = async () => {
-      if (courseId) {
-        try {
-          const res = await getModuleProgress(courseId as string, 1); // Module 1 for video
-          if (res.success && res.data && res.data.moduleProgress?.videoCompleted) {
-            setVideoCompleted(true);
-          }
-        } catch (error) {
-          console.error('Error checking video completion:', error);
-        }
-      }
-    };
-    checkVideoCompletion();
-  }, [courseId]);
-
-  const handleVideoCompleted = useCallback(async () => {
-    if (!courseId || !user?.id) return;
-    
-    try {
-      // Module 1 VIDEO completion (separate from notes completion)
-      await updateModuleProgress(courseId as string, 1, true);
-      setVideoCompleted(true);
-    } catch (error) {
-      console.error('Error updating video progress:', error);
+    if (courseId && subjectId && !currentSubjectContent) {
+      console.log('📚 Fetching subject content for chapter detail:', { courseId, subjectId });
+      fetchSubjectContent(courseId as string, subjectId as string);
     }
-  }, [courseId, user?.id]);
+  }, [courseId, subjectId, currentSubjectContent, fetchSubjectContent]);
 
-  const handleVideoCompletionStatusChange = useCallback((completed: boolean) => {
-    // Update local state when video completion status changes
-    setVideoCompleted(completed);
-  }, []);
+  // Find the module from the current subject content
+  let chapterData: any = null;
+  let moduleNumber: number = 1;
+  if (currentSubjectContent && currentSubjectContent.modules) {
+    // Extract module number from lessonId (e.g., "module-1" -> 1)
+    const moduleMatch = lesson?.toString().match(/module-(\d+)/);
+    moduleNumber = moduleMatch ? parseInt(moduleMatch[1]) : 1;
+    
+    if (moduleNumber) {
+      chapterData = currentSubjectContent.modules.find((module: any) => module.moduleNumber === moduleNumber);
+      console.log('🎯 Found module by number:', moduleNumber, 'Module data:', chapterData);
+    }
+    
+    // Fallback: try to find by id
+    if (!chapterData) {
+      chapterData = currentSubjectContent.modules.find((module: any) => module.id === lesson);
+      console.log('🎯 Found module by id:', lesson, 'Module data:', chapterData);
+    }
+  }
+
+  // Transform the module data to match the expected format
+  const data = chapterData ? {
+    id: `module-${chapterData.moduleNumber}`,
+    title: chapterData.moduleName || `Module ${chapterData.moduleNumber}`,
+    subtitle: chapterData.description || 'Module content',
+    description: chapterData.description || 'Module description',
+    hasVideo: chapterData.hasVideo || false,
+    hasNotes: chapterData.hasNotes || false,
+    videoUrl: chapterData.videoUrl || null,
+    notesUrl: chapterData.notesUrl || null,
+    videoTitle: chapterData.videoTitle || null,
+    notesTitle: chapterData.notesTitle || null,
+    teacherId: currentSubjectContent?.teacherId || null,
+    tags: [
+      chapterData.hasVideo ? { type: 'video' as const, label: 'Video', count: 1 } : null,
+      chapterData.hasNotes ? { type: 'notes' as const, label: 'Notes', count: 1 } : null,
+      chapterData.hasLiveClass ? { type: 'live' as const, label: 'Live Class', count: 1 } : null
+    ].filter((tag): tag is { type: "video" | "notes" | "live"; label: string; count: number } => tag !== null)
+  } : null;
+
+  // Show loading state while fetching subject content
+  if (subjectContentLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-gray-600 text-base">Loading chapter details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state if subject content failed to load
+  if (subjectContentError) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-gray-600 text-base">Failed to load chapter details.</Text>
+          <Text className="text-xs text-red-400 mt-2">Error: {subjectContentError}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!data) {
     return (
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-gray-600 text-base">Chapter not found.</Text>
+          <Text className="text-gray-600 text-base">Chapter details not found.</Text>
+          <Text className="text-xs text-gray-400 mt-2">Module: {lesson}</Text>
+          <Text className="text-xs text-gray-400">Subject: {subjectId}</Text>
+          <Text className="text-xs text-gray-400">Course: {courseId}</Text>
         </View>
       </SafeAreaView>
     );
@@ -130,14 +113,14 @@ return (
     <SafeAreaView className="flex-1">
       <ChapterDetailCard
         chapter={data}
+        courseId={courseId as string}
+        subjectName={subjectId as string}
+        moduleNumber={moduleNumber}
           onPrevious={() => router.back()}
           onBack={() => router.back()}
           onNext={() => {
             /* navigation to next module */
           }}
-          onVideoCompleted={handleVideoCompleted}
-          onVideoCompletionStatusChange={handleVideoCompletionStatusChange}
-          videoCompleted={videoCompleted}
         />
       </SafeAreaView>
 
@@ -145,7 +128,6 @@ return (
       <FooterNav
         onPrevious={() => router.back()}
         onNext={() => {}}
-        videoCompleted={videoCompleted}
       />
     </View>
   );

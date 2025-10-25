@@ -13,28 +13,7 @@ const demoClasses: Array<{
   duration: string;
   isLive: boolean;
   participants: number;
-}> = [
-  {
-    id: 'live-1',
-    title: 'Physics - Laws of Motion',
-    teacher: 'Dr. Sharma',
-    subject: 'Physics',
-    time: '9:00 PM - 10:00 PM',
-    duration: '60 min',
-    isLive: true,
-    participants: 42,
-  },
-  {
-    id: 'live-2',
-    title: 'Chemistry - Organic Compounds',
-    teacher: 'Prof. Patel',
-    subject: 'Chemistry',
-    time: '10:00 PM - 11:00 PM',
-    duration: '60 min',
-    isLive: false,
-    participants: 0,
-  },
-];
+}> = [];
 
 // Export function to check if there are live classes
 export const hasLiveClasses = () => demoClasses.length > 0;

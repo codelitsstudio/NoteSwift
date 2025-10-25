@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Download, Eye, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AddOfflineSaleDialog } from "@/components/orders/AddOfflineSaleDialog";
+import { CodeGeneratedDialog } from "@/components/orders/CodeGeneratedDialog";
 
 export default function OrdersPaymentsPage() {
   const { toast } = useToast();
@@ -23,6 +24,8 @@ export default function OrdersPaymentsPage() {
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'transactions' | 'codes'>('transactions');
+  const [isCodeDialogOpen, setIsCodeDialogOpen] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState('');
 
   useEffect(() => {
     fetchAdmins();
@@ -174,9 +177,12 @@ export default function OrdersPaymentsPage() {
       const data = await response.json();
 
       if (data.success) {
+        const unlockCode = data.data.unlockCode.code;
+        setGeneratedCode(unlockCode);
+        setIsCodeDialogOpen(true);
         toast({
           title: "Success",
-          description: `Transaction created! Unlock code: ${data.data.unlockCode}`,
+          description: `Transaction created! Unlock code: ${unlockCode}`,
         });
         setIsAddDialogOpen(false);
         fetchTransactions();
@@ -215,6 +221,11 @@ export default function OrdersPaymentsPage() {
           coursesLoading={coursesLoading}
           onSubmit={handleSubmitTransaction}
           loading={loading}
+        />
+        <CodeGeneratedDialog
+          open={isCodeDialogOpen}
+          onOpenChange={setIsCodeDialogOpen}
+          code={generatedCode}
         />
       </div>
 

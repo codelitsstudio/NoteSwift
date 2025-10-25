@@ -179,7 +179,7 @@ export default function RootLayout() {
                   <Stack.Screen name="Learn/LearnPage" options={{ header: () => <Header /> }} />
                   <Stack.Screen name="Test/TestPage" options={{ header: () => <Header /> }} />
                   <Stack.Screen name="Ask/AskPage" options={{ header: () => <Header /> }} />
-                  <Stack.Screen name="More/MorePage" options={{ header: () => <Header /> }} />
+                  <Stack.Screen name="More/MorePage" options={{ headerShown: false }} />
 
                   {/* Detail Screens with HeaderTwo */}
                   <Stack.Screen name="Learn/SubjectPage" options={{ headerShown: false }} />
@@ -209,6 +209,7 @@ export default function RootLayout() {
                   {/* Dynamic Routes */}
                   <Stack.Screen name="Chapter/[chapter]" options={{ headerShown: false }} />
                   <Stack.Screen name="Chapter/[chapterDetail]" options={{ headerShown: false }} />
+                  <Stack.Screen name="Subject/[subject]" options={{ headerShown: false }} />
 
                   {/* Onboarding Screens WITHOUT Header */}
                   <Stack.Screen name="onboarding/Login/login" options={{ headerShown: false }} />

@@ -4,12 +4,14 @@ import { View, TouchableOpacity, Text, LayoutChangeEvent, Animated, Easing, Acti
 import Slider from "@react-native-community/slider";
 import { Video, ResizeMode, Audio, VideoFullscreenUpdate } from "expo-av";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { useLocalSearchParams } from "expo-router";
 import { updateModuleProgress } from "../../../api/lessonProgress";
 import * as ScreenOrientation from 'expo-screen-orientation';
+import api from "@/api/axios";
 
 type LiveVideoProps = {
-  videoUri?: string;
+  courseId: string;
+  subjectName: string;
+  moduleNumber: number;
   thumbnailUri?: string;
   onPressPlay?: () => void;
   onTimeUpdate?: (ms: number) => void;
@@ -22,7 +24,7 @@ type LiveVideoProps = {
 const BLUE = "#3b82f6";
 
 const LiveVideo = forwardRef<any, LiveVideoProps>(
-  ({ videoUri = "https://codelitsstudio.com/videos/how-to-study-for-noteswift.mp4", thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate, onVideoCompletionStatusChange, videoCompleted: initialVideoCompleted = false }, ref) => {
+  ({ courseId, subjectName, moduleNumber, thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate, onVideoCompletionStatusChange, videoCompleted: initialVideoCompleted = false }, ref) => {
     const videoRef = useRef<Video | null>(null);
     const [videoState, setVideoState] = useState({
       status: {} as any,
@@ -39,9 +41,34 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
       videoStateRef.current = videoState;
     }, [videoState]);
     const [videoCompleted, setVideoCompleted] = useState(initialVideoCompleted);
-    const params = useLocalSearchParams();
-    const courseId = params.courseId ? String(params.courseId) : "";
-    const moduleNumber = params.module ? parseInt(String(params.module)) : 1;
+
+    // State for signed URL
+    const [signedUrl, setSignedUrl] = useState<string | null>(null);
+    const [urlLoading, setUrlLoading] = useState(true);
+    const [urlError, setUrlError] = useState<string | null>(null);
+
+    // Fetch signed URL on component mount
+    useEffect(() => {
+      const fetchSignedUrl = async () => {
+        try {
+          setUrlLoading(true);
+          setUrlError(null);
+          const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/video`);
+          if (response.data.success && response.data.signedUrl) {
+            setSignedUrl(response.data.signedUrl);
+          } else {
+            throw new Error('Failed to get signed URL');
+          }
+        } catch (err) {
+          console.error('Error fetching video signed URL:', err);
+          setUrlError('Failed to load video. Please try again.');
+        } finally {
+          setUrlLoading(false);
+        }
+      };
+
+      fetchSignedUrl();
+    }, [courseId, subjectName, moduleNumber]);
 
     // Track if we've already marked video as completed
     const hasMarkedCompletedRef = useRef(false);
@@ -275,7 +302,7 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
       }));
     }, []);
 
-    const controlsVisible = videoState.showControls && !videoState.isLoading;
+    const controlsVisible = videoState.showControls && !videoState.isLoading && !urlLoading && !urlError;
 
     const timeDisplay = useMemo(() => 
       `${formatTime(videoState.isSliding ? videoState.localPosition : videoState.status?.positionMillis)} / ${formatTime(videoState.status?.durationMillis)}`,
@@ -291,35 +318,71 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
             onPress={handleVideoPress}
             style={styles.videoWrapper}
           >
-            {videoState.isLoading && (
+            {(videoState.isLoading || urlLoading) && (
               <View style={styles.skeleton}>
                 <ActivityIndicator size="large" color={BLUE} />
+                {urlLoading && <Text style={{ color: BLUE, marginTop: 8 }}>Loading video...</Text>}
               </View>
             )}
-            <Video
-              ref={videoRef}
-              source={{ uri: videoUri }}
-              style={StyleSheet.absoluteFill}
-              resizeMode={ResizeMode.COVER}
-              onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-              onFullscreenUpdate={(event) => {
-                if (event.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
-                  // Entered fullscreen, lock to landscape
-                  ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-                } else if (event.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_DISMISS) {
-                  // Exited fullscreen, lock to portrait
-                  ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-                }
-              }}
-              shouldPlay={false}
-              usePoster={!!thumbnailUri}
-              posterSource={thumbnailUri ? { uri: thumbnailUri } : undefined}
-              progressUpdateIntervalMillis={500}
-            />
+            {urlError && !urlLoading && (
+              <View style={styles.skeleton}>
+                <Icon name="error-outline" size={48} color="#EF4444" />
+                <Text style={{ color: '#EF4444', marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
+                  {urlError}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setUrlError(null);
+                    setUrlLoading(true);
+                    // Re-fetch signed URL
+                    const fetchSignedUrl = async () => {
+                      try {
+                        const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/video`);
+                        if (response.data.success && response.data.signedUrl) {
+                          setSignedUrl(response.data.signedUrl);
+                        } else {
+                          throw new Error('Failed to get signed URL');
+                        }
+                      } catch (err) {
+                        setUrlError('Failed to load video. Please try again.');
+                      } finally {
+                        setUrlLoading(false);
+                      }
+                    };
+                    fetchSignedUrl();
+                  }}
+                  style={{ marginTop: 16, backgroundColor: BLUE, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+                >
+                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {signedUrl && !urlLoading && !urlError && (
+              <Video
+                ref={videoRef}
+                source={{ uri: signedUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode={ResizeMode.COVER}
+                onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                onFullscreenUpdate={(event) => {
+                  if (event.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
+                    // Entered fullscreen, lock to landscape
+                    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+                  } else if (event.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_DISMISS) {
+                    // Exited fullscreen, lock to portrait
+                    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+                  }
+                }}
+                shouldPlay={false}
+                usePoster={!!thumbnailUri}
+                posterSource={thumbnailUri ? { uri: thumbnailUri } : undefined}
+                progressUpdateIntervalMillis={500}
+              />
+            )}
           </TouchableOpacity>
 
-          {/* Inline Controls */}
-          {!videoState.isLoading && (
+          {/* Inline Controls - Only show when video is loaded and no errors */}
+          {signedUrl && !videoState.isLoading && !urlLoading && !urlError && (
             <>
               {/* Center Play/Pause */}
               <Animated.View

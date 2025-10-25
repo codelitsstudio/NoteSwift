@@ -21,7 +21,7 @@ const HeaderFifth: React.FC<HeaderFifthProps> = ({ title, onBack }) => {
           <MaterialIcons name="chevron-left" size={28} color="#000" />
         </TouchableOpacity>
 
-        <Text className="text-lg font-semibold flex-1 text-center">TEST123</Text>
+        <Text className="text-lg font-semibold flex-1 text-center">{title}</Text>
 
         <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
           <MaterialIcons name="more-vert" size={24} color="#000" />

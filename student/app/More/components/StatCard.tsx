@@ -5,43 +5,41 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAvatarStore } from '../../../stores/avatarStore';
 import { useAuthStore } from '../../../stores/authStore';
-
-// Demo enrolled courses data (7 total for testing)
-const enrolledCourses = [
-  { id: 'course-1', name: 'Grade 10 Learning Package', subjects: 12, status: 'Active' },
-  { id: 'course-2', name: 'Grade 12 Learning Package', subjects: 15, status: 'Active' },
-  { id: 'course-3', name: 'CTEVT Learning Package', subjects: 8, status: 'Active' },
-  { id: 'course-4', name: 'JEE Foundation', subjects: 10, status: 'Active' },
-  { id: 'course-5', name: 'NEET Prep', subjects: 9, status: 'Active' },
-  { id: 'course-6', name: 'Mathematics Booster', subjects: 6, status: 'Active' },
-  { id: 'course-7', name: 'English Fluency', subjects: 5, status: 'Active' }
-];
+import { useCourseStore } from '../../../stores/courseStore';
 
 const StatCard = () => {
   const router = useRouter();
   const { avatarEmoji } = useAvatarStore();
   const { user } = useAuthStore();
-  // keep the demo list as initial seed, but manage courses in state so we can add new ones
-  const [courses, setCourses] = useState(enrolledCourses);
-  const [selectedCourse, setSelectedCourse] = useState(courses[0]);
+  const { courses, enrolledCourses, enrollments, selectedCourse, selectCourse } = useCourseStore();
+  
+  // Get enrolled courses with full course data
+  const enrolledCoursesData = courses.filter(course => 
+    enrolledCourses.includes(course.id || course._id)
+  );
+  
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(
+    selectedCourse ? (selectedCourse.id || selectedCourse._id) : 
+    (enrolledCoursesData.length > 0 ? (enrolledCoursesData[0].id || enrolledCoursesData[0]._id) : null)
+  );
   const [showDropdown, setShowDropdown] = useState(false);
-  // pending selection inside modal — tapping a course toggles this but doesn't apply it until confirmed
-  const [pendingSelectedId, setPendingSelectedId] = useState<string | null>(courses[0]?.id ?? null);
-  const hasEnrolledCourses = courses.length > 0;
+  const [pendingSelectedId, setPendingSelectedId] = useState<string | null>(selectedCourseId);
+  
+  const hasEnrolledCourses = enrolledCoursesData.length > 0;
 
   // When user taps a course in the modal, just mark it as pending (tick). Apply only on confirm.
-  const handleCourseSelect = (course: typeof enrolledCourses[0]) => {
-    setPendingSelectedId(course.id);
+  const handleCourseSelect = (courseId: string) => {
+    setPendingSelectedId(courseId);
   };
 
   const applyPendingSelection = () => {
     if (!pendingSelectedId) return;
-    const course = courses.find((c) => c.id === pendingSelectedId);
+    const course = enrolledCoursesData.find((c) => (c.id || c._id) === pendingSelectedId);
     if (course) {
-      setSelectedCourse(course);
+      selectCourse(course);
+      setSelectedCourseId(pendingSelectedId);
     }
     setShowDropdown(false);
-    // TODO: Trigger refetch of Learn, Ask, Test data based on selected course
   };
 
   if (!hasEnrolledCourses) {
@@ -100,10 +98,10 @@ const StatCard = () => {
           <View className="flex-row items-start justify-between mb-2">
             <View className="flex-1">
               <Text className="text-gray-900 text-xl font-bold leading-tight">
-                {user?.full_name || selectedCourse.name}
+                {user?.full_name || selectedCourse?.title || 'Select a Course'}
               </Text>
               <Text className="text-gray-500 text-sm mt-1">
-                {user?.grade ? `Grade ${user.grade}` : `${selectedCourse.subjects} Subjects`}
+                {user?.grade ? `Grade ${user.grade}` : `${selectedCourse?.subjects?.length || 0} Subjects`}
               </Text>
             </View>
          
@@ -114,7 +112,7 @@ const StatCard = () => {
             <View className="flex-row items-center">
               <MaterialIcons name="check-circle" size={14} color="#2563eb" />
               <Text className="text-blue-600 text-xs font-medium ml-1">
-                {selectedCourse.status}
+                {selectedCourse?.status || 'Active'}
               </Text>
             </View>
             <TouchableOpacity className="flex-row items-center" onPress={() => router.push('/Profile/ProfilePage')}>
@@ -127,7 +125,7 @@ const StatCard = () => {
           <TouchableOpacity
             className="bg-white rounded-3xl py-3.5 flex-row items-center border border-gray-300"
             onPress={() => {
-              setPendingSelectedId(selectedCourse?.id ?? null);
+              setPendingSelectedId(selectedCourseId);
               setShowDropdown(true);
             }}
             activeOpacity={0.7}
@@ -136,7 +134,7 @@ const StatCard = () => {
               <MaterialIcons name="add" size={18} color="#6B7280" />
             </View>
             <Text className="text-gray-700 text-[0.90rem] font-medium flex-1 ml-3">
-              {selectedCourse?.name}
+              {selectedCourse?.title || 'Select Course'}
             </Text>
             <MaterialIcons name="chevron-right" size={22} color="#6B7280" className="mr-3" />
           </TouchableOpacity>
@@ -167,43 +165,40 @@ const StatCard = () => {
 
             {/* Course List */}
             <ScrollView className="px-5 py-6">
-              {courses.map((course) => (
-                <TouchableOpacity
-                  key={course.id}
-                  className={`p-4 rounded-xl mb-2 ${
-                    pendingSelectedId === course.id ? 'bg-blue-50 border-2 border-blue-500' : 'bg-gray-50'
-                  }`}
-                  onPress={() => handleCourseSelect(course)}
-                  activeOpacity={0.7}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-1">
-                      <Text className="text-gray-900 text-base font-bold">
-                        {course.name}
-                      </Text>
-                      <Text className="text-gray-500 text-xs mt-1">
-                        {course.subjects} Subjects • {course.status}
-                      </Text>
+              {enrolledCoursesData.map((course) => {
+                const courseId = course.id || course._id;
+                return (
+                  <TouchableOpacity
+                    key={courseId}
+                    className={`p-4 rounded-xl mb-2 ${
+                      pendingSelectedId === courseId ? 'bg-blue-50 border-2 border-blue-500' : 'bg-gray-50'
+                    }`}
+                    onPress={() => handleCourseSelect(courseId)}
+                    activeOpacity={0.7}
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1">
+                        <Text className="text-gray-900 text-base font-bold">
+                          {course.title}
+                        </Text>
+                        <Text className="text-gray-500 text-xs mt-1">
+                          {course.subjects?.length || 0} Subjects • {course.program || 'General'}
+                        </Text>
+                      </View>
+                      {pendingSelectedId === courseId && (
+                        <MaterialIcons name="check-circle" size={24} color="#3B82F6" />
+                      )}
                     </View>
-                    {pendingSelectedId === course.id && (
-                      <MaterialIcons name="check-circle" size={24} color="#3B82F6" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             {/* Footer action: tapping this will APPLY the pending ticked course as the selected course */}
             <View className="px-5 py-4 mt-8 border-t bottom-5 border-gray-200">
               <TouchableOpacity
                 className="bg-blue-600 rounded-3xl py-5 flex-row items-center justify-center"
-                onPress={() => {
-                  if (pendingSelectedId) {
-                    const course = courses.find((c) => c.id === pendingSelectedId);
-                    if (course) setSelectedCourse(course);
-                  }
-                  setShowDropdown(false);
-                }}
+                onPress={applyPendingSelection}
                 activeOpacity={0.8}
               >
                 <MaterialIcons name="check-circle" size={18} color="white" />

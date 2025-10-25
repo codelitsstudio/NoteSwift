@@ -1,4 +1,4 @@
-import { LoginStudent, SignupStudent } from "@shared/api/student/auth";
+import { LoginStudent, SignupStudent } from "@core/api/student/auth";
 import api from "../axios";
 
 export const createStudent = async(data: SignupStudent.Req) => {

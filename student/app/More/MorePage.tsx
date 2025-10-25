@@ -1,6 +1,7 @@
 // more/MorePage.tsx
 import React, { useState, useCallback } from 'react';
-import { SafeAreaView, ScrollView, View, Text, Linking, Alert } from 'react-native';
+import { ScrollView, View, Text, Linking, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router'; 
 import { useAppUpdate } from '../hooks/useAppUpdate';
 import StatCard from './components/StatCard';
@@ -9,6 +10,8 @@ import AppStatus from './components/AppStatus';
 import PrimaryNav from '@/components/Navigation/PrimaryNav';
 import Skeleton from '../../components/Container/Skeleton';
 import { useFocusEffect } from '@react-navigation/native';
+import { useCourseStore } from '../../stores/courseStore';
+import { useAuthStore } from '../../stores/authStore';
 
 // MorePage Skeleton Component
 const MorePageSkeleton: React.FC = () => {
@@ -88,6 +91,8 @@ const MorePageSkeleton: React.FC = () => {
 const MorePage = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuthStore();
+  const { fetchUserEnrollments, fetchAllCourses } = useCourseStore();
 
   const handleContactUs = () => {
     const phoneNumber = '9779767464242'; // WhatsApp business number without +
@@ -106,13 +111,28 @@ const MorePage = () => {
     });
   };
 
-  // Set loading state immediately when page is focused
+  // Set loading state and fetch data when page is focused
   useFocusEffect(
     useCallback(() => {
-      setIsLoading(true);
-      // Brief loading for consistency
-      setIsLoading(false);
-    }, [])
+      const loadData = async () => {
+        setIsLoading(true);
+        try {
+          // Fetch user enrollments and courses data
+          if (user?._id) {
+            await Promise.all([
+              fetchUserEnrollments(user._id),
+              fetchAllCourses()
+            ]);
+          }
+        } catch (error) {
+          console.error('Error loading More page data:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadData();
+    }, [user?._id, fetchUserEnrollments, fetchAllCourses])
   );
 
   // App update logic
@@ -178,12 +198,12 @@ const MorePage = () => {
     }
   };
   return (
-    <SafeAreaView className="flex-1 pb-10 bg-gray-50" >
+    <SafeAreaView edges={['top']} className="flex-1 pb-10 bg-gray-50" >
       {isLoading ? (
         <MorePageSkeleton />
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1 mb-12">
-          <Text className="text-xl px-5 mt-6 font-bold text-gray-900 mb-0">StatCard</Text>
+          <Text className="text-2xl px-5 mt-6 font-bold text-gray-900 mb-0">More</Text>
           {/* Today's Progress Card (StatCard) - NOW FIRST */}
           <StatCard />
           {/* App Status Component */}

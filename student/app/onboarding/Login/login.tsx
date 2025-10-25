@@ -129,6 +129,9 @@ export default function Login() {
           } else if (api_message.toLowerCase().includes("invalid password") || api_message.toLowerCase().includes("password incorrect") || api_message.toLowerCase().includes("incorrect password")) {
             errorTitle = "Incorrect Password";
             errorMessage = "The password you entered is incorrect. Please try again or reset your password.";
+          } else if (api_message.toLowerCase().includes("account setup incomplete") || api_message.toLowerCase().includes("forgot password")) {
+            errorTitle = "Account Setup Required";
+            errorMessage = "Your account needs to be set up. Please use 'Forgot Password' to create a password for your account.";
           } else if (api_message.toLowerCase().includes("email or password missing")) {
             errorTitle = "Missing Information";
             errorMessage = "Please enter both email and password to continue.";
@@ -255,6 +258,18 @@ export default function Login() {
                   }
                 />
               </View>
+{/* 
+              <View className="flex-row justify-end mb-4">
+                <TouchableOpacity
+                  onPress={() => {
+                    router.push("/onboarding/ForgotPassword/forgotEmail");
+                  }}
+                >
+                  <Text className="text-sm text-blue-500 font-semibold">
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+              </View> */}
 
               <ButtonPrimary title="Login" onPress={handleLogin} />
 

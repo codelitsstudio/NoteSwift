@@ -9,6 +9,9 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 export function EditModuleForm({ course, module, teacherEmail }: { course: any; module: any; teacherEmail: string }) {
+  console.log('EditModuleForm received module:', module);
+  console.log('Module description:', module?.description);
+  
   const [moduleName, setModuleName] = useState(module.moduleName || "");
   const [description, setDescription] = useState(module.description || "");
   const [order, setOrder] = useState<number | undefined>(module.order);
@@ -24,6 +27,15 @@ export function EditModuleForm({ course, module, teacherEmail }: { course: any; 
         variant: "destructive",
         title: "Validation Error",
         description: "Module name is required",
+      });
+      return;
+    }
+
+    if (!description.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Module description is required",
       });
       return;
     }
@@ -130,13 +142,14 @@ export function EditModuleForm({ course, module, teacherEmail }: { course: any; 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">Description *</Label>
         <Textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Brief description of what this module covers..."
           rows={3}
+          required
         />
       </div>
 

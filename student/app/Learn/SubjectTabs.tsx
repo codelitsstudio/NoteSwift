@@ -12,9 +12,27 @@ interface SubjectTabsProps {
     subjects: Subject[];
   };
   courseKey?: string;
+  enrollment?: {
+    progress: number;
+    moduleProgress?: Array<{
+      moduleNumber: number;
+      videoCompleted: boolean;
+      notesCompleted: boolean;
+      progress: number;
+    }>;
+  };
+  courseOfferedBy?: string;
+  courseTeachers?: Array<{
+    subjectName: string;
+    teacher: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+  }>;
 }
 
-export default function SubjectTabs({ packageData, courseKey = 'course-1' }: SubjectTabsProps) {
+export default function SubjectTabs({ packageData, courseKey = 'course-1', enrollment, courseOfferedBy, courseTeachers }: SubjectTabsProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedFilter, setSelectedFilter] = React.useState<'all' | 'science' | 'language' | 'other'>('all');
@@ -27,36 +45,48 @@ export default function SubjectTabs({ packageData, courseKey = 'course-1' }: Sub
     
     let matchesFilter = true;
     if (selectedFilter === 'science') {
-      matchesFilter = ['Physics', 'Chemistry', 'Biology', 'Science'].includes(subject.name);
+      matchesFilter = ['Physics', 'Chemistry', 'Biology', 'Science'].some(name => 
+        subject.name.toLowerCase().includes(name.toLowerCase())
+      );
     } else if (selectedFilter === 'language') {
-      matchesFilter = ['English'].includes(subject.name);
+      matchesFilter = ['English', 'Language'].some(name => 
+        subject.name.toLowerCase().includes(name.toLowerCase())
+      );
     } else if (selectedFilter === 'other') {
-      matchesFilter = ['Mathematics', 'Computer Science', 'Social Studies'].includes(subject.name);
+      matchesFilter = !['Physics', 'Chemistry', 'Biology', 'Science', 'English', 'Language'].some(name => 
+        subject.name.toLowerCase().includes(name.toLowerCase())
+      );
     }
     
     return matchesSearch && matchesFilter;
   });
 
   const SubjectCard = ({ subject, index }: { subject: Subject; index: number }) => {
-    // Calculate demo progress based on subject (just for UI demo)
-    const progress = subject.id.includes('physics') ? 45 : 
-                    subject.id.includes('chemistry') ? 30 : 
-                    subject.id.includes('mathematics') || subject.id.includes('math') ? 60 : 
-                    subject.id.includes('biology') ? 25 : 
-                    subject.id.includes('science') ? 55 : 
-                    subject.id.includes('english') ? 40 : 
-                    subject.id.includes('cs') || subject.id.includes('computer') ? 35 : 
-                    subject.id.includes('social') ? 50 : 20;
+    // Calculate real progress from enrollment data
+    const getSubjectProgress = (subject: Subject): number => {
+      if (!enrollment?.moduleProgress || !subject.modules) {
+        return 0; // No progress data available
+      }
+      
+      // For now, use overall course progress as subject progress
+      // TODO: Implement subject-specific progress calculation when module-to-subject mapping is available
+      return enrollment.progress || 0;
+    };
 
-    // Demo tutor names
-    const tutors = [
-      'Prof. Sharma',
-      'Dr. Patel',
-      'Prof. Kumar',
-      'Dr. Singh',
-      'Prof. Gupta',
-    ];
-    const tutorName = tutors[index % tutors.length];
+    const progress = getSubjectProgress(subject);
+
+    // Use real teacher name from courseTeachers or fallback to courseOfferedBy
+    const getSubjectTeacher = (subject: Subject): string => {
+      if (courseTeachers) {
+        const subjectTeacher = courseTeachers.find(ct => ct.subjectName === subject.name);
+        if (subjectTeacher?.teacher) {
+          return subjectTeacher.teacher.name;
+        }
+      }
+      return courseOfferedBy || 'Course Instructor';
+    };
+
+    const tutorName = getSubjectTeacher(subject);
 
     return (
       <View className="mx-1 my-2">
@@ -71,8 +101,8 @@ export default function SubjectTabs({ packageData, courseKey = 'course-1' }: Sub
               courseKey: courseKey,
             });
             router.push({
-              pathname: '/Chapter/[chapter]',
-              params: { chapter: subject.id, courseKey: courseKey }
+              pathname: '/Subject/[subject]',
+              params: { subject: encodeURIComponent(subject.id), courseKey: courseKey }
             });
           }}
         >
@@ -103,7 +133,7 @@ export default function SubjectTabs({ packageData, courseKey = 'course-1' }: Sub
               <View className="flex-row items-center mr-3 mb-1 px-2 py-1 bg-gray-50 border rounded-full border-gray-200">
                 <MaterialIcons name="schedule" size={13} color="#2563eb" />
                 <Text className="ml-1 text-xs font-medium text-gray-700">
-                  {subject.estimatedHours}+ Hours
+                  ~1 Year
                 </Text>
               </View>
             </View>
@@ -167,32 +197,6 @@ export default function SubjectTabs({ packageData, courseKey = 'course-1' }: Sub
             selectedFilter === 'language' ? 'text-white' : 'text-gray-700'
           }`}>
             Language
-          </Text>
-        </TouchableOpacity>
-         <TouchableOpacity
-          activeOpacity={0.7}
-          className={`px-3 py-1.5 rounded-full border ${
-            selectedFilter === 'science' ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-200'
-          }`}
-          onPress={() => setSelectedFilter('science')}
-        >
-          <Text className={`text-sm font-medium ${
-            selectedFilter === 'science' ? 'text-white' : 'text-gray-700'
-          }`}>
-            Physics
-          </Text>
-        </TouchableOpacity>
-         <TouchableOpacity
-          activeOpacity={0.7}
-          className={`px-3 py-1.5 rounded-full border ${
-            selectedFilter === 'science' ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-200'
-          }`}
-          onPress={() => setSelectedFilter('science')}
-        >
-          <Text className={`text-sm font-medium ${
-            selectedFilter === 'science' ? 'text-white' : 'text-gray-700'
-          }`}>
-            English
           </Text>
         </TouchableOpacity>
         <TouchableOpacity

@@ -13,12 +13,17 @@ export function CreateContentForm({ modules, teacherEmail }: { modules: any[]; t
   const [moduleNumber, setModuleNumber] = useState<string>("");
   const [contentType, setContentType] = useState<string>("video");
   const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [description, setDescription] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState<string>("");
+  const [description, setDescription] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
+
+  const handleContentTypeChange = (value: string) => {
+    setContentType(value);
+    setFile(null); // Reset file when content type changes
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,11 +46,11 @@ export function CreateContentForm({ modules, teacherEmail }: { modules: any[]; t
       return;
     }
 
-    if (!url.trim()) {
+    if (!file) {
       toast({
         variant: "destructive",
         title: "Validation Error",
-        description: "URL is required",
+        description: "Please select a file to upload",
       });
       return;
     }
@@ -64,15 +69,14 @@ export function CreateContentForm({ modules, teacherEmail }: { modules: any[]; t
         const moduleNum = parseInt(moduleNumber);
 
         if (contentType === "video") {
-          // Upload video
-          const data = {
-            moduleNumber: moduleNum,
-            videoUrl: url.trim(),
-            videoTitle: title.trim(),
-            ...(videoDuration && { videoDuration: parseInt(videoDuration) }),
-          };
-
-          const response = await teacherAPI.courses.uploadVideo(teacherEmail, data);
+          // Upload video file
+          const response = await teacherAPI.courses.uploadVideo(
+            teacherEmail,
+            moduleNum,
+            file,
+            title.trim(),
+            videoDuration ? parseInt(videoDuration) : undefined
+          );
 
           if (response.success) {
             toast({
@@ -88,14 +92,13 @@ export function CreateContentForm({ modules, teacherEmail }: { modules: any[]; t
             });
           }
         } else if (contentType === "notes") {
-          // Upload notes
-          const data = {
-            moduleNumber: moduleNum,
-            notesUrl: url.trim(),
-            notesTitle: title.trim(),
-          };
-
-          const response = await teacherAPI.courses.uploadNotes(teacherEmail, data);
+          // Upload notes file
+          const response = await teacherAPI.courses.uploadNotes(
+            teacherEmail,
+            moduleNum,
+            file,
+            title.trim()
+          );
 
           if (response.success) {
             toast({
@@ -148,7 +151,7 @@ export function CreateContentForm({ modules, teacherEmail }: { modules: any[]; t
 
       <div className="space-y-2">
         <Label>Content Type *</Label>
-        <Select value={contentType} onValueChange={setContentType}>
+        <Select value={contentType} onValueChange={handleContentTypeChange}>
           <SelectTrigger>
             <SelectValue placeholder="Select content type" />
           </SelectTrigger>
@@ -171,15 +174,19 @@ export function CreateContentForm({ modules, teacherEmail }: { modules: any[]; t
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="url">URL *</Label>
+        <Label htmlFor="file">{contentType === "video" ? "Video File" : "Notes File"} *</Label>
         <Input
-          id="url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder={contentType === "video" ? "https://youtube.com/watch?v=..." : "https://example.com/notes.pdf"}
+          id="file"
+          type="file"
+          accept={contentType === "video" ? "video/*" : ".pdf,.doc,.docx,.txt,.ppt,.pptx,.jpg,.jpeg,.png,.gif"}
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
           required
         />
+        {file && (
+          <p className="text-sm text-muted-foreground">
+            Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+          </p>
+        )}
       </div>
 
       {contentType === "video" && (

@@ -15,14 +15,13 @@ import ModelQuestions from './Components/ModelQuestions';
 import { OfflineScreen } from '../../components/Container/OfflineScreen';
 import { useLearnStore } from '@/stores/learnStore';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import SubjectTabs from './SubjectTabs';
-import { courses } from '../../utils/courseData';
 import { useAuthStore } from '../../stores/authStore';
 import { useCourseStore } from '../../stores/courseStore';
 import LiveClasses, { hasLiveClasses } from './Components/LiveClasses';
 import LiveClassJoinBottomSheet from './Components/LiveClassJoinBottomSheet';
 import Skeleton from '../../components/Container/Skeleton';
 import { useFocusEffect } from '@react-navigation/native';
+import MyCourses from './Components/MyCourses';
 
 // LearnPage Skeleton Component
 const LearnPageSkeleton: React.FC = () => {
@@ -92,7 +91,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const fetchFeed = useLearnStore(state=>state.fetchFeed);
   const { user } = useAuthStore();
-  const { fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse, is_loading } = useCourseStore();
+  const { fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse, is_loading, selectedCourse, enrolledCourses, courses, selectCourse } = useCourseStore();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -131,6 +130,28 @@ export default function HomePage() {
       // Set loading to false immediately for ultra-fast skeleton
       setIsLoading(false);
     }, [user?.id, fetchFeed, fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse])
+  );
+
+  // Auto-select first enrolled course if none selected
+  useFocusEffect(
+    useCallback(() => {
+      const autoSelectCourse = () => {
+        if (!selectedCourse && enrolledCourses.length > 0 && courses.length > 0) {
+          // Find the first enrolled course from the courses array
+          const firstEnrolledCourse = courses.find(course => 
+            enrolledCourses.includes(course.id || course._id)
+          );
+          if (firstEnrolledCourse) {
+            console.log('🎯 Auto-selecting first enrolled course:', firstEnrolledCourse.title);
+            selectCourse(firstEnrolledCourse);
+          }
+        }
+      };
+
+      // Small delay to ensure data is loaded
+      const timeoutId = setTimeout(autoSelectCourse, 100);
+      return () => clearTimeout(timeoutId);
+    }, [selectedCourse, enrolledCourses, courses])
   );
 
   // Pull-to-refresh handler for the whole Learn page
@@ -179,19 +200,15 @@ export default function HomePage() {
               <>
                 <LiveClasses onJoinPress={handleJoinPress} />
                 <View className="mb-4">
-                  <Text className="text-xl font-bold text-gray-900 mb-4">
-                    Your Subjects
-                  </Text>
-                  <SubjectTabs packageData={courses['course-1']} courseKey="course-1" />
+                 
+                  <MyCourses />
                 </View>
               </>
             ) : (
               <>
                 <View className="mb-4">
-                  <Text className="text-xl font-bold text-gray-900 mb-4">
-                    Your Subjects
-                  </Text>
-                  <SubjectTabs packageData={courses['course-1']} courseKey="course-1" />
+                 
+                  <MyCourses />
                 </View>
                 <LiveClasses onJoinPress={handleJoinPress} />
               </>

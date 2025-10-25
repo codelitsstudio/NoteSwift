@@ -1,9 +1,9 @@
 import { createStudent, signInStudent, sendRegistrationOTP, verifyRegistrationOTP, sendEmailRegistrationOTP, verifyEmailRegistrationOTP } from '@/api/student/auth';
-import { LoginStudent, SignupStudent } from '@shared/api/student/auth';
+import { LoginStudent, SignupStudent } from '@core/api/student/auth';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { ApiState } from './common';
-import { TStudentWithNoSensitive } from "@shared/model/students/Student";
+import { TStudentWithNoSensitive } from "@core/models/students/Student";
 import { avatarStore } from './avatarStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -130,8 +130,11 @@ export const useAuthStore = create<AuthState>()(
             
             set({is_loading: false, api_message: res.message});
             return !res.error;
-        } catch (error) {
-            set({is_loading: false, api_message: "Something went wrong"});
+        } catch (error: any) {
+            console.error('Login error:', error);
+            // Preserve the specific error message from the backend
+            const errorMessage = error?.message || "Something went wrong";
+            set({is_loading: false, api_message: errorMessage});
             return false;
         }
     },

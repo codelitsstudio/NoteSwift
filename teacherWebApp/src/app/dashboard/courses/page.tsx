@@ -3,13 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText, Video, CheckCircle, Edit, Trash2 } from "lucide-react";
+import { BookOpen, FileText, Video, CheckCircle, Edit, Trash2, RefreshCw, MoreHorizontal, Upload, X, Eye, EyeOff, Replace } from "lucide-react";
 import teacherAPI from "@/lib/api/teacher-api";
 import Link from "next/link";
 import { useTeacher } from "@/context/teacher-context";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { API_ENDPOINTS } from "@/config/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +19,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function CoursesPage() {
   const { assignedSubjects, assignedCourses, isLoading: contextLoading, refreshAssignments, teacherEmail } = useTeacher();
@@ -28,47 +47,30 @@ export default function CoursesPage() {
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
-  const [fallbackSubjects, setFallbackSubjects] = useState<any[]>([]);
-  const [fallbackLoading, setFallbackLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatingContent, setUpdatingContent] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (contextLoading) return;
-    
-    if (!teacherEmail) {
-      return;
+  // Replace upload dialog state
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [moduleToReplace, setModuleToReplace] = useState<any>(null);
+  const [replaceType, setReplaceType] = useState<'video' | 'notes' | null>(null);
+  const [replaceForm, setReplaceForm] = useState({
+    file: null as File | null,
+    title: '',
+    duration: ''
+  });
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshAssignments();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
     }
-
-    // If TeacherContext has no assigned subjects, try direct fetch from all-subject-content
-    if (!contextLoading && (!assignedSubjects || assignedSubjects.length === 0)) {
-      const fetchFromAllSubjects = async () => {
-        try {
-          setFallbackLoading(true);
-          const token = localStorage.getItem('teacherToken');
-          if (!token) return;
-
-          const response = await fetch(`${API_ENDPOINTS.COURSES}/all-subject-content`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.result?.subjects) {
-              setFallbackSubjects(data.result.subjects);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching fallback subjects:', error);
-        } finally {
-          setFallbackLoading(false);
-        }
-      };
-
-      fetchFromAllSubjects();
-    }
-  }, [teacherEmail, contextLoading, assignedSubjects]);
+  };
 
   const handleDeleteModule = async () => {
     if (!moduleToDelete || !teacherEmail) return;
@@ -106,7 +108,183 @@ export default function CoursesPage() {
     }
   };
 
-  if (contextLoading || fallbackLoading) {
+  const handleRemoveVideo = async (module: any) => {
+    if (!teacherEmail) return;
+
+    setUpdatingContent(`video-${module.uniqueKey}`);
+    try {
+      const response = await teacherAPI.courses.updateModule(teacherEmail, module.moduleNumber, {
+        hasVideo: false,
+        videoUrl: null,
+        videoTitle: null,
+        videoDuration: null,
+        videoUploadedAt: null,
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Video removed successfully!",
+        });
+        await refreshAssignments();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: response.message || "Failed to remove video",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error removing video:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to remove video",
+      });
+    } finally {
+      setUpdatingContent(null);
+    }
+  };
+
+  const handleRemoveNotes = async (module: any) => {
+    if (!teacherEmail) return;
+
+    setUpdatingContent(`notes-${module.uniqueKey}`);
+    try {
+      const response = await teacherAPI.courses.updateModule(teacherEmail, module.moduleNumber, {
+        hasNotes: false,
+        notesUrl: null,
+        notesTitle: null,
+        notesUploadedAt: null,
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Notes removed successfully!",
+        });
+        await refreshAssignments();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: response.message || "Failed to remove notes",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error removing notes:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to remove notes",
+      });
+    } finally {
+      setUpdatingContent(null);
+    }
+  };
+
+  const handleTogglePublish = async (module: any) => {
+    if (!teacherEmail) return;
+
+    setUpdatingContent(`publish-${module.uniqueKey}`);
+    try {
+      const newStatus = !module.isActive;
+      const response = await teacherAPI.courses.updateModule(teacherEmail, module.moduleNumber, {
+        isActive: newStatus,
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: `Module ${newStatus ? 'published' : 'unpublished'} successfully!`,
+        });
+        await refreshAssignments();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: response.message || `Failed to ${newStatus ? 'publish' : 'unpublish'} module`,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error toggling publish status:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update module status",
+      });
+    } finally {
+      setUpdatingContent(null);
+    }
+  };
+
+  const handleReplaceUpload = (module: any, type: 'video' | 'notes') => {
+    setModuleToReplace(module);
+    setReplaceType(type);
+    setReplaceForm({
+      file: null,
+      title: type === 'video' ? (module.videoTitle || '') : (module.notesTitle || ''),
+      duration: type === 'video' ? (module.videoDuration || '') : ''
+    });
+    setReplaceDialogOpen(true);
+  };
+
+  const handleReplaceSubmit = async () => {
+    if (!moduleToReplace || !replaceType || !teacherEmail || !replaceForm.file) return;
+
+    setUploadingFile(true);
+    setUpdatingContent(`replace-${moduleToReplace.uniqueKey}`);
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append(replaceType, replaceForm.file);
+      formData.append('moduleNumber', moduleToReplace.moduleNumber.toString());
+      if (replaceForm.title) formData.append('title', replaceForm.title);
+      if (replaceType === 'video' && replaceForm.duration) formData.append('videoDuration', replaceForm.duration);
+
+      // Upload to backend (which will handle Firebase upload)
+      const endpoint = replaceType === 'video' ? '/upload/video' : '/upload/notes';
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/teacher${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('teacherToken')}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `${replaceType === 'video' ? 'Video' : 'Notes'} replaced successfully!`,
+        });
+        await refreshAssignments();
+        setReplaceDialogOpen(false);
+        setModuleToReplace(null);
+        setReplaceType(null);
+        setReplaceForm({ file: null, title: '', duration: '' });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.message || `Failed to replace ${replaceType}`,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error replacing content:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || `Failed to replace ${replaceType}`,
+      });
+    } finally {
+      setUploadingFile(false);
+      setUpdatingContent(null);
+    }
+  };
+
+  if (contextLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -117,7 +295,7 @@ export default function CoursesPage() {
     );
   }
 
-  // Use assignedSubjects from context, or assignedCourses if subjects is empty, or fallback subjects
+  // Use assignedSubjects from context, or assignedCourses if subjects is empty
   const subjectsToUse = assignedSubjects && assignedSubjects.length > 0 
     ? assignedSubjects 
     : assignedCourses && assignedCourses.length > 0 
@@ -139,13 +317,12 @@ export default function CoursesPage() {
           modulesWithNotes: 0,
           scheduledLiveClasses: 0,
         }))
-      : fallbackSubjects;
+      : [];
 
   // Debug logging
   console.log('Courses Page Debug:');
   console.log('assignedSubjects:', assignedSubjects);
   console.log('assignedCourses:', assignedCourses);
-  console.log('fallbackSubjects:', fallbackSubjects);
   console.log('subjectsToUse:', subjectsToUse);
   console.log('subjectsToUse[0]?.modules:', subjectsToUse[0]?.modules);
 
@@ -180,7 +357,8 @@ export default function CoursesPage() {
     (subject.modules || []).map((module: any) => ({
       ...module,
       subjectName: subject.subjectName,
-      courseName: subject.courseName
+      courseName: subject.courseName,
+      uniqueKey: `${subject._id}_${module.moduleNumber}` // Create unique key
     }))
   );
   const modules = allModules;
@@ -194,11 +372,22 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">My Course Modules</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          All modules from your assigned subjects
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">My Course Modules</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            All modules from your assigned subjects
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Content Overview Stats */}
@@ -312,12 +501,12 @@ export default function CoursesPage() {
           ) : (
             <div className="space-y-4">
               {modules.map((module: any) => (
-                <Card key={module._id} className="bg-blue-50/60 border-blue-100">
+                <Card key={module.uniqueKey} className="bg-blue-50/60 border-blue-100">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <CardTitle className="text-lg">
-                          Module {module.moduleNumber}: {module.title}
+                          Module {module.moduleNumber}: {module.moduleName || module.name || 'Untitled Module'}
                         </CardTitle>
                         <p className="text-sm text-muted-foreground mt-1">
                           {module.subjectName} - {module.courseName}
@@ -353,23 +542,90 @@ export default function CoursesPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/dashboard/courses/edit-module/${module.moduleNumber}`}>
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => {
-                            setModuleToDelete(module);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/courses/edit-module/${module.moduleNumber}`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Module
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {(module.hasVideo || module.hasNotes) && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <Replace className="h-4 w-4 mr-2" />
+                                  Replace Upload
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                  {module.hasVideo && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleReplaceUpload(module, 'video')}
+                                      disabled={updatingContent === `replace-${module.uniqueKey}`}
+                                    >
+                                      <Video className="h-4 w-4 mr-2" />
+                                      Replace Video
+                                    </DropdownMenuItem>
+                                  )}
+                                  {module.hasNotes && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleReplaceUpload(module, 'notes')}
+                                      disabled={updatingContent === `replace-${module.uniqueKey}`}
+                                    >
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      Replace Notes
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                            )}
+                            <DropdownMenuSeparator />
+                            {module.hasVideo && (
+                              <DropdownMenuItem
+                                onClick={() => handleRemoveVideo(module)}
+                                disabled={updatingContent === `video-${module.uniqueKey}`}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                {updatingContent === `video-${module.uniqueKey}` ? (
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Video className="h-4 w-4 mr-2" />
+                                )}
+                                Remove Video
+                              </DropdownMenuItem>
+                            )}
+                            {module.hasNotes && (
+                              <DropdownMenuItem
+                                onClick={() => handleRemoveNotes(module)}
+                                disabled={updatingContent === `notes-${module.uniqueKey}`}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                {updatingContent === `notes-${module.uniqueKey}` ? (
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <FileText className="h-4 w-4 mr-2" />
+                                )}
+                                Remove Notes
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setModuleToDelete(module);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Module
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </CardHeader>
@@ -416,22 +672,114 @@ export default function CoursesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Module</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "Module {moduleToDelete?.moduleNumber}: {moduleToDelete?.title}"?
-              This action cannot be undone and will permanently remove all associated content.
+              Are you sure you want to delete Module {moduleToDelete?.moduleNumber}: {moduleToDelete?.moduleName}?
+              This action cannot be undone and will remove all associated content.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteModule}
               disabled={deleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {deleting ? "Deleting..." : "Delete Module"}
+              {deleting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Replace Upload Dialog */}
+      <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Replace {replaceType === 'video' ? 'Video' : 'Notes'}
+            </DialogTitle>
+            <DialogDescription>
+              Update the {replaceType} content for Module {moduleToReplace?.moduleNumber}: {moduleToReplace?.moduleName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={replaceForm.title}
+                onChange={(e) => setReplaceForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder={`Enter ${replaceType} title`}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="file">File</Label>
+              <Input
+                id="file"
+                type="file"
+                accept={replaceType === 'video' ? 'video/*' : '.pdf,.doc,.docx,.txt,.ppt,.pptx,image/*'}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setReplaceForm(prev => ({ ...prev, file }));
+                }}
+              />
+              {replaceForm.file && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {replaceForm.file.name} ({(replaceForm.file.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
+            </div>
+            {replaceType === 'video' && (
+              <div className="grid gap-2">
+                <Label htmlFor="duration">Duration</Label>
+                <Input
+                  id="duration"
+                  value={replaceForm.duration}
+                  onChange={(e) => setReplaceForm(prev => ({ ...prev, duration: e.target.value }))}
+                  placeholder="e.g., 10:30"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReplaceDialogOpen(false);
+                setModuleToReplace(null);
+                setReplaceType(null);
+                setReplaceForm({ file: null, title: '', duration: '' });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReplaceSubmit}
+              disabled={updatingContent === `replace-${moduleToReplace?.uniqueKey}` || uploadingFile || !replaceForm.file || !replaceForm.title.trim()}
+            >
+              {updatingContent === `replace-${moduleToReplace?.uniqueKey}` || uploadingFile ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  {uploadingFile ? 'Uploading...' : 'Replacing...'}
+                </>
+              ) : (
+                <>
+                  <Replace className="h-4 w-4 mr-2" />
+                  Replace {replaceType === 'video' ? 'Video' : 'Notes'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

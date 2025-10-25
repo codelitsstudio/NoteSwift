@@ -23,7 +23,7 @@ async function getData(teacherEmail: string) {
       teacherAPI.questions.getAll(teacherEmail),
       teacherAPI.liveClasses.getAll(teacherEmail, undefined, true), // upcoming only
       teacherAPI.analytics.getWeeklyActivity(teacherEmail),
-      teacherAPI.students.getAll(teacherEmail),
+      teacherAPI.students.getAll(teacherEmail), // Get all students initially
       teacherAPI.courses.getSubjectContent(teacherEmail),
     ]);
 
@@ -33,8 +33,24 @@ async function getData(teacherEmail: string) {
     const questions = questionsRes.data?.questions || [];
     const upcomingClasses = liveClassesRes.data?.liveClasses || [];
     const weeklyActivity = weeklyActivityRes.data?.weeklyActivity || [];
-    const students = studentsRes.data?.students || [];
-    const courses = coursesRes.data?.subjectContent || [];
+    let students = studentsRes.data?.students || [];
+    const courses = coursesRes.data || null;
+
+    // If we have courses, get students for the first course (primary course)
+    if (coursesRes.data?.course?._id) {
+      try {
+        console.log('🔍 Fetching students for course:', coursesRes.data.course._id, coursesRes.data.course.title);
+        const courseStudentsRes = await teacherAPI.students.getAll(teacherEmail, coursesRes.data.course._id);
+        console.log('📊 Course students response:', courseStudentsRes);
+        students = courseStudentsRes.data?.students || [];
+        console.log(`📊 Dashboard: Showing ${students.length} students for course: ${coursesRes.data.course.title}`);
+      } catch (error) {
+        console.error('Failed to fetch course-specific students:', error);
+        // Fall back to all students
+      }
+    } else {
+      console.log('❌ No course data available for student fetching');
+    }
 
     const assignmentStats = assignmentsRes.data?.stats || {};
     const testStats = testsRes.data?.stats || {};
@@ -153,10 +169,11 @@ async function getData(teacherEmail: string) {
         }).length,
         pendingGrading,
         upcomingClasses: upcomingClasses.length,
-        totalCourses: courses.length, // Get from teacher profile
+        totalCourses: courses?.course ? 1 : 0, // Teacher has 1 course or none
         doubtsOpen,
         completionRate
       },
+      courses, // Add courses to the returned data
       weeklyActivity: weeklyActivity.map((w: any) => ({
         day: w.day,
         value: w.activity || 0
@@ -190,6 +207,7 @@ async function getData(teacherEmail: string) {
     // Return empty data on error with a note about the teacher
     return {
       stats: { totalStudents: 0, activeToday: 0, pendingGrading: 0, upcomingClasses: 0, totalCourses: 0, doubtsOpen: 0, completionRate: 0 },
+      courses: null, // No course data in error case
       weeklyActivity: [],
       upcoming: [],
       recentActivity: [],
@@ -266,7 +284,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { stats, weeklyActivity, upcoming, recentActivity, pendingTasks, announcements, performanceInsights } = data;
+  const { stats, courses, weeklyActivity, upcoming, recentActivity, pendingTasks, announcements, performanceInsights } = data;
 
   return (
     <div className="flex flex-col gap-6">
@@ -282,12 +300,16 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-blue-50/60 border-blue-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Your Students</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {courses?.course?.title ? `${courses.course.title} Students` : 'Your Students'}
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalStudents}</div>
-            <p className="text-xs mt-2 text-muted-foreground">{stats.activeToday} active today</p>
+            <p className="text-xs mt-2 text-muted-foreground">
+              {courses?.course?.title ? `Enrolled in ${courses.course.title}` : `${stats.activeToday} active today`}
+            </p>
           </CardContent>
         </Card>
 

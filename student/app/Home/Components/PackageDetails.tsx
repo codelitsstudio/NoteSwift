@@ -20,6 +20,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNotificationStore } from '../../../stores/notificationStore';
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { redeemUnlockCode } from '../../../api/student/learn';
+import { Constants } from 'expo-constants';
+import * as Application from 'expo-application';
 
 interface Module {
   name: string;
@@ -28,8 +30,7 @@ interface Module {
 }
 
 interface Subject {
-  subject: string;
-  description: string;
+  name: string;
   modules: Module[];
 }
 
@@ -45,7 +46,7 @@ interface Package {
   learningPoints: string[];
   subjects?: Subject[];
   features: string[];
-  teacherName?: string;
+  offeredBy?: string;
   keyFeatures?: string[];
   faq?: {
     question: string;
@@ -90,6 +91,12 @@ const PackageDetails = () => {
         </View>
       </SafeAreaView>
     );
+  }
+
+  // Ensure id field exists for consistency (some courses might only have _id)
+  if (pkg && !pkg.id && pkg._id) {
+    pkg.id = pkg._id;
+    console.log('🔧 Fixed package id field:', pkg.id);
   }
 
   const packageTitle = pkg.title || pkg.name || 'Package';
@@ -174,6 +181,45 @@ const PackageDetails = () => {
 
   const toggleFaq = (question: string) => setExpandedFaq(expandedFaq === question ? null : question);
 
+  // Generate proper device fingerprint
+  const generateDeviceFingerprint = async () => {
+    try {
+      const deviceInfo = {
+        platform: Platform.OS,
+        version: Platform.Version,
+        appId: Application.applicationId,
+        appVersion: Application.nativeApplicationVersion,
+        buildVersion: Application.nativeBuildVersion,
+        installationTime: Application.getInstallationTimeAsync ?
+          (await Application.getInstallationTimeAsync()).getTime() : Date.now(),
+        timestamp: Date.now(),
+      };
+
+      // Create a simple hash from device information
+      const deviceString = JSON.stringify(deviceInfo);
+      let hash = 0;
+      for (let i = 0; i < deviceString.length; i++) {
+        const char = deviceString.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+
+      // Convert to positive hex string and take first 32 characters
+      return Math.abs(hash).toString(16).padStart(16, '0').substring(0, 32);
+    } catch (error) {
+      console.warn('Failed to generate device fingerprint, using fallback:', error);
+      // Fallback to a simple hash
+      const fallbackString = `${Platform.OS}-${Application.applicationId || 'unknown'}-${Date.now()}`;
+      let hash = 0;
+      for (let i = 0; i < fallbackString.length; i++) {
+        const char = fallbackString.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      return Math.abs(hash).toString(16).substring(0, 16);
+    }
+  };
+
   const handleRedeemCode = async () => {
     if (!unlockCode.trim()) {
       Toast.show({
@@ -183,12 +229,45 @@ const PackageDetails = () => {
       return;
     }
 
+    // Prevent redemption if already enrolled
+    if (alreadyEnrolled) {
+      Toast.show({
+        type: 'info',
+        text1: 'Already enrolled',
+        text2: 'You are already enrolled in this course.',
+      });
+      return;
+    }
+
+    console.log('🔓 REDEEM CODE DEBUG:', {
+      unlockCode: unlockCode.trim(),
+      pkgId: pkg?.id,
+      pkgTitle: pkg?.title || pkg?.name,
+      pkgType: pkg?.type,
+      fullPkg: pkg
+    });
+
+    if (!pkg?.id) {
+      Toast.show({
+        type: 'error',
+        text1: 'Package data error',
+        text2: 'Unable to identify the package. Please try again.',
+      });
+      return;
+    }
+
     setIsRedeeming(true);
     try {
-      // Generate device hash (simple for now)
-      const deviceHash = 'device-' + Date.now(); // TODO: proper device fingerprint
+      // Generate proper device fingerprint
+      const deviceHash = await generateDeviceFingerprint();
 
-      const result = await redeemUnlockCode(unlockCode, pkg._id, deviceHash);
+      console.log('🔓 Calling redeemUnlockCode with:', {
+        code: unlockCode.trim(),
+        courseId: pkg.id,
+        deviceHash: deviceHash.substring(0, 16) + '...'
+      });
+
+      const result = await redeemUnlockCode(unlockCode.trim(), pkg.id, deviceHash);
       
       Toast.show({
         type: 'success',
@@ -196,11 +275,16 @@ const PackageDetails = () => {
         text2: 'You are now enrolled in this course.',
       });
 
-      // Refresh enrollment status
-      await enrollInCourse(pkg._id);
+      // Enrollment is already handled by the unlock code redemption
+      // No need to call enrollInCourse again
       
       bottomSheetRef.current?.dismiss();
       setUnlockCode('');
+      
+      // Navigate to More page for course selection
+      setTimeout(() => {
+        router.push('/More/MorePage');
+      }, 1500);
     } catch (error: any) {
       Toast.show({
         type: 'error',
@@ -289,6 +373,12 @@ const PackageDetails = () => {
                 {pkg.isFeatured ? (pkg.price && pkg.price > 0 ? "Featured Pro" : "Featured") : (pkg.price && pkg.price > 0 ? "Pro" : "Free")} Package
               </Text>
             </View>
+            {alreadyEnrolled && (
+              <View className="bg-green-50 px-3 py-1.5 rounded-full border border-green-200 flex-row items-center ml-2">
+                <MaterialIcons name="check-circle" size={16} color="#10B981" />
+                <Text className="text-green-700 font-medium text-sm ml-1">Enrolled</Text>
+              </View>
+            )}
           </View>
 
           {/* Title & Summary */}
@@ -318,7 +408,7 @@ const PackageDetails = () => {
           <View className="mb-6">
             <Text className="text-sm text-gray-500 mb-1">Offered by</Text>
             <Text className="text-lg font-semibold text-customBlue">
-              {pkg.teacherName || 'NoteSwift Team'}
+              {pkg.offeredBy || 'NoteSwift Team'}
             </Text>
           </View>
 
@@ -386,55 +476,84 @@ const PackageDetails = () => {
           </View>
 
           {/* Syllabus with Subject and Module Details */}
-          {pkg.subjects && (
-            <View className="mb-8">
-              <Text className="text-lg font-bold text-gray-900 mb-3">Course Content</Text>
-              {pkg.subjects.map((subject: Subject, subjectIndex: number) => (
-                <View key={`subject-${subjectIndex}`} className="mb-3">
-                  <TouchableOpacity
-                    onPress={() => setExpandedSubject(expandedSubject === subjectIndex ? -1 : subjectIndex)}
-                    className="flex-row items-center justify-between p-4 bg-gray-50 rounded-t-lg border border-gray-200"
-                  >
-                    <View className="flex-1">
-                      <View className="flex-row items-center mb-1">
-                        <Text className="text-sm text-blue-600 font-medium">Subject {subjectIndex + 1}</Text>
-                        <Text className="text-sm text-gray-500 ml-2">• {subject.modules.length} modules</Text>
-                      </View>
-                      <Text className="text-base text-gray-900 font-semibold">{subject.subject}</Text>
-                      <Text className="text-sm text-gray-600 mt-1">{subject.description}</Text>
-                    </View>
-                    <MaterialIcons
-                      name={expandedSubject === subjectIndex ? "keyboard-arrow-up" : "keyboard-arrow-down"}
-                      size={24}
-                      color="#4B5563"
-                    />
-                  </TouchableOpacity>
-                  
-                  {expandedSubject === subjectIndex && (
-                    <View className="border-x border-b border-gray-200 rounded-b-lg">
-                      {subject.modules.map((module: Module, moduleIndex: number) => (
-                        <View 
-                          key={`module-${subjectIndex}-${moduleIndex}`}
-                          className={`p-4 bg-white ${
-                            moduleIndex !== subject.modules.length - 1 ? 'border-b border-gray-100' : ''
-                          }`}
-                        >
-                          <View className="flex-row items-center justify-between mb-1">
-                            <Text className="text-sm font-medium text-gray-700">
-                              Module {moduleIndex + 1}
-                            </Text>
-                            <Text className="text-sm text-gray-500">{module.duration}</Text>
+          {(() => {
+            console.log('📚 PackageDetails subjects check:', {
+              hasSubjects: !!pkg.subjects,
+              subjectsLength: pkg.subjects?.length,
+              subjects: pkg.subjects
+            });
+            return pkg.subjects && pkg.subjects.length > 0 && (
+              <View className="mb-8">
+                <Text className="text-lg font-bold text-gray-900 mb-3">Course Content</Text>
+                {pkg.subjects.map((subject: Subject, subjectIndex: number) => {
+                  console.log('📖 Subject data:', subject);
+                  return (
+                    <View key={`subject-${subjectIndex}`} className="mb-3">
+                      <TouchableOpacity
+                        onPress={() => setExpandedSubject(expandedSubject === subjectIndex ? -1 : subjectIndex)}
+                        className="flex-row items-center justify-between p-4 bg-gray-50 rounded-t-lg border border-gray-200"
+                      >
+                        <View className="flex-1">
+                          <View className="flex-row items-center mb-1">
+                            <Text className="text-sm text-blue-600 font-medium">Subject {subjectIndex + 1}</Text>
+                            <Text className="text-sm text-gray-500 ml-2">• {subject.modules.length} modules</Text>
                           </View>
-                          <Text className="text-base text-gray-800 mb-1">{module.name}</Text>
-                          <Text className="text-sm text-gray-600">{module.description}</Text>
+                          <Text className="text-base text-gray-900 font-semibold">{subject.name}</Text>
+                          <Text className="text-sm text-gray-600 mt-1">
+                            {subject.modules && subject.modules.length > 0 
+                              ? subject.modules[0].description || `${subject.modules.length} modules covering key concepts`
+                              : 'Subject content and modules'
+                            }
+                          </Text>
                         </View>
-                      ))}
+                        <MaterialIcons
+                          name={expandedSubject === subjectIndex ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+                          size={24}
+                          color="#4B5563"
+                        />
+                      </TouchableOpacity>
+                      
+                      {expandedSubject === subjectIndex && (
+                        <View className="border-x border-b border-gray-200 rounded-b-lg">
+                          {subject.modules.map((module: Module, moduleIndex: number) => (
+                            <View 
+                              key={`module-${subjectIndex}-${moduleIndex}`}
+                              className={`p-4 bg-white ${
+                                moduleIndex !== subject.modules.length - 1 ? 'border-b border-gray-100' : ''
+                              }`}
+                            >
+                              <View className="flex-row items-center justify-between mb-1">
+                                <Text className="text-sm font-medium text-gray-700">
+                                  Module {moduleIndex + 1}
+                                </Text>
+                                <Text className="text-sm text-gray-500">{module.duration}</Text>
+                              </View>
+                              <Text className="text-base text-gray-800 mb-1">{module.name}</Text>
+                              <Text className="text-sm text-gray-600">{module.description}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                     </View>
-                  )}
+                  );
+                })}
+              </View>
+            );
+          })()}
+
+          {/* Debug: Show if no subjects */}
+          {(() => {
+            if (!pkg.subjects || pkg.subjects.length === 0) {
+              console.log('❌ No subjects found:', { subjects: pkg.subjects });
+              return (
+                <View className="mb-8">
+                  <Text className="text-lg font-bold text-gray-900 mb-3">Course Content</Text>
+                  <Text className="text-gray-500 text-center py-4">No course content available</Text>
                 </View>
-              ))}
-            </View>
-          )}
+              );
+            }
+            return null;
+          })()}
 
           {/* FAQ */}
           <View className="mb-1">
@@ -477,207 +596,225 @@ const PackageDetails = () => {
         // Pro Package - Trial and Enroll Buttons
         <View className="absolute bottom-6 left-0 right-0 bg-white border-t border-gray-200 py-4">
           <View className="px-5">
-            <View className="flex-row justify-center">
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedTrialType('free');
-                  setShowCheckout(true);
-                  bottomSheetRef.current?.present();
-                }}
-                className="w-40 py-4 rounded-3xl border border-blue-500 bg-white mr-4"
-              >
-                <Text className="text-center text-lg font-semibold text-blue-500">
-                  Free Trial
+            {alreadyEnrolled ? (
+              <>
+                <TouchableOpacity
+                  className="w-full py-4 rounded-3xl bg-blue-500"
+                  onPress={() => router.push('/More/MorePage')}
+                >
+                  <Text className="text-center text-lg font-bold text-white">
+                    Select the Course
+                  </Text>
+                </TouchableOpacity>
+                <Text className="text-gray-400 text-center mt-2 mb-3 text-sm">
+                  Choose this course to start learning
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedTrialType('paid');
-                  setShowCheckout(true);
-                  bottomSheetRef.current?.present();
-                }}
-                className="w-40 py-4 rounded-3xl bg-blue-500"
-              >
-                <Text className="text-center text-lg font-bold text-white">
-                  Enroll Now
+              </>
+            ) : (
+              <>
+                <View className="flex-row justify-center">
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedTrialType('free');
+                      setShowCheckout(true);
+                      bottomSheetRef.current?.present();
+                    }}
+                    className="w-40 py-4 rounded-3xl border border-blue-500 bg-white mr-4"
+                  >
+                    <Text className="text-center text-lg font-semibold text-blue-500">
+                      Free Trial
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedTrialType('paid');
+                      setShowCheckout(true);
+                      bottomSheetRef.current?.present();
+                    }}
+                    className="w-40 py-4 rounded-3xl bg-blue-500"
+                  >
+                    <Text className="text-center text-lg font-bold text-white">
+                      Enroll Now
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text className="text-gray-400 text-center mt-2 mb-3 text-sm">
+                  One-time payment – no recurring charges.
                 </Text>
-              </TouchableOpacity>
-            </View>
-            <Text className="text-gray-400 text-center mt-2 mb-3 text-sm">
-              One-time payment – no recurring charges.
-            </Text>
+              </>
+            )}
           </View>
         </View>
       )}
 
-      {/* Bottom Sheet for Pro Packages */}
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        index={0}
-        snapPoints={snapPoints}
-        onDismiss={() => {
-          setShowCheckout(false);
-          Keyboard.dismiss();
-        }}
-        backgroundStyle={{ backgroundColor: '#fff' }}
-        handleIndicatorStyle={{ backgroundColor: '#E5E7EB' }}
-        keyboardBehavior={Platform.OS === 'ios' ? 'extend' : 'interactive'}
-        android_keyboardInputMode="adjustResize"
-      >
-        <BottomSheetView className="flex-1 px-6 pb-6">
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 20 }}
-          >
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-xl font-bold text-gray-800">Checkout</Text>
-            <TouchableOpacity onPress={() => {
-              setShowCheckout(false);
-              bottomSheetRef.current?.dismiss();
-            }}>
-              <MaterialIcons name="close" size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Package Summary */}
-          <View className={`rounded-xl p-4 mb-6 ${
-            selectedTrialType === 'free' ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
-          }`}>
-            <View className="flex-row items-center justify-between">
-              <View className="flex-1">
-                <Text className="text-lg font-bold text-gray-900">{packageTitle}</Text>
-                <Text className="text-sm text-gray-600">
-                  {selectedTrialType === 'free'
-                    ? `Try ${packageTitle.toLowerCase()} free for 7 days`
-                    : pkg.description
-                  }
-                </Text>
-                <Text className="mt-2">
-                  <Text className={`text-lg font-bold ${
-                    selectedTrialType === 'free' ? 'text-blue-600' : 'text-gray-900'
-                  }`}>
-                    Rs. {selectedTrialType === 'free' ? '0' : pkg.price?.toLocaleString()}
-                  </Text>
-                  {selectedTrialType === 'free' ? (
-                    <Text className="text-sm text-blue-600"> (Free for 7 days)</Text>
-                  ) : (
-                    <Text className="text-sm text-gray-500"> (One-time payment)</Text>
-                  )}
-                </Text>
-              </View>
-              {selectedTrialType === 'free' && (
-                <View className="bg-blue-500 px-3 py-1 rounded-full">
-                  <Text className="text-xs text-white font-bold">TRIAL</Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Conditional Content Based on Trial Type */}
-          {selectedTrialType === 'free' ? (
-            <>
-              {/* Free Trial Information */}
-              <Text className="text-lg font-semibold text-gray-800 mb-4">Start Your Free Trial</Text>
-              <View className="mb-6">
-                <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                  <View className="flex-row items-center mb-3">
-                    <MaterialIcons name="info" size={20} color="#6B7280" />
-                    <Text className="ml-2 text-sm font-semibold text-gray-900">Trial Terms</Text>
-                  </View>
-                  <Text className="text-sm text-gray-700 leading-5 mb-3">
-                    • Your free trial lasts 7 days from activation{'\n'}
-                    • Full access to all premium features{'\n'}
-                    • Cancel anytime during the trial period{'\n'}
-                    • No payment required to start
-                  </Text>
-                  <Text className="text-xs text-gray-600">
-                    If you don&apos;t cancel before the trial ends, you&apos;ll be charged the full price automatically.
-                  </Text>
-                </View>
-              </View>
-            </>
-          ) : (
-            <>
-              {/* Payment Method Selection */}
-              <Text className="text-lg font-semibold text-gray-800 mb-4">Payment Method</Text>
-              <View className="mb-6">
-
-
-                <TouchableOpacity 
-                  className={`flex-row items-center p-4 rounded-xl border-2 ${
-                    paymentMethod === 'code' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
-                  }`}
-                  onPress={() => setPaymentMethod('code')}
-                >
-                  <MaterialIcons 
-                    name="lock-open" 
-                    size={24} 
-                    color={paymentMethod === 'code' ? '#3B82F6' : '#6B7280'} 
-                  />
-                  <Text className={`ml-3 font-medium ${
-                    paymentMethod === 'code' ? 'text-blue-900' : 'text-gray-700'
-                  }`}>
-                    Enter Unlock Code
-                  </Text>
-                  {paymentMethod === 'code' && (
-                    <View className="ml-2">
-                      <MaterialIcons name="check-circle" size={20} color="#3B82F6" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-
-          {/* Checkout/Redeem Section */}
-          {paymentMethod === 'code' ? (
-            <>
-              <View className="mb-4">
-                <Text className="text-lg font-semibold text-gray-800 mb-2">Enter Unlock Code</Text>
-                <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-lg"
-                  placeholder="e.g. IEA-21JA-WA"
-                  value={unlockCode}
-                  onChangeText={setUnlockCode}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  autoFocus={paymentMethod === 'code'}
-                  keyboardType="default"
-                  returnKeyType="done"
-                  onSubmitEditing={handleRedeemCode}
-                />
-              </View>
-              <TouchableOpacity
-                className={`py-4 rounded-3xl mb-4 ${isRedeeming ? 'bg-gray-400' : 'bg-blue-500'}`}
-                onPress={handleRedeemCode}
-                disabled={isRedeeming}
-              >
-                <Text className="text-white text-center font-semibold text-lg">
-                  {isRedeeming ? 'Redeeming...' : 'Verify & Enroll'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View
-              className="bg-gray-300 py-4 rounded-3xl mb-4 opacity-70"
-              style={{ pointerEvents: 'none' }}
+      {/* Bottom Sheet for Pro Packages - Only show if not enrolled */}
+      {!alreadyEnrolled && (
+        <BottomSheetModal
+          ref={bottomSheetRef}
+          index={0}
+          snapPoints={snapPoints}
+          onDismiss={() => {
+            setShowCheckout(false);
+            Keyboard.dismiss();
+          }}
+          backgroundStyle={{ backgroundColor: '#fff' }}
+          handleIndicatorStyle={{ backgroundColor: '#E5E7EB' }}
+          keyboardBehavior={Platform.OS === 'ios' ? 'extend' : 'interactive'}
+          android_keyboardInputMode="adjustResize"
+        >
+          <BottomSheetView className="flex-1 px-6 pb-6">
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 20 }}
             >
-              <Text className="text-gray-500 text-center font-semibold text-lg">
-                Available Soon
-              </Text>
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-xl font-bold text-gray-800">Checkout</Text>
+              <TouchableOpacity onPress={() => {
+                setShowCheckout(false);
+                bottomSheetRef.current?.dismiss();
+              }}>
+                <MaterialIcons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
             </View>
-          )}
 
-          <Text className="text-xs text-gray-500 text-center">
-            {selectedTrialType === 'free' 
-              ? 'Your trial data is secured with 256-bit SSL encryption'
-              : 'Your payment is secured with 256-bit SSL encryption'
-            }
-          </Text>
-          </ScrollView>
-        </BottomSheetView>
-      </BottomSheetModal>
+            {/* Package Summary */}
+            <View className={`rounded-xl p-4 mb-6 ${
+              selectedTrialType === 'free' ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
+            }`}>
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="text-lg font-bold text-gray-900">{packageTitle}</Text>
+                  <Text className="text-sm text-gray-600">
+                    {selectedTrialType === 'free'
+                      ? `Try ${packageTitle.toLowerCase()} free for 7 days`
+                      : pkg.description
+                    }
+                  </Text>
+                  <Text className="mt-2">
+                    <Text className={`text-lg font-bold ${
+                      selectedTrialType === 'free' ? 'text-blue-600' : 'text-gray-900'
+                    }`}>
+                      Rs. {selectedTrialType === 'free' ? '0' : pkg.price?.toLocaleString()}
+                    </Text>
+                    {selectedTrialType === 'free' ? (
+                      <Text className="text-sm text-blue-600"> (Free for 7 days)</Text>
+                    ) : (
+                      <Text className="text-sm text-gray-500"> (One-time payment)</Text>
+                    )}
+                  </Text>
+                </View>
+                {selectedTrialType === 'free' && (
+                  <View className="bg-blue-500 px-3 py-1 rounded-full">
+                    <Text className="text-xs text-white font-bold">TRIAL</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Conditional Content Based on Trial Type */}
+            {selectedTrialType === 'free' ? (
+              <>
+                {/* Free Trial Information */}
+                <Text className="text-lg font-semibold text-gray-800 mb-4">Start Your Free Trial</Text>
+                <View className="mb-6">
+                  <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <View className="flex-row items-center mb-3">
+                      <MaterialIcons name="info" size={20} color="#6B7280" />
+                      <Text className="ml-2 text-sm font-semibold text-gray-900">Trial Terms</Text>
+                    </View>
+                    <Text className="text-sm text-gray-700 leading-5 mb-3">
+                      • Your free trial lasts 7 days from activation{'\n'}
+                      • Full access to all premium features{'\n'}
+                      • Cancel anytime during the trial period{'\n'}
+                      • No payment required to start
+                    </Text>
+                    <Text className="text-xs text-gray-600">
+                      If you don&apos;t cancel before the trial ends, you&apos;ll be charged the full price automatically.
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Payment Method Selection */}
+                <Text className="text-lg font-semibold text-gray-800 mb-4">Payment Method</Text>
+                <View className="mb-6">
+                  <TouchableOpacity 
+                    className={`flex-row items-center p-4 rounded-xl border-2 ${
+                      paymentMethod === 'code' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+                    }`}
+                    onPress={() => setPaymentMethod('code')}
+                  >
+                    <MaterialIcons 
+                      name="lock-open" 
+                      size={24} 
+                      color={paymentMethod === 'code' ? '#3B82F6' : '#6B7280'} 
+                    />
+                    <Text className={`ml-3 font-medium ${
+                      paymentMethod === 'code' ? 'text-blue-900' : 'text-gray-700'
+                    }`}>
+                      Enter Unlock Code
+                    </Text>
+                    {paymentMethod === 'code' && (
+                      <View className="ml-2">
+                        <MaterialIcons name="check-circle" size={20} color="#3B82F6" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* Checkout/Redeem Section */}
+            {paymentMethod === 'code' ? (
+              <>
+                <View className="mb-4">
+                  <Text className="text-lg font-semibold text-gray-800 mb-2">Enter Unlock Code</Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-4 py-3 text-lg"
+                    placeholder="e.g. IEA-21JA-WA"
+                    value={unlockCode}
+                    onChangeText={setUnlockCode}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    autoFocus={paymentMethod === 'code'}
+                    keyboardType="default"
+                    returnKeyType="done"
+                    onSubmitEditing={handleRedeemCode}
+                  />
+                </View>
+                <TouchableOpacity
+                  className={`py-4 rounded-3xl mb-4 ${isRedeeming ? 'bg-gray-400' : 'bg-blue-500'}`}
+                  onPress={handleRedeemCode}
+                  disabled={isRedeeming}
+                >
+                  <Text className="text-white text-center font-semibold text-lg">
+                    {isRedeeming ? 'Redeeming...' : 'Verify & Enroll'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View
+                className="bg-gray-300 py-4 rounded-3xl mb-4 opacity-70"
+                style={{ pointerEvents: 'none' }}
+              >
+                <Text className="text-gray-500 text-center font-semibold text-lg">
+                  Available Soon
+                </Text>
+              </View>
+            )}
+
+            <Text className="text-xs text-gray-500 text-center">
+              {selectedTrialType === 'free' 
+                ? 'Your trial data is secured with 256-bit SSL encryption'
+                : 'Your payment is secured with 256-bit SSL encryption'
+              }
+            </Text>
+            </ScrollView>
+          </BottomSheetView>
+        </BottomSheetModal>
+      )}
     </SafeAreaView>
   );
 };
