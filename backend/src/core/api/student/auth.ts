@@ -6,6 +6,7 @@ export namespace SignupStudent {
         full_name: string;
         grade: number;
         email: string;
+        phone_number: string;
         password: string;
         address: {
             province?: string;
@@ -24,6 +25,7 @@ export namespace LoginStudent {
     export interface Req {
         email: string;
         password: string;
+        deviceFingerprint: string;
     }
 
     export interface Res {

@@ -15,6 +15,10 @@ const schema = new Schema<TStudent<mongoose.Types.ObjectId>>({
         required: true,
         unique: true
     },
+    phone_number: {
+        type: String,
+        required: true
+    },
     address: {
         institution: {
             type: String,
@@ -74,12 +78,29 @@ const schema = new Schema<TStudent<mongoose.Types.ObjectId>>({
             type: Boolean,
             default: true
         }
+    },
+    deviceFingerprint: {
+        type: String,
+        required: false, // Optional for backward compatibility
+        unique: false // Allow multiple users to have same fingerprint (different users, same device type)
+    },
+    lastLoginAt: {
+        type: Date,
+        required: false
     }
 }, {timestamps: true});
 
 // Virtual for ID compatibility (frontend uses both _id and id)
 schema.virtual('id').get(function() {
   return this._id.toHexString();
+});
+
+// Pre-save hook for validation
+schema.pre('save', function(next) {
+  if (this.isNew && !this.password) {
+    return next(new Error('Password is required for new students'));
+  }
+  next();
 });
 
 schema.set("toJSON", {

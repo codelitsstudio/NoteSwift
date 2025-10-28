@@ -135,8 +135,8 @@ export class DatabaseMaintenanceService {
 
       if (orphanedEnrollments.length > 0) {
         return {
-          status: 'warning',
-          message: `Found ${orphanedEnrollments.length} orphaned enrollments`,
+          status: 'healthy', // Changed from 'warning' to 'healthy' since we don't auto-delete anymore
+          message: `Found ${orphanedEnrollments.length} potentially orphaned enrollments (not auto-deleting)`,
           details: { totalEnrollments, activeEnrollments, orphanedCount: orphanedEnrollments.length }
         };
       }
@@ -296,9 +296,14 @@ export class DatabaseMaintenanceService {
       const orphaned = await this.findOrphanedEnrollments();
       
       if (orphaned.length > 0) {
-        const orphanedIds = orphaned.map(o => o._id);
-        await CourseEnrollment.deleteMany({ _id: { $in: orphanedIds } });
-        console.log(`🧹 Cleaned ${orphaned.length} orphaned enrollments`);
+        // DISABLED: Do not automatically delete orphaned enrollments
+        // This was causing legitimate enrollments to be lost
+        console.log(`⚠️ Found ${orphaned.length} potentially orphaned enrollments - NOT deleting for safety`);
+        console.log('Orphaned enrollment IDs:', orphaned.map(o => o._id.toString()));
+        
+        // Instead of deleting, just log them for manual review
+        // await CourseEnrollment.deleteMany({ _id: { $in: orphanedIds } });
+        // console.log(`🧹 Cleaned ${orphaned.length} orphaned enrollments`);
       } else {
         console.log('🧹 No orphaned enrollments found');
       }

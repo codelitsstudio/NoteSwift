@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import Teacher from './Teacher.model';
 
 export interface IAnswer {
   answeredBy: mongoose.Types.ObjectId; // Teacher or Student ID

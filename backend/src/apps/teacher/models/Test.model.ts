@@ -267,7 +267,16 @@ testSchema.index({ 'attempts.studentId': 1 });
 
 // Calculate derived fields before save
 testSchema.pre('save', function(next) {
-  this.totalQuestions = this.questions.length;
+  // Only set totalQuestions from questions.length if it wasn't explicitly set
+  if (!this.totalQuestions || this.totalQuestions === 0) {
+    this.totalQuestions = this.questions.length;
+  }
+  
+  // Ensure totalQuestions is at least 1 for non-draft tests
+  if (this.status !== 'draft' && this.totalQuestions < 1) {
+    return next(new Error('Test must have at least 1 question'));
+  }
+  
   this.totalMarks = this.questions.reduce((sum, q) => sum + q.marks, 0);
   this.totalAttempts = this.attempts.length;
   

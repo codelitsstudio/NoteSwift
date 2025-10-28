@@ -9,6 +9,7 @@ export interface ITeacher extends Document {
   phoneNumber?: string;
   dateOfBirth?: Date;
   gender?: string;
+  profilePhoto?: string;
   address?: {
     street?: string;
     city?: string;
@@ -59,6 +60,7 @@ const teacherSchema = new Schema<ITeacher>({
   phoneNumber: { type: String },
   dateOfBirth: { type: Date },
   gender: { type: String },
+  profilePhoto: { type: String },
   address: {
     street: String,
     city: String,
@@ -111,7 +113,7 @@ teacherSchema.pre('save', function(next) {
 });
 
 const Teacher: Model<ITeacher> = 
-  mongoose.models.Teacher || 
-  mongoose.model<ITeacher>('Teacher', teacherSchema);
+  mongoose.models.teacher || 
+  mongoose.model<ITeacher>('teacher', teacherSchema, 'teachers');
 
 export default Teacher;

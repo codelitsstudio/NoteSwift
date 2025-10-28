@@ -106,6 +106,7 @@ export const getCourseContent = async (req: AuthRequest, res: Response): Promise
       return {
         name: subject.name,
         description: subject.description,
+        totalLessons: subjectContent?.modules?.length || subject.modules?.length || 0,
         teacher: subjectContent ? {
           id: (subjectContent.teacherId as any)?._id?.toString() || subjectContent.teacherId?.toString(),
           name: subjectContent.teacherName || 'Course Instructor',
@@ -146,8 +147,21 @@ export const getCourseContent = async (req: AuthRequest, res: Response): Promise
             isActive: subjectContentModule?.isActive !== false,
 
             // Video content - prefer SubjectContent data
-            hasVideo: subjectContentModule?.hasVideo === true || module.hasVideo === true || module.hasVideo === 'true' || false,
-            video: (subjectContentModule?.hasVideo === true || module.hasVideo === true || module.hasVideo === 'true') ? {
+            hasVideo: subjectContentModule?.hasVideo === true || module.hasVideo === true || module.hasVideo === 'true' || 
+                     (subjectContentModule?.videos && subjectContentModule.videos.length > 0) ||
+                     (subjectContentModule?.videoUrl && subjectContentModule.videoUrl.trim()) || false,
+            video: (subjectContentModule?.hasVideo === true || module.hasVideo === true || module.hasVideo === 'true' ||
+                   (subjectContentModule?.videos && subjectContentModule.videos.length > 0) ||
+                   (subjectContentModule?.videoUrl && subjectContentModule.videoUrl.trim())) ? {
+              // Support multiple videos
+              videos: subjectContentModule?.videos || 
+                     (subjectContentModule?.videoUrl ? [{
+                       url: subjectContentModule.videoUrl,
+                       title: subjectContentModule.videoTitle || 'Video',
+                       duration: subjectContentModule.videoDuration,
+                       uploadedAt: subjectContentModule.videoUploadedAt
+                     }] : []),
+              // Keep backward compatibility
               url: subjectContentModule?.videoUrl || module.videoUrl,
               title: subjectContentModule?.videoTitle || module.videoTitle,
               duration: subjectContentModule?.videoDuration || module.videoDuration,
@@ -178,6 +192,10 @@ export const getCourseContent = async (req: AuthRequest, res: Response): Promise
             testCount: subjectContentModule?.testIds?.length || module.testIds?.length || 0,
             hasQuestions: subjectContentModule?.hasQuestions || module.hasQuestions || false,
             questionCount: subjectContentModule?.questionIds?.length || module.questionIds?.length || 0,
+            // likes metadata
+            likes: subjectContentModule?.likes || module.likes || [],
+            likeCount: (subjectContentModule?.likes?.length || module.likes?.length || 0),
+            likedByUser: studentId ? ((subjectContentModule?.likes || module.likes || []).some((id: any) => id.toString() === studentId)) : false,
           };
           
           console.log('📝 Module result:', {
@@ -265,12 +283,15 @@ export const getSubjectContent = async (req: AuthRequest, res: Response): Promis
       courseId: courseId,
       subjectName: { $regex: new RegExp(`^${decodeURIComponent(subjectName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
       isActive: true
-    }).populate('teacherId', 'firstName lastName email verificationDocuments');
+    }).populate('teacherId', 'firstName lastName email profilePhoto verificationDocuments');
 
     console.log('🎯 SubjectContent lookup result:', subjectContent ? 'FOUND' : 'NOT FOUND', {
       searchedFor: decodeURIComponent(subjectName),
       found: subjectContent?.subjectName
     });
+
+    // Declare teacherInfo in outer scope for the entire function
+    let teacherInfo: { id: string; name: string; email: string; avatar: string } | undefined = undefined;
 
     // If no SubjectContent exists, fall back to Course data
     if (!subjectContent) {
@@ -315,7 +336,6 @@ export const getSubjectContent = async (req: AuthRequest, res: Response): Promis
         teacherId: null,
         teacherName: course.offeredBy || 'Course Instructor',
         teacherEmail: null,
-        teacherAvatar: null,
         modules: (subject.modules || []).map((module: any, index: number) => ({
           moduleNumber: index + 1,
           moduleName: module.name,
@@ -347,23 +367,50 @@ export const getSubjectContent = async (req: AuthRequest, res: Response): Promis
         updatedAt: course.updatedAt
       } as any;
     } else {
-      // SubjectContent exists, get teacher info and merge with Course descriptions if needed
-      let teacherInfo = null;
-      if (subjectContent.teacherId) {
+      // SubjectContent exists, extract teacher info properly
+      if (subjectContent.teacherId && typeof subjectContent.teacherId === 'object' && 'firstName' in subjectContent.teacherId) {
         const teacher = subjectContent.teacherId as any;
         teacherInfo = {
           id: (teacher._id as any).toString(),
           name: subjectContent.teacherName || `${teacher.firstName} ${teacher.lastName}`.trim(),
           email: subjectContent.teacherEmail || teacher.email,
-          avatar: teacher.verificationDocuments || 'https://randomuser.me/api/portraits/men/32.jpg'
+          avatar: teacher.profilePhoto || 
+                  (teacher.verificationDocuments?.profile?.[0]?.url) ||
+                  (typeof teacher.verificationDocuments === 'string' ? teacher.verificationDocuments : null) || 
+                  'https://randomuser.me/api/portraits/men/32.jpg'
         };
-      }
 
-      // Update teacher info in the response
-      (subjectContent as any).teacherId = teacherInfo?.id || null;
-      (subjectContent as any).teacherName = teacherInfo?.name || subjectContent.teacherName;
-      (subjectContent as any).teacherEmail = teacherInfo?.email || subjectContent.teacherEmail;
-      (subjectContent as any).teacherAvatar = teacherInfo?.avatar || null;
+        console.log('👨‍🏫 Teacher avatar being set:', {
+          teacherId: teacherInfo?.id,
+          teacherName: teacherInfo?.name,
+          avatar: teacherInfo?.avatar,
+          profilePhoto: teacher.profilePhoto,
+          verificationDocuments: teacher.verificationDocuments
+        });
+      } else {
+        console.log('👨‍🏫 Teacher not populated or missing, teacherId:', subjectContent.teacherId);
+        // Try to manually populate the teacher
+        try {
+          const Teacher = (await import('../../models/Teacher.model')).default;
+          if (subjectContent.teacherId) {
+            const teacher = await Teacher.findById(subjectContent.teacherId).select('firstName lastName email profilePhoto verificationDocuments');
+            if (teacher) {
+              teacherInfo = {
+                id: (teacher._id as any).toString(),
+                name: subjectContent.teacherName || `${teacher.firstName} ${teacher.lastName}`.trim(),
+                email: subjectContent.teacherEmail || teacher.email,
+                avatar: teacher.profilePhoto || 
+                        (teacher.verificationDocuments?.profile?.[0]?.url) ||
+                        (typeof teacher.verificationDocuments === 'string' ? teacher.verificationDocuments : null) || 
+                        'https://randomuser.me/api/portraits/men/32.jpg'
+              };
+              console.log('👨‍🏫 Manually populated teacher avatar:', teacherInfo.avatar);
+            }
+          }
+        } catch (error) {
+          console.log('👨‍🏫 Error manually populating teacher:', error);
+        }
+      }
     }
 
     // Simple approach: modify the response data directly
@@ -376,6 +423,36 @@ export const getSubjectContent = async (req: AuthRequest, res: Response): Promis
     }
 
     const responseData = subjectContent.toObject ? subjectContent.toObject() : subjectContent;
+
+    // Add tags to modules based on hasVideo and hasNotes OR presence of URLs
+    if (responseData.modules && Array.isArray(responseData.modules)) {
+      responseData.modules = responseData.modules.map((module: any) => {
+        module.tags = [];
+        // Check for video content - either videos array has items OR videoUrl exists OR hasVideo is true
+        const hasVideos = (module.videos && module.videos.length > 0) || 
+                         (module.videoUrl && module.videoUrl.trim()) || 
+                         module.hasVideo === true;
+        if (hasVideos) {
+          const videoCount = (module.videos && module.videos.length) || 
+                           (module.videoUrl ? 1 : 0) || 
+                           (module.hasVideo ? 1 : 0);
+          module.tags.push({ type: 'video', label: 'Videos', count: videoCount });
+          // Ensure hasVideo is set to true if content exists
+          module.hasVideo = true;
+        }
+        // Check for notes content - either hasNotes flag is true OR notesUrl exists
+        if (module.hasNotes === true || (module.notesUrl && module.notesUrl.trim())) {
+          module.tags.push({ type: 'notes', label: 'Notes', count: 1 });
+          // Ensure hasNotes is set to true if URL exists
+          module.hasNotes = true;
+        }
+        // Ensure likes metadata exists and include per-user flag when possible
+        module.likes = module.likes || [];
+        module.likeCount = Array.isArray(module.likes) ? module.likes.length : 0;
+        module.likedByUser = studentId ? (module.likes.some((id: any) => id.toString() === studentId) ) : false;
+        return module;
+      });
+    }
 
     // Ensure all modules have descriptions from Course data if missing
     if (responseData.modules && Array.isArray(responseData.modules)) {
@@ -395,6 +472,24 @@ export const getSubjectContent = async (req: AuthRequest, res: Response): Promis
               );
               module.description = courseModule?.description || '';
             }
+            
+            // Create tags array based on hasVideo and hasNotes OR presence of URLs
+            module.tags = [];
+            const hasVideos = (module.videos && module.videos.length > 0) || 
+                             (module.videoUrl && module.videoUrl.trim()) || 
+                             module.hasVideo === true;
+            if (hasVideos) {
+              const videoCount = (module.videos && module.videos.length) || 
+                               (module.videoUrl ? 1 : 0) || 
+                               (module.hasVideo ? 1 : 0);
+              module.tags.push({ type: 'video', label: 'Videos', count: videoCount });
+              module.hasVideo = true;
+            }
+            if (module.hasNotes === true || (module.notesUrl && module.notesUrl.trim())) {
+              module.tags.push({ type: 'notes', label: 'Notes', count: 1 });
+              module.hasNotes = true;
+            }
+            
             return module;
           });
         }
@@ -405,7 +500,9 @@ export const getSubjectContent = async (req: AuthRequest, res: Response): Promis
       success: true,
       data: responseData,
       modulesCount: responseData?.modules?.length || 0,
-      firstModule: responseData?.modules?.[0] || null
+      firstModule: responseData?.modules?.[0] || null,
+      teacherName: responseData.teacherName,
+      teacherId: responseData.teacherId
     });
 
     res.json({
@@ -528,7 +625,7 @@ export const getTeacherProfile = async (req: Request, res: Response): Promise<vo
     const teacher = await Teacher.findOne({
       _id: teacherId,
       registrationStatus: 'approved'
-    }).select('firstName lastName email verificationDocuments assignedCourses') as ITeacher | null;
+    }).select('firstName lastName email profilePhoto verificationDocuments assignedCourses') as ITeacher | null;
 
     if (!teacher) {
       res.status(404).json({
@@ -546,7 +643,7 @@ export const getTeacherProfile = async (req: Request, res: Response): Promise<vo
           id: (teacher._id as any).toString(),
           name: `${teacher.firstName} ${teacher.lastName}`.trim(),
           email: teacher.email,
-          avatar: teacher.verificationDocuments || 'https://randomuser.me/api/portraits/men/32.jpg' // Default avatar
+          avatar: teacher.profilePhoto || teacher.verificationDocuments || 'https://randomuser.me/api/portraits/men/32.jpg' // Default avatar
         }
       },
       message: "Teacher profile retrieved successfully"
@@ -827,14 +924,34 @@ export const getUserEnrollments = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
+    // First get the enrollments without populate
     const enrollments = await CourseEnrollment.find({
       studentId: userId,
       isActive: true,
-    }).populate("courseId", "title description subjects tags");
+    });
+
+    // Then manually populate the course data
+    const enrollmentsWithCourses = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        try {
+          const course = await Course.findById(enrollment.courseId).select('title description subjects tags');
+          return {
+            ...enrollment.toObject(),
+            courseId: course || enrollment.courseId // fallback to just the ID if course not found
+          };
+        } catch (error) {
+          console.error(`Error fetching course ${enrollment.courseId}:`, error);
+          return {
+            ...enrollment.toObject(),
+            courseId: enrollment.courseId // fallback to just the ID
+          };
+        }
+      })
+    );
 
     res.json({
       success: true,
-      data: enrollments,
+      data: enrollmentsWithCourses,
       message: "Enrollments retrieved successfully",
     });
   } catch (error) {
@@ -1598,6 +1715,7 @@ function generateRecommendedFor(program: string): string[] {
 export const getVideoSignedUrl = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { courseId, subjectName, moduleNumber } = req.params;
+    const { videoIndex = 0 } = req.query; // Default to first video if not specified
     const studentId = req.user?.id;
 
     if (!courseId || !subjectName || !moduleNumber || !studentId) {
@@ -1641,7 +1759,46 @@ export const getVideoSignedUrl = async (req: AuthRequest, res: Response): Promis
 
     // Find the module
     const module = subjectContent.modules.find(m => m.moduleNumber === parseInt(moduleNumber));
-    if (!module || !module.hasVideo || !module.videoUrl) {
+    if (!module) {
+      res.status(404).json({
+        success: false,
+        message: "Module not found"
+      });
+      return;
+    }
+
+    // Check if module has videos
+    if (!module.hasVideo || (!module.videos && !module.videoUrl)) {
+      res.status(404).json({
+        success: false,
+        message: "No videos found for this module"
+      });
+      return;
+    }
+
+    let selectedVideo = null;
+    const index = parseInt(videoIndex as string);
+
+    // Handle multiple videos array
+    if (module.videos && Array.isArray(module.videos) && module.videos.length > 0) {
+      if (index >= 0 && index < module.videos.length) {
+        selectedVideo = module.videos[index];
+      } else {
+        res.status(400).json({
+          success: false,
+          message: `Invalid video index. Available videos: 0-${module.videos.length - 1}`
+        });
+        return;
+      }
+    } else if (module.videoUrl && index === 0) {
+      // Backward compatibility for single video
+      selectedVideo = {
+        url: module.videoUrl,
+        title: module.videoTitle || 'Video',
+        duration: module.videoDuration,
+        uploadedAt: module.videoUploadedAt
+      };
+    } else {
       res.status(404).json({
         success: false,
         message: "Video not found for this module"
@@ -1654,17 +1811,23 @@ export const getVideoSignedUrl = async (req: AuthRequest, res: Response): Promis
 
     // Generate signed URL (valid for 20 minutes)
     const signedUrl = await FirebaseService.generateVideoSignedUrl(
-      module.videoUrl,
+      selectedVideo.url,
       subjectContent.subjectName,
       20
     );
+
+    // Also provide a stable public download URL (Google Cloud Storage public URL or local uploads URL)
+    const downloadUrl = FirebaseService.getPublicUrl(selectedVideo.url, subjectContent.subjectName);
 
     res.json({
       success: true,
       data: {
         signedUrl,
-        title: module.videoTitle,
-        duration: module.videoDuration,
+        downloadUrl,
+        storagePath: selectedVideo.url,
+        title: selectedVideo.title,
+        duration: selectedVideo.duration,
+        videoIndex: index,
         expiresIn: 20 * 60 * 1000 // 20 minutes in milliseconds
       },
       message: "Video signed URL generated successfully"
@@ -1760,5 +1923,57 @@ export const getNotesSignedUrl = async (req: AuthRequest, res: Response): Promis
       success: false,
       message: "Failed to generate notes access URL"
     });
+  }
+};
+
+// Toggle like for a module video (student)
+export const toggleModuleLike = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { courseId, subjectName, moduleNumber } = req.params;
+    const studentId = req.user?.id;
+
+    if (!courseId || !subjectName || !moduleNumber || !studentId) {
+      res.status(400).json({ success: false, message: 'Course ID, subject name, module number and authentication required' });
+      return;
+    }
+
+    const subjectContent = await SubjectContent.findOne({
+      courseId: courseId,
+      subjectName: { $regex: new RegExp(`^${decodeURIComponent(subjectName).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}$`, 'i') }
+    });
+
+    if (!subjectContent) {
+      res.status(404).json({ success: false, message: 'Subject content not found' });
+      return;
+    }
+
+    const moduleIdx = subjectContent.modules.findIndex(m => m.moduleNumber === parseInt(moduleNumber));
+    if (moduleIdx === -1) {
+      res.status(404).json({ success: false, message: 'Module not found' });
+      return;
+    }
+
+    const mod = subjectContent.modules[moduleIdx] as any;
+    if (!mod.likes) mod.likes = [];
+
+    const studentIdStr = studentId.toString();
+    let liked = false;
+
+    // If already liked, remove; otherwise add
+    if (mod.likes.some((id: any) => id.toString() === studentIdStr)) {
+      mod.likes = mod.likes.filter((id: any) => id.toString() !== studentIdStr);
+      liked = false;
+    } else {
+      mod.likes.push(studentId as any);
+      liked = true;
+    }
+
+    // Save the parent document
+    await subjectContent.save();
+
+    res.json({ success: true, data: { likes: mod.likes.length, liked }, message: 'Module like toggled' });
+  } catch (error) {
+    console.error('Error toggling module like:', error);
+    res.status(500).json({ success: false, message: 'Failed to toggle like' });
   }
 };

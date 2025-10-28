@@ -4,6 +4,7 @@ export interface TStudent<T=string>{
     full_name: string;
     grade: number;
     email: string;
+    phone_number: string;
     password: string;
     address: {
         province: string;
@@ -22,6 +23,8 @@ export interface TStudent<T=string>{
         weekly_progress_report: boolean;
         new_content_alerts: boolean;
     };
+    deviceFingerprint?: string; // Device binding for security
+    lastLoginAt?: Date; // Track last login time
 }
 
 export interface TStudentWithNoSensitive extends Omit<TStudent, "password"> {

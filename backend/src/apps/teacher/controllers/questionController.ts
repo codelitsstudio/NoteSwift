@@ -4,6 +4,22 @@ import SubjectContent from '../models/SubjectContent.model';
 import Teacher from '../models/Teacher.model';
 import CourseEnrollment from '../models/CourseEnrollment';
 
+// Helper function to check if teacher has access to a question
+const checkTeacherAccess = async (question: any, teacherEmail: string): Promise<boolean> => {
+  // Check if question has subjectContentId and it belongs to teacher
+  if (question.subjectContentId) {
+    const subjectContent = await SubjectContent.findById(question.subjectContentId);
+    if (subjectContent && subjectContent.teacherEmail === teacherEmail) {
+      return true;
+    }
+  }
+  
+  // Check if question's subjectName matches teacher's subjects
+  const teacherSubjects = await SubjectContent.find({ teacherEmail });
+  const teacherSubjectNames = teacherSubjects.map(sc => sc.subjectName);
+  return teacherSubjectNames.includes(question.subjectName);
+};
+
 // GET /api/teacher/questions - Get questions for teacher's subjects
 export const getTeacherQuestions = async (req: Request, res: Response) => {
   try {
@@ -24,10 +40,15 @@ export const getTeacherQuestions = async (req: Request, res: Response) => {
     if (subjectContentId) {
       query.subjectContentId = subjectContentId;
     } else {
-      // Get all questions for teacher's subjects
+      // Get all questions for teacher's subjects (by subjectContentId OR subjectName)
       const subjectContents = await SubjectContent.find({ teacherEmail });
       const subjectContentIds = subjectContents.map(sc => sc._id);
-      query.subjectContentId = { $in: subjectContentIds };
+      const subjectNames = subjectContents.map(sc => sc.subjectName);
+      
+      query.$or = [
+        { subjectContentId: { $in: subjectContentIds } },
+        { subjectName: { $in: subjectNames } }
+      ];
     }
     
     if (status) query.status = status;
@@ -61,9 +82,9 @@ export const getQuestionById = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
 
-    // Verify teacher has access (check if subjectContent belongs to teacher)
-    const subjectContent = await SubjectContent.findById(question.subjectContentId);
-    if (!subjectContent || subjectContent.teacherEmail !== teacherEmail) {
+    // Verify teacher has access
+    const hasAccess = await checkTeacherAccess(question, teacherEmail as string);
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -90,8 +111,8 @@ export const answerQuestion = async (req: Request, res: Response) => {
     }
 
     // Verify teacher has access
-    const subjectContent = await SubjectContent.findById(question.subjectContentId);
-    if (!subjectContent || subjectContent.teacherEmail !== teacherEmail) {
+    const hasAccess = await checkTeacherAccess(question, teacherEmail);
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -141,8 +162,8 @@ export const setQuestionPriority = async (req: Request, res: Response) => {
     }
 
     // Verify teacher has access
-    const subjectContent = await SubjectContent.findById(question.subjectContentId);
-    if (!subjectContent || subjectContent.teacherEmail !== teacherEmail) {
+    const hasAccess = await checkTeacherAccess(question, teacherEmail);
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -168,8 +189,8 @@ export const resolveQuestion = async (req: Request, res: Response) => {
     }
 
     // Verify teacher has access
-    const subjectContent = await SubjectContent.findById(question.subjectContentId);
-    if (!subjectContent || subjectContent.teacherEmail !== teacherEmail) {
+    const hasAccess = await checkTeacherAccess(question, teacherEmail);
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -203,8 +224,8 @@ export const acceptAnswer = async (req: Request, res: Response) => {
     }
 
     // Verify teacher has access
-    const subjectContent = await SubjectContent.findById(question.subjectContentId);
-    if (!subjectContent || subjectContent.teacherEmail !== teacherEmail) {
+    const hasAccess = await checkTeacherAccess(question, teacherEmail);
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -242,8 +263,8 @@ export const deleteQuestion = async (req: Request, res: Response) => {
     }
 
     // Verify teacher has access
-    const subjectContent = await SubjectContent.findById(question.subjectContentId);
-    if (!subjectContent || subjectContent.teacherEmail !== teacherEmail) {
+    const hasAccess = await checkTeacherAccess(question, teacherEmail as string);
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 

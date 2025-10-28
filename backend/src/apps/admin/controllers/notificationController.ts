@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import connectDB from '@core/lib/mongoose';
 import Notification from '../models/Notification';
+import { Student } from '../../student/models/students/Student.model';
+import { pushNotificationService } from '../../../services/pushNotificationService';
 
 /**
  * GET /api/admin/notifications
@@ -53,6 +55,7 @@ export const createNotification = async (req: Request, res: Response, next: Next
         success: false, 
         error: 'Type and title are required' 
       });
+      return;
     }
 
     // Get admin from request (set by middleware)
@@ -82,6 +85,37 @@ export const createNotification = async (req: Request, res: Response, next: Next
     });
 
     await notification.save();
+
+    // Send push notifications if type is 'push'
+    if (type === 'push' && status === 'sent') {
+      try {
+        // Get all students with push tokens
+        const students = await Student.find({ pushToken: { $exists: true, $ne: null } });
+        const pushTokens = students.map(student => student.pushToken).filter(Boolean);
+
+        if (pushTokens.length > 0) {
+          console.log(`Sending push notification to ${pushTokens.length} students`);
+          
+          await pushNotificationService.sendPushNotifications(
+            pushTokens,
+            title,
+            message || description || '',
+            {
+              type: 'admin_notification',
+              notificationId: notification._id,
+              adminEmail: createdByEmail
+            }
+          );
+          
+          console.log('Push notifications sent successfully');
+        } else {
+          console.log('No students with push tokens found');
+        }
+      } catch (pushError) {
+        console.error('Error sending push notifications:', pushError);
+        // Don't fail the request if push notification fails
+      }
+    }
 
     res.json({ success: true, result: { notification } });
   } catch (error) {

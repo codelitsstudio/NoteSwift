@@ -32,5 +32,5 @@ const studentSchema = new Schema<IStudent>({
   lastLogin: Date,
 }, { timestamps: true });
 
-const Student: Model<IStudent> = models.Student || mongoose.model<IStudent>('Student', studentSchema, 'students');
+const Student: Model<IStudent> = models.AdminStudent || mongoose.model<IStudent>('AdminStudent', studentSchema, 'students');
 export default Student;

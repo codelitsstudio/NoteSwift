@@ -1,11 +1,21 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+// Interface for video content
+export interface IVideoContent {
+  url: string;
+  title: string;
+  duration?: string;
+  uploadedAt?: Date;
+}
+
 // Interface for module content configuration
 export interface IModuleContent {
   moduleNumber: number;
   moduleName: string;
   description?: string; // Add description field
   hasVideo: boolean;
+  videos?: IVideoContent[]; // Support multiple videos
+  // Keep backward compatibility
   videoUrl?: string;
   videoTitle?: string;
   videoDuration?: string;
@@ -29,6 +39,8 @@ export interface IModuleContent {
   
   hasQuestions: boolean;
   questionIds?: mongoose.Types.ObjectId[]; // Reference to Question/Doubt collection
+  // Likes stored as student ObjectId references
+  likes?: mongoose.Types.ObjectId[];
   
   order: number;
   isActive: boolean;
@@ -64,6 +76,15 @@ const moduleContentSchema = new Schema<IModuleContent>({
   description: { type: String }, // Add description field
   
   hasVideo: { type: Boolean, default: false },
+  videos: [{ // Support multiple videos
+    url: { type: String, required: true },
+    title: { type: String, required: true },
+    duration: { type: String },
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+  // Likes: allow tracking student likes for a module (optional)
+  likes: [{ type: Schema.Types.ObjectId, ref: 'Student' }],
+  // Keep backward compatibility
   videoUrl: { type: String },
   videoTitle: { type: String },
   videoDuration: { type: String },

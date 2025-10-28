@@ -148,7 +148,7 @@ export const getUnlockCodes = async (req: Request, res: Response): Promise<void>
 // Redeem unlock code (for mobile app)
 export const redeemUnlockCode = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { code, courseId, deviceHash } = req.body;
+    const { code, courseId } = req.body;
     const userId = req.user?.id;
 
     if (!code || !courseId || !userId) {
@@ -184,7 +184,6 @@ export const redeemUnlockCode = async (req: Request, res: Response): Promise<voi
     // Mark code as used
     unlockCode.isUsed = true;
     unlockCode.usedByUserId = userId;
-    unlockCode.usedDeviceHash = deviceHash;
     unlockCode.usedTimestamp = new Date();
     await unlockCode.save();
 
@@ -220,8 +219,7 @@ export const redeemUnlockCode = async (req: Request, res: Response): Promise<voi
         action: 'code_redemption',
         unlockCode: code,
         courseId,
-        courseName: course?.title || 'Unknown Course',
-        deviceHash
+        courseName: course?.title || 'Unknown Course'
       }
     );
 

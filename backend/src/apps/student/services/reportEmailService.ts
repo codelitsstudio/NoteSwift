@@ -61,7 +61,6 @@ class ReportEmailService {
         <div style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
             <p style="color: #9ca3af; font-size: 12px; margin: 0;">
                 © ${new Date().getFullYear()} NoteSwift. All rights reserved.<br>
-                123 Swift Street, Innovation City, 12345
             </p>
         </div>
     </div>

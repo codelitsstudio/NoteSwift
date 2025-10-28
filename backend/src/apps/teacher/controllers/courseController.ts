@@ -1165,8 +1165,18 @@ export const getAllTeacherSubjectContent = async (req: Request, res: Response) =
           if (subjectData) {
             console.log('🎯 ALL-SUBJECT-CONTENT: Subject modules:', subjectData.modules?.length || 0);
 
+            // Fetch SubjectContent to get videos array
+            const subjectContent = await SubjectContent.findOne({
+              teacherId: teacher._id,
+              courseId: assignment.courseId,
+              subjectName: assignment.subject,
+              isActive: true
+            });
+
+            console.log('🎯 ALL-SUBJECT-CONTENT: SubjectContent found:', !!subjectContent, 'Videos in modules:', subjectContent?.modules?.map(m => m.videos?.length || 0));
+
             subjects.push({
-              _id: `${courseDoc._id}_${subjectData.name}`,
+              _id: subjectContent?._id || `${courseDoc._id}_${subjectData.name}`, // Use SubjectContent _id if available, fallback to constructed
               courseId: courseDoc._id,
               courseName: courseDoc.title,
               courseProgram: courseDoc.program || '',
@@ -1175,23 +1185,40 @@ export const getAllTeacherSubjectContent = async (req: Request, res: Response) =
               description: subjectData.description,
               syllabus: subjectData.syllabus,
               objectives: subjectData.objectives,
-              modules: subjectData.modules?.map((module: any, index: number) => ({
-                _id: `${courseDoc._id}_${subjectData.name}_${index}`,
-                moduleNumber: index + 1,
-                title: module.name || `Module ${index + 1}`,
-                description: module.description || '',
-                hasVideo: module.hasVideo || false,
-                hasNotes: module.hasNotes || false,
-                hasTest: module.hasTest || false,
-                hasLiveClass: module.hasLiveClass || false,
-                videoTitle: module.videoTitle || '',
-                notesTitle: module.notesTitle || '',
-                videoUrl: module.videoUrl || '',
-                notesUrl: module.notesUrl || '',
-                liveClassSchedule: module.liveClassSchedule || [],
-                order: module.order || index + 1,
-                isActive: module.isActive !== false
-              })) || [],
+              modules: subjectData.modules?.map((module: any, index: number) => {
+                // Get videos from SubjectContent if available
+                const subjectContentModule = subjectContent?.modules?.find((m: any) => m.moduleNumber === (index + 1));
+                let videos = subjectContentModule?.videos || [];
+                
+                // If videos array is empty but single video exists, create videos array from single video
+                if (videos.length === 0 && subjectContentModule?.hasVideo && subjectContentModule?.videoUrl) {
+                  videos = [{
+                    url: subjectContentModule.videoUrl,
+                    title: subjectContentModule.videoTitle || 'Video',
+                    duration: subjectContentModule.videoDuration,
+                    uploadedAt: subjectContentModule.videoUploadedAt
+                  }];
+                }
+                
+                return {
+                  _id: `${courseDoc._id}_${subjectData.name}_${index}`,
+                  moduleNumber: index + 1,
+                  moduleName: module.name || `Module ${index + 1}`,
+                  description: module.description || '',
+                  hasVideo: subjectContentModule?.hasVideo || videos.length > 0 || module.hasVideo || false,
+                  hasNotes: subjectContentModule?.hasNotes || module.hasNotes || false,
+                  hasTest: subjectContentModule?.hasTest || module.hasTest || false,
+                  hasLiveClass: subjectContentModule?.hasLiveClass || module.hasLiveClass || false,
+                  videoTitle: subjectContentModule?.videoTitle || (videos.length > 0 ? videos[0].title : '') || module.videoTitle || '',
+                  notesTitle: subjectContentModule?.notesTitle || module.notesTitle || '',
+                  videoUrl: subjectContentModule?.videoUrl || (videos.length > 0 ? videos[0].url : '') || module.videoUrl || '',
+                  notesUrl: subjectContentModule?.notesUrl || module.notesUrl || '',
+                  videos: videos, // Include the videos array
+                  liveClassSchedule: subjectContentModule?.liveClassSchedule || module.liveClassSchedule || [],
+                  order: module.order || index + 1,
+                  isActive: module.isActive !== false
+                };
+              }) || [],
               lastUpdated: courseDoc.updatedAt || new Date(),
               assignedAt: assignment.assignedAt,
               totalModules: subjectData.modules?.length || 0,
@@ -1220,7 +1247,8 @@ export const getAllTeacherSubjectContent = async (req: Request, res: Response) =
 
     console.log('🎯 ALL-SUBJECT-CONTENT: Final result - subjects:', subjects.length, 'courses:', courses.length);
     if (subjects.length > 0) {
-      console.log('🎯 ALL-SUBJECT-CONTENT: First subject modules:', subjects[0].modules?.length || 0);
+      console.log('🎯 ALL-SUBJECT-CONTENT: First subject _id:', subjects[0]._id);
+      console.log('🎯 ALL-SUBJECT-CONTENT: First subject full object:', JSON.stringify(subjects[0], null, 2));
     }
     
     return res.status(200).json({
@@ -1243,16 +1271,12 @@ export const createModule = async (req: Request, res: Response) => {
     const { teacherEmail } = req.query;
     const { moduleName, moduleNumber, description, order } = req.body;
 
-    if (!teacherEmail) {
-      return res.status(400).json({ success: false, message: 'Teacher email is required' });
-    }
-
     if (!moduleName) {
       return res.status(400).json({ success: false, message: 'Module name is required' });
     }
 
-    // Get teacher
-    const teacher = await Teacher.findOne({ email: teacherEmail, isActive: true });
+    // Use authenticated teacher instead of finding by email
+    const teacher = (req as any).teacher;
     if (!teacher || !teacher.assignedCourses || teacher.assignedCourses.length === 0) {
       return res.status(404).json({ success: false, message: 'Teacher not found or no courses assigned' });
     }
@@ -1313,6 +1337,7 @@ export const createModule = async (req: Request, res: Response) => {
     };
 
     subjectContent.modules.push(newModule as any);
+    subjectContent.markModified('modules');
     await subjectContent.save();
 
     // Also persist module to Course.subjects[].modules so admin and course listing stay in sync
@@ -1365,12 +1390,8 @@ export const updateModule = async (req: Request, res: Response) => {
     const { moduleNumber } = req.params;
     const updateData = req.body;
 
-    if (!teacherEmail) {
-      return res.status(400).json({ success: false, message: 'Teacher email is required' });
-    }
-
-    // Get teacher
-    const teacher = await Teacher.findOne({ email: teacherEmail, isActive: true });
+    // Use authenticated teacher instead of finding by email
+    const teacher = (req as any).teacher;
     if (!teacher || !teacher.assignedCourses || teacher.assignedCourses.length === 0) {
       return res.status(404).json({ success: false, message: 'Teacher not found or no courses assigned' });
     }
@@ -1401,6 +1422,27 @@ export const updateModule = async (req: Request, res: Response) => {
 
     // Update module fields
     Object.assign(subjectContent.modules[moduleIndex], updateData);
+    
+    // If hasVideo is being set to false, also clear the videos array
+    if (updateData.hasVideo === false) {
+      subjectContent.modules[moduleIndex].videos = [];
+      subjectContent.modules[moduleIndex].videoUrl = undefined;
+      subjectContent.modules[moduleIndex].videoTitle = undefined;
+      subjectContent.modules[moduleIndex].videoDuration = undefined;
+      subjectContent.modules[moduleIndex].videoUploadedAt = undefined;
+    }
+    
+    // If hasNotes is being set to false, also clear notes fields
+    if (updateData.hasNotes === false) {
+      subjectContent.modules[moduleIndex].notesUrl = undefined;
+      subjectContent.modules[moduleIndex].notesTitle = undefined;
+      subjectContent.modules[moduleIndex].notesUploadedAt = undefined;
+    }
+    
+    subjectContent.markModified('modules');
+    if (updateData.hasVideo === false) {
+      subjectContent.markModified(`modules.${moduleIndex}.videos`);
+    }
     await subjectContent.save();
 
     // Also update Course.subjects[].modules
@@ -1450,12 +1492,8 @@ export const deleteModule = async (req: Request, res: Response) => {
     const { teacherEmail } = req.query;
     const { moduleNumber } = req.params;
 
-    if (!teacherEmail) {
-      return res.status(400).json({ success: false, message: 'Teacher email is required' });
-    }
-
-    // Get teacher
-    const teacher = await Teacher.findOne({ email: teacherEmail, isActive: true });
+    // Use authenticated teacher instead of finding by email
+    const teacher = (req as any).teacher;
     if (!teacher || !teacher.assignedCourses || teacher.assignedCourses.length === 0) {
       return res.status(404).json({ success: false, message: 'Teacher not found or no courses assigned' });
     }
@@ -1480,6 +1518,7 @@ export const deleteModule = async (req: Request, res: Response) => {
       m => m.moduleNumber !== parseInt(moduleNumber)
     );
 
+    subjectContent.markModified('modules');
     await subjectContent.save();
 
     // Also remove module from Course.subjects[].modules
@@ -1507,23 +1546,29 @@ export const deleteModule = async (req: Request, res: Response) => {
   }
 };
 
-// Upload video to module (Firebase Storage)
+// Upload video to module (Firebase Storage) - supports multiple videos
 export const uploadVideo = async (req: Request, res: Response) => {
   try {
     const { teacherEmail } = req.query;
-    const { moduleNumber, videoTitle, videoDuration } = req.body;
+    const { moduleNumber, videoTitle, videoDuration, videoTitles, videoDurations, replaceVideoIndex } = req.body;
 
-    if (!teacherEmail || !moduleNumber) {
+    if (!moduleNumber) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // Check if video file was uploaded
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No video file uploaded' });
+    // Check if video files were uploaded
+    if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+      return res.status(400).json({ success: false, message: 'No video files uploaded' });
     }
 
-    // Get teacher and subject content
-    const teacher = await Teacher.findOne({ email: teacherEmail, isActive: true });
+    const videoFiles = Array.isArray(req.files) ? req.files : [req.files.video].filter(Boolean);
+
+    if (videoFiles.length === 0) {
+      return res.status(400).json({ success: false, message: 'No video files uploaded' });
+    }
+
+    // Use authenticated teacher instead of finding by email
+    const teacher = (req as any).teacher;
     if (!teacher || !teacher.assignedCourses || teacher.assignedCourses.length === 0) {
       return res.status(404).json({ success: false, message: 'Teacher not found or no courses assigned' });
     }
@@ -1561,6 +1606,7 @@ export const uploadVideo = async (req: Request, res: Response) => {
             moduleName: mod.name,
             description: mod.description || '',
             hasVideo: false,
+            videos: [], // Initialize empty videos array
             hasNotes: false,
             hasLiveClass: false,
             hasTest: false,
@@ -1592,32 +1638,86 @@ export const uploadVideo = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Module not found' });
     }
 
+    const moduleIndex = subjectContent.modules.findIndex(m => m.moduleNumber === parseInt(moduleNumber));
+
     // Import FirebaseService dynamically to avoid circular imports
     const FirebaseService = (await import('../../../services/firebaseService')).default;
 
-    // Upload video to Firebase Storage
-    const uploadResult = await FirebaseService.uploadVideo(
-      req.file.buffer,
-      req.file.originalname,
-      req.file.mimetype,
-      assignedCourse.subject,
-      {
-        title: videoTitle,
-        duration: videoDuration,
-        teacherId: (teacher._id as any).toString(),
-        courseId: assignedCourse.courseId,
+    // Handle multiple video uploads
+    const uploadedVideos: any[] = [];
+    const videoTitlesArray = videoTitles ? JSON.parse(videoTitles) : [];
+    const videoDurationsArray = videoDurations ? JSON.parse(videoDurations) : [];
+
+    for (let i = 0; i < videoFiles.length; i++) {
+      const videoFile = videoFiles[i] as any; // Multer file object
+      const title = videoTitlesArray[i] || videoTitle || videoFile.originalname;
+      const duration = videoDurationsArray[i] || videoDuration;
+
+      // Upload video to Firebase Storage
+      const uploadResult = await FirebaseService.uploadVideo(
+        videoFile.buffer,
+        videoFile.originalname,
+        videoFile.mimetype,
+        assignedCourse.subject,
+        {
+          title: title,
+          duration: duration,
+          teacherId: (teacher._id as any).toString(),
+          courseId: assignedCourse.courseId,
+        }
+      );
+
+      uploadedVideos.push({
+        url: uploadResult.storagePath, // Store storage path, not download URL
+        title: title,
+        duration: duration,
+        uploadedAt: uploadResult.uploadedAt
+      });
+    }
+
+    // Handle video replacement or addition
+    if (!module.videos) {
+      module.videos = [];
+    }
+
+    // If videos array is empty but single video exists, populate from single video first
+    if (module.videos.length === 0 && module.hasVideo && module.videoUrl) {
+      module.videos = [{
+        url: module.videoUrl,
+        title: module.videoTitle || 'Video',
+        duration: module.videoDuration,
+        uploadedAt: module.videoUploadedAt
+      }];
+    }
+
+    if (replaceVideoIndex !== undefined && replaceVideoIndex !== null) {
+      // Replace specific video in array
+      const index = parseInt(replaceVideoIndex);
+      if (index >= 0 && index < module.videos.length && uploadedVideos.length > 0) {
+        module.videos[index] = uploadedVideos[0];
+      } else {
+        return res.status(400).json({ success: false, message: 'Invalid video index for replacement' });
       }
-    );
+    } else {
+      // Add new videos to array
+      module.videos.push(...uploadedVideos);
+    }
 
     module.hasVideo = true;
-    module.videoUrl = uploadResult.storagePath; // Store storage path, not download URL
-    module.videoTitle = videoTitle || req.file.originalname;
-    module.videoDuration = videoDuration;
-    module.videoUploadedAt = uploadResult.uploadedAt;
 
+    // Keep backward compatibility - set first video as primary video
+    if (module.videos.length > 0) {
+      module.videoUrl = module.videos[0].url;
+      module.videoTitle = module.videos[0].title;
+      module.videoDuration = module.videos[0].duration;
+      module.videoUploadedAt = module.videos[0].uploadedAt;
+    }
+
+    subjectContent.markModified('modules');
+    subjectContent.markModified(`modules.${moduleIndex}.videos`);
     await subjectContent.save();
 
-    // Also update Course.subjects[].modules video fields
+    // Also update Course.subjects[].modules video fields for backward compatibility
     try {
       const course = await Course.findById(subjectContent.courseId);
       if (course) {
@@ -1626,29 +1726,33 @@ export const uploadVideo = async (req: Request, res: Response) => {
           const idx = subjectContent.modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleNumber));
           if (idx !== -1 && subject.modules[idx]) {
             subject.modules[idx].hasVideo = true;
-            subject.modules[idx].videoUrl = uploadResult.storagePath;
-            subject.modules[idx].videoTitle = videoTitle || req.file.originalname;
-            subject.modules[idx].videoDuration = videoDuration;
-            subject.modules[idx].videoUploadedAt = uploadResult.uploadedAt;
+            // Keep existing videoUrl if it exists, otherwise set to first video
+            if (module.videos.length > 0) {
+              subject.modules[idx].videoUrl = module.videos[0].url;
+              subject.modules[idx].videoTitle = module.videos[0].title;
+              subject.modules[idx].videoDuration = module.videos[0].duration;
+              subject.modules[idx].videoUploadedAt = module.videos[0].uploadedAt;
+            }
             await course.save();
           }
         }
       }
     } catch (err) {
-      console.error('Failed to sync uploaded video to Course document:', err);
+      console.error('Failed to sync uploaded videos to Course document:', err);
     }
 
+    const actionMessage = replaceVideoIndex !== undefined && replaceVideoIndex !== null ? 'replaced' : 'uploaded';
     return res.status(200).json({
       success: true,
-      message: 'Video uploaded successfully',
+      message: `Video ${actionMessage} successfully`,
       data: {
         module,
         subjectContent,
-        uploadResult: {
-          fileName: uploadResult.fileName,
-          size: uploadResult.size,
-          uploadedAt: uploadResult.uploadedAt,
-        }
+        uploadedVideos: uploadedVideos.map(v => ({
+          fileName: v.title,
+          size: 0, // Size not available from FirebaseService currently
+          uploadedAt: v.uploadedAt,
+        }))
       }
     });
 
@@ -1664,7 +1768,7 @@ export const uploadNotes = async (req: Request, res: Response) => {
     const { teacherEmail } = req.query;
     const { moduleNumber, notesTitle } = req.body;
 
-    if (!teacherEmail || !moduleNumber) {
+    if (!moduleNumber) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
@@ -1673,8 +1777,8 @@ export const uploadNotes = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'No notes file uploaded' });
     }
 
-    // Get teacher and subject content
-    const teacher = await Teacher.findOne({ email: teacherEmail, isActive: true });
+    // Use authenticated teacher instead of finding by email
+    const teacher = (req as any).teacher;
     if (!teacher || !teacher.assignedCourses || teacher.assignedCourses.length === 0) {
       return res.status(404).json({ success: false, message: 'Teacher not found or no courses assigned' });
     }
@@ -1742,6 +1846,8 @@ export const uploadNotes = async (req: Request, res: Response) => {
     if (!module) {
       return res.status(404).json({ success: false, message: 'Module not found' });
     }
+
+    const moduleIndex = subjectContent.modules.findIndex(m => m.moduleNumber === parseInt(moduleNumber));
 
     // Import FirebaseService dynamically to avoid circular imports
     const FirebaseService = (await import('../../../services/firebaseService')).default;
@@ -1764,6 +1870,8 @@ export const uploadNotes = async (req: Request, res: Response) => {
     module.notesTitle = notesTitle || req.file.originalname;
     module.notesUploadedAt = uploadResult.uploadedAt;
 
+    subjectContent.markModified('modules');
+    subjectContent.markModified(`modules.${moduleIndex}.videos`);
     await subjectContent.save();
 
     // Also update Course.subjects[].modules notes fields

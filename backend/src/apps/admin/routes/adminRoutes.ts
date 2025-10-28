@@ -14,6 +14,7 @@ import * as adminManagementController from '../controllers/adminManagementContro
 import * as ordersPaymentsController from '../controllers/ordersPaymentsController';
 import * as subjectContentController from '../controllers/subjectContentController';
 import * as reportsController from '../controllers/reportsController';
+import * as appUpdateController from '../controllers/appUpdateController';
 import { verifyAdminAuth } from '../middlewares/adminAuth.middleware';
 
 const router = express.Router();
@@ -106,5 +107,11 @@ router.put('/subject-content/:id', verifyAdminAuth, subjectContentController.upd
 
 // ==================== REPORTS ROUTES ====================
 router.get('/reports/overview', verifyAdminAuth, reportsController.getReportsOverview);
+
+// ==================== APP UPDATE ROUTES ====================
+router.post('/app-update', verifyAdminAuth, appUpdateController.createAppUpdate);
+router.post('/app-update/deactivate', verifyAdminAuth, appUpdateController.deactivateAppUpdate);
+router.get('/app-update/status', appUpdateController.getAppUpdateStatus);
+router.get('/app-update', verifyAdminAuth, appUpdateController.getAppUpdateForAdmin);
 
 export default router;

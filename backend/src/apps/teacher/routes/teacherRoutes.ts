@@ -45,6 +45,11 @@ const upload = multer({
         return cb(new Error('Invalid file type for notes upload'));
       }
     }
+    // Allow PDF files for test uploads
+    if (file.fieldname === 'pdf' && file.mimetype !== 'application/pdf') {
+      return cb(new Error('Only PDF files are allowed for test uploads'));
+    }
+    // Allow other files if they match expected types
     cb(null, true);
   }
 });
@@ -60,7 +65,7 @@ router.patch('/auth/profile', authenticateTeacher, authController.updateProfile 
 
 // ==================== UPLOAD ROUTES ====================
 router.post('/upload/sign', uploadController.generateSignature as any);
-router.post('/upload/video', authenticateTeacher, upload.single('video'), courseController.uploadVideo as any);
+router.post('/upload/video', authenticateTeacher, upload.array('videos', 10), courseController.uploadVideo as any);
 router.post('/upload/notes', authenticateTeacher, upload.single('notes'), courseController.uploadNotes as any);
 
 // ==================== ANNOUNCEMENT ROUTES ====================
@@ -84,6 +89,7 @@ router.delete('/assignments/:id', assignmentController.deleteAssignment as any);
 router.get('/tests', testController.getTeacherTests as any);
 router.post('/tests', testController.createTest as any);
 router.patch('/tests/:id', testController.updateTest as any);
+router.post('/tests/:id/upload-pdf', upload.any(), testController.uploadTestPDF as any);
 router.get('/tests/:id/attempts', testController.getTestAttempts as any);
 router.patch('/tests/:testId/attempts/:attemptId/grade', testController.gradeTestAttempt as any);
 router.post('/tests/:id/publish', testController.publishTest as any);
@@ -124,11 +130,11 @@ router.post('/resources/:id/publish', resourceController.publishResource as any)
 router.delete('/resources/:id', resourceController.deleteResource as any);
 
 // ==================== COURSE/MODULE ROUTES ====================
-router.get('/courses/subject-content', courseController.getTeacherSubjectContent as any);
+router.get('/courses/subject-content', authenticateTeacher, courseController.getTeacherSubjectContent as any);
 router.get('/courses/all-subject-content', authenticateTeacher, courseController.getAllTeacherSubjectContent as any);
-router.post('/courses/modules', courseController.createModule as any);
-router.patch('/courses/modules/:moduleNumber', courseController.updateModule as any);
-router.delete('/courses/modules/:moduleNumber', courseController.deleteModule as any);
+router.post('/courses/modules', authenticateTeacher, courseController.createModule as any);
+router.patch('/courses/modules/:moduleNumber', authenticateTeacher, courseController.updateModule as any);
+router.delete('/courses/modules/:moduleNumber', authenticateTeacher, courseController.deleteModule as any);
 router.post('/courses/modules/upload-video', courseController.uploadVideo as any);
 router.post('/courses/modules/upload-notes', courseController.uploadNotes as any);
 

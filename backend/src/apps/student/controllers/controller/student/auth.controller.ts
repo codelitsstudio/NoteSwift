@@ -33,6 +33,17 @@ export const signUpStudent: Controller = async (req, res, next) => {
         }
         if (!secret) throw new Error("No session secret provided");
 
+        if (!body.phone_number || body.phone_number.trim().length === 0) {
+            jsonResponse.clientError("Phone number is required");
+            return;
+        }
+
+        // Validate phone number format
+        if (!/^[9][78]\d{8}$/.test(body.phone_number.trim())) {
+            jsonResponse.clientError("Invalid phone number format. Must be 10 digits starting with 97 or 98");
+            return;
+        }
+
         // ✅ Manual validations
         if (!body.full_name || body.full_name.trim().length < 3) {
             jsonResponse.clientError("Full name is required and must be at least 3 characters");
@@ -69,16 +80,55 @@ export const signUpStudent: Controller = async (req, res, next) => {
         // Generate a permanent avatar emoji for this user
         const avatarEmoji = getRandomAvatarEmoji();
 
+        console.log('🔐 Signup Debug:');
+        console.log('- Password provided:', !!body.password);
+        console.log('- Password length:', body.password ? body.password.length : 'N/A');
+        console.log('- Encrypted password exists:', !!encrypted_password);
+        console.log('- Encrypted password length:', encrypted_password ? encrypted_password.length : 'N/A');
+        console.log('- Encrypted password starts with $2:', encrypted_password ? encrypted_password.startsWith('$2') : 'N/A');
+
+        const studentData = {
+            address: body.address,
+            full_name: body.full_name,
+            grade: body.grade,
+            password: encrypted_password,
+            email: body.email.toLowerCase(),
+            phone_number: body.phone_number,
+            avatarEmoji: avatarEmoji,
+        };
+
+        console.log('📝 Student data before creating:', {
+            ...studentData,
+            password: studentData.password ? '[HIDDEN]' : 'MISSING'
+        });
+
         const student = new Student({
             address: body.address,
             full_name: body.full_name,
             grade: body.grade,
             password: encrypted_password,
             email: body.email.toLowerCase(),
-            avatarEmoji: avatarEmoji, // Permanent emoji assigned at registration
+            phone_number: body.phone_number,
+            avatarEmoji: avatarEmoji,
         });
 
+        console.log('🆕 Student instance created');
+        console.log('- Student password before save:', !!student.password);
+        console.log('- Student password length before save:', student.password ? student.password.length : 'N/A');
+        console.log('- Student password value before save:', student.password ? student.password.substring(0, 10) + '...' : 'N/A');
+
         await student.save();
+        
+        console.log('✅ Student saved successfully');
+        console.log('- Student ID:', student._id);
+        console.log('- Student password after save:', !!student.password);
+        console.log('- Student password length after save:', student.password ? student.password.length : 'N/A');
+
+        // Check if password exists in the saved document
+        const savedStudent = await Student.findById(student._id).select('+password');
+        console.log('🔍 Password in database after save:', !!savedStudent?.password);
+        console.log('🔍 Password length in database:', savedStudent?.password ? savedStudent.password.length : 'N/A');
+        console.log('🔍 Password value in database:', savedStudent?.password ? savedStudent.password.substring(0, 10) + '...' : 'N/A');
         const session: SessionPayload = {
             user_id: student._id.toString(),
             role: "student"
@@ -198,6 +248,7 @@ export const loginStudent: Controller = async (req, res, next) => {
         console.log('🔍 Login Debug:');
         console.log('- Email provided:', !!body.email);
         console.log('- Password provided:', !!body.password);
+        console.log('- Device fingerprint provided:', !!body.deviceFingerprint);
         console.log('- Secret available:', !!secret);
 
         if (!secret) throw new Error("No session secret provided");
@@ -209,9 +260,11 @@ export const loginStudent: Controller = async (req, res, next) => {
             return;
         }
 
-        // Find student
+        // Find student - explicitly select password field
         console.log('🔍 Searching for student with email:', body.email);
-        const student = await Student.findOne({ email: body.email.toLowerCase() });
+        const student = await Student.findOne({ email: body.email.toLowerCase() }).select('+password');
+        
+        // Alternative method to ensure password is retrieved
         if (!student) {
             console.log('❌ Student not found for email:', body.email);
             // Log failed login attempt
@@ -231,6 +284,16 @@ export const loginStudent: Controller = async (req, res, next) => {
             return;
         }
 
+        // Force reload the password field if not present
+        if (!student.password && !student.get('password')) {
+            console.log('🔄 Password field missing, reloading student with password...');
+            const studentWithPassword = await Student.findById(student._id).select('+password');
+            if (studentWithPassword) {
+                student.password = studentWithPassword.password;
+                console.log('✅ Password field reloaded successfully');
+            }
+        }
+
         console.log('✅ Student found:', student._id);
         console.log('🔍 Student object keys:', Object.keys(student));
         console.log('🔍 Student _doc keys:', Object.keys(student._doc || {}));
@@ -240,7 +303,7 @@ export const loginStudent: Controller = async (req, res, next) => {
         console.log('🔍 Student password length:', student.password ? student.password.length : 'N/A');
 
         // Try accessing password directly from _doc if needed
-        const passwordField = student.password || (student._doc && student._doc.password);
+        const passwordField = student.password || student.get('password') || (student._doc && student._doc.password);
 
         console.log('🔍 Password field value exists:', !!passwordField);
         console.log('🔍 Password field type:', typeof passwordField);
@@ -290,6 +353,54 @@ export const loginStudent: Controller = async (req, res, next) => {
 
         console.log('✅ Password match successful');
 
+        // DEVICE BINDING SECURITY CHECK
+        console.log('🔐 Checking device binding...');
+        const currentDeviceFingerprint = body.deviceFingerprint;
+
+        if (!currentDeviceFingerprint) {
+            console.log('❌ No device fingerprint provided');
+            jsonResponse.clientError("Device verification required. Please update your app.");
+            return;
+        }
+
+        // Check if student already has a device fingerprint (first login)
+        if (!student.deviceFingerprint) {
+            console.log('📱 First login - binding device fingerprint');
+            // This is the first login, bind this device
+            student.deviceFingerprint = currentDeviceFingerprint;
+        } else if (student.deviceFingerprint !== currentDeviceFingerprint) {
+            console.log('🚨 Device fingerprint mismatch - potential security breach');
+            console.log('Stored fingerprint:', student.deviceFingerprint.substring(0, 8) + '...');
+            console.log('Provided fingerprint:', currentDeviceFingerprint.substring(0, 8) + '...');
+
+            // Log security breach attempt
+            await auditLogger.logSystemEvent(
+                'device_binding_violation',
+                `Security breach attempt: ${student.full_name} (${student.email}) tried to login from different device`,
+                'failure',
+                {
+                    userId: student._id.toString(),
+                    userType: 'student',
+                    userName: student.full_name || student.email,
+                    userEmail: student.email,
+                    ipAddress: req.ip || req.connection.remoteAddress,
+                    userAgent: req.get('User-Agent'),
+                    storedFingerprint: student.deviceFingerprint.substring(0, 8) + '...',
+                    attemptedFingerprint: currentDeviceFingerprint.substring(0, 8) + '...',
+                    reason: 'Attempted login from different device'
+                }
+            );
+
+            jsonResponse.clientError("Security policy violation: This account is already bound to another device. Please logout from your other device first or contact support.");
+            return;
+        } else {
+            console.log('✅ Device fingerprint verified');
+        }
+
+        // Update last login time
+        student.lastLoginAt = new Date();
+        await student.save();
+
         // Generate token
         console.log('🎫 Generating JWT token...');
         const token = jwt.sign({ user_id: student._id.toString(), role: "student" }, secret, {
@@ -315,7 +426,8 @@ export const loginStudent: Controller = async (req, res, next) => {
             true,
             {
                 ipAddress: req.ip || req.connection.remoteAddress,
-                userAgent: req.get('User-Agent')
+                userAgent: req.get('User-Agent'),
+                deviceFingerprint: currentDeviceFingerprint.substring(0, 8) + '...'
             }
         );
 
@@ -862,7 +974,7 @@ export const verifyCurrentPassword: Controller = async (req, res, next) => {
         console.log('🔐 Verifying current password for user:', student._id);
 
         // Get full student data with password
-        const fullStudent = await Student.findById(student._id);
+        const fullStudent = await Student.findById(student._id).select('+password');
         if (!fullStudent) {
             jsonResponse.notAuthorized("User not found");
             return;
@@ -917,7 +1029,7 @@ export const changePasswordWithCurrent: Controller = async (req, res, next) => {
         console.log('🔒 Changing password with current verification for user:', student._id);
 
         // Get full student data with password
-        const fullStudent = await Student.findById(student._id);
+        const fullStudent = await Student.findById(student._id).select('+password');
         if (!fullStudent) {
             jsonResponse.notAuthorized("User not found");
             return;
@@ -1198,36 +1310,45 @@ export const updateNotificationPreferences: Controller = async (req, res, next) 
     }
 };
 
-// Send report email
-export const sendReportEmail: Controller = async (req, res, next) => {
+// Reset device fingerprint (allows login from new device)
+export const resetDeviceFingerprint: Controller = async (req, res, next) => {
     const jsonResponse = new JsonResponse(res);
     try {
-        const { reportText, userEmail } = req.body;
-
-        if (!reportText || reportText.trim().length === 0) {
-            jsonResponse.clientError("Report text is required");
+        const student = res.locals.student;
+        if (!student) {
+            jsonResponse.notAuthorized("Authentication required");
             return;
         }
 
-        if (reportText.trim().length < 10) {
-            jsonResponse.clientError("Report must be at least 10 characters long");
-            return;
-        }
+        // Reset device fingerprint to allow login from new device
+        student.deviceFingerprint = undefined;
+        await student.save();
 
-        console.log("📧 Sending report email from:", userEmail || 'Anonymous');
+        console.log('🔐 Device fingerprint reset for user:', student._id);
 
-        // Send report email
-        const result = await reportEmailService.sendReportEmail(reportText.trim(), userEmail);
+        // Log the device reset
+        await auditLogger.logSystemEvent(
+            'device_fingerprint_reset',
+            `Device fingerprint reset for ${student.full_name} (${student.email})`,
+            'warning',
+            {
+                userId: student._id.toString(),
+                userType: 'student',
+                userName: student.full_name || student.email,
+                userEmail: student.email,
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                reason: 'User requested device fingerprint reset'
+            }
+        );
 
-        if (result.success) {
-            jsonResponse.success({ message: "Report sent successfully" });
-        } else {
-            jsonResponse.serverError(result.message);
-        }
+        jsonResponse.success({
+            message: "Device binding reset successfully. You can now login from a different device."
+        });
 
     } catch (error) {
-        console.error("Error sending report email:", error);
-        jsonResponse.serverError("Failed to send report. Please try again.");
+        console.error("Error resetting device fingerprint:", error);
+        jsonResponse.serverError("Failed to reset device binding. Please try again.");
     }
 };
 
@@ -1380,21 +1501,153 @@ export const resetPasswordWithResetOTP: Controller = async (req, res, next) => {
         const salt = await bcrypt.genSalt(10);
         const hashedNewPassword = await bcrypt.hash(newPassword, salt);
 
-        // Update password by setting it directly and saving
+        // Update password and reset device fingerprint to logout all other devices
         student.password = hashedNewPassword;
+        student.deviceFingerprint = undefined;
         const updatedStudent = await student.save();
 
         console.log('✅ Password reset successfully for email:', normalizedEmail);
-        console.log('🔍 Updated student password exists:', !!updatedStudent.password);
-        console.log('🔍 Updated student password type:', typeof updatedStudent.password);
-        console.log('🔍 Updated student password length:', updatedStudent.password ? updatedStudent.password.length : 'N/A');
+        console.log('� Device fingerprint reset for security - all other devices logged out');
+
+        // Log the password reset and device reset
+        await auditLogger.logSystemEvent(
+            'password_reset_with_device_reset',
+            `Password reset and device fingerprint cleared for ${student.full_name} (${student.email})`,
+            'warning',
+            {
+                userId: student._id.toString(),
+                userType: 'student',
+                userName: student.full_name || student.email,
+                userEmail: student.email,
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                reason: 'Password reset - device fingerprint cleared for security'
+            }
+        );
 
         jsonResponse.success({
-            message: "Password reset successfully. You can now log in with your new password."
+            message: "Password reset successfully. All other devices have been logged out for security. You can now log in with your new password."
         });
 
     } catch (error) {
         console.error("Error resetting password with OTP:", error);
         jsonResponse.serverError("Failed to reset password. Please try again.");
+    }
+};
+
+// Send report email
+export const sendReportEmail: Controller = async (req, res, next) => {
+    const jsonResponse = new JsonResponse(res);
+    try {
+        const { reportText } = req.body;
+        const student = res.locals.student;
+
+        if (!reportText || reportText.trim().length === 0) {
+            jsonResponse.clientError("Report text is required");
+            return;
+        }
+
+        if (reportText.trim().length > 2000) {
+            jsonResponse.clientError("Report text is too long (maximum 2000 characters)");
+            return;
+        }
+
+        console.log('📧 Sending report email from user:', student ? student.email : 'Anonymous');
+
+        // Send report email
+        const result = await reportEmailService.sendReportEmail(
+            reportText.trim(),
+            student ? student.email : undefined
+        );
+
+        if (result.success) {
+            jsonResponse.success({
+                message: result.message
+            });
+        } else {
+            jsonResponse.serverError(result.message);
+        }
+
+    } catch (error) {
+        console.error("Error sending report email:", error);
+        jsonResponse.serverError("Failed to send report. Please try again.");
+    }
+};
+
+// Logout controller
+export const logoutStudent: Controller = async (req, res, next) => {
+    const jsonResponse = new JsonResponse(res);
+    try {
+        const student = res.locals.student;
+        if (!student) {
+            jsonResponse.notAuthorized("Authentication required");
+            return;
+        }
+
+        console.log('🚪 Student logout initiated for user:', student._id);
+
+        // Clear device fingerprint to allow login from other devices
+        student.deviceFingerprint = undefined;
+        await student.save();
+
+        // Log successful logout
+        await auditLogger.logLogout(
+            student._id.toString(),
+            'student',
+            student.full_name || student.email,
+            student.email,
+            {
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                reason: 'User initiated logout'
+            }
+        );
+
+        console.log('✅ Student logout successful, device binding cleared for user:', student._id);
+
+        jsonResponse.success({
+            message: "Logged out successfully"
+        });
+
+    } catch (error) {
+        console.error("Error during student logout:", error);
+        jsonResponse.serverError("Failed to logout. Please try again.");
+    }
+};
+
+// Push Token Controllers
+
+// Register push token for notifications
+export const registerPushToken: Controller = async (req, res, next) => {
+    const jsonResponse = new JsonResponse(res);
+    try {
+        const { pushToken } = req.body;
+        const student = res.locals.student;
+
+        if (!student) {
+            jsonResponse.notAuthorized("Authentication required");
+            return;
+        }
+
+        if (!pushToken) {
+            jsonResponse.clientError("Push token is required");
+            return;
+        }
+
+        console.log('📱 Registering push token for user:', student._id);
+
+        // Update push token
+        student.pushToken = pushToken;
+        await student.save();
+
+        console.log('✅ Push token registered successfully for user:', student._id);
+
+        jsonResponse.success({
+            message: "Push token registered successfully"
+        });
+
+    } catch (error) {
+        console.error("Error registering push token:", error);
+        jsonResponse.serverError("Failed to register push token. Please try again.");
     }
 };

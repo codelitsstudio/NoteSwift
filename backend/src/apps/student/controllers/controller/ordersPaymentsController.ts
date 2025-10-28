@@ -148,13 +148,12 @@ export const getUnlockCodes = async (req: Request, res: Response, next: NextFunc
 // Redeem unlock code (for mobile app)
 export const redeemUnlockCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { code, courseId, deviceHash } = req.body;
+    const { code, courseId } = req.body;
     const student = res.locals.student;
 
     console.log('🎫 REDEEM CODE REQUEST:', {
       code: code ? 'provided' : 'missing',
       courseId: courseId ? 'provided' : 'missing',
-      deviceHash: deviceHash ? 'provided' : 'missing',
       studentId: student ? student._id : 'missing'
     });
 
@@ -234,7 +233,6 @@ export const redeemUnlockCode = async (req: Request, res: Response, next: NextFu
     // Mark code as used
     unlockCode.isUsed = true;
     unlockCode.usedByUserId = userId.toString();
-    unlockCode.usedDeviceHash = deviceHash;
     unlockCode.usedTimestamp = new Date();
     await unlockCode.save();
     console.log('✅ Code marked as used');
@@ -288,8 +286,7 @@ export const redeemUnlockCode = async (req: Request, res: Response, next: NextFu
         action: 'code_redemption',
         unlockCode: code,
         courseId,
-        courseName: course?.title || 'Unknown Course',
-        deviceHash
+        courseName: course?.title || 'Unknown Course'
       }
     );
 

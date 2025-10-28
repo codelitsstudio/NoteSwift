@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticateTeacher } from "../../middlewares/teacher.middleware";
-import JsonResponse from "../../lib/Response";
+import JsonResponse from "@student/lib/Response";
 
 const router = Router();
 

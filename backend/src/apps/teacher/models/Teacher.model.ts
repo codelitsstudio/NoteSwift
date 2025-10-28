@@ -97,7 +97,7 @@ teacherSchema.pre('save', function(next) {
 });
 
 const Teacher: Model<ITeacher> = 
-  mongoose.models.Teacher || 
-  mongoose.model<ITeacher>('Teacher', teacherSchema, 'teachers');
+  mongoose.models.teacher || 
+  mongoose.model<ITeacher>('teacher', teacherSchema, 'teachers');
 
 export default Teacher;

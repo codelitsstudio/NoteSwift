@@ -1,12 +1,21 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+// Interface for video content
+export interface IVideoContent {
+  url: string;
+  title: string;
+  duration?: string;
+  uploadedAt: Date;
+}
+
 // Interface for module content configuration
 export interface IModuleContent {
   moduleNumber: number;
   moduleName: string;
   description?: string; // Description of the module content
   hasVideo: boolean;
-  videoUrl?: string;
+  videos?: IVideoContent[]; // Support multiple videos
+  videoUrl?: string; // Backward compatibility
   videoTitle?: string;
   videoDuration?: string;
   videoUploadedAt?: Date;
@@ -64,7 +73,13 @@ const moduleContentSchema = new Schema<IModuleContent>({
   description: { type: String }, // Description of the module content
   
   hasVideo: { type: Boolean, default: false },
-  videoUrl: { type: String },
+  videos: [{ // Support multiple videos
+    url: { type: String, required: true },
+    title: { type: String, required: true },
+    duration: { type: String },
+    uploadedAt: { type: Date, required: true }
+  }],
+  videoUrl: { type: String }, // Backward compatibility
   videoTitle: { type: String },
   videoDuration: { type: String },
   videoUploadedAt: { type: Date },

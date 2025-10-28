@@ -1,7 +1,9 @@
 import { Router } from "express";
 import Question from "../../models/Question.model";
 import SubjectContent from "../../models/SubjectContent.model";
+import { Student } from "../../models/students/Student.model";
 import JsonResponse from "../../lib/Response";
+import { pushNotificationService } from "../../../../services/pushNotificationService";
 
 const router = Router();
 
@@ -226,6 +228,27 @@ router.post("/:id/answer", async (req, res) => {
     }
 
     await question.save();
+
+    // Send push notification to student
+    try {
+      const student = await Student.findById(question.studentId);
+      if (student && student.pushToken) {
+        await pushNotificationService.sendPushNotification(
+          student.pushToken,
+          "Question Answered",
+          `Your question "${question.title.length > 50 ? question.title.substring(0, 50) + '...' : question.title}" has been answered by ${teacher.name}`,
+          {
+            type: 'question_answered',
+            questionId: question._id,
+            teacherName: teacher.name
+          }
+        );
+        console.log(`Push notification sent to student ${student._id} for answered question ${question._id}`);
+      }
+    } catch (notificationError) {
+      console.error('Error sending push notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     jsonResponse.success({
       answer: {
