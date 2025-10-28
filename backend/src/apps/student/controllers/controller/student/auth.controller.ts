@@ -3,7 +3,7 @@ import { Controller } from "../../../types/controller";
 import { LoginStudent, SignupStudent } from "@core/api/student/auth"
 import { Student } from "../../../models/students/Student.model";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { SessionPayload } from "../../../middlewares/student.middleware";
 import { TStudentWithNoSensitive } from "@core/models/students/Student";
 import otpService from "services/otpService";
@@ -1503,8 +1503,14 @@ export const resetPasswordWithResetOTP: Controller = async (req, res, next) => {
 
         // Update password and reset device fingerprint to logout all other devices
         student.password = hashedNewPassword;
-        student.deviceFingerprint = undefined;
-        const updatedStudent = await student.save();
+        // Reset device fingerprint to logout all other devices
+        await Student.updateOne(
+            { _id: student._id },
+            { 
+                $set: { password: hashedNewPassword },
+                $unset: { deviceFingerprint: 1 }
+            }
+        );
 
         console.log('✅ Password reset successfully for email:', normalizedEmail);
         console.log('� Device fingerprint reset for security - all other devices logged out');
