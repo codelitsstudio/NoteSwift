@@ -51,10 +51,6 @@ class EmailOTPService {
         <div style="font-family: 'Inter', Arial, sans-serif; background-color: #f3f4f6; padding: 20px;">
     <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden;">
 
-        <div style="padding: 40px 40px 20px; text-align: center;">
-            <img src="https://i.postimg.cc/Gh6L7sKL/IMG-4146.png" alt="NoteSwift Logo" style="width: 150px; height: auto; margin-bottom: 20px;" onerror="this.onerror=null;this.src='https://placehold.co/150x50/007AFF/ffffff?text=NoteSwift&font=raleway';">
-        </div>
-
         <div style="padding: 0 40px 30px;">
 
             <h2 style="color: #1f2937; margin-bottom: 20px; font-size: 22px; text-align: center;">Verify Your Email Address</h2>
