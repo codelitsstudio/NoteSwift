@@ -107,8 +107,8 @@ export default function ForgotReset() {
         type: 'success',
         position: "top",
         text1: 'Password Reset Successful!',
-        text2: 'Your password has been updated. Please login with your new password.',
-        visibilityTime: 3000,
+        text2: 'Your password has been updated and all other devices have been logged out for security. Please login with your new password.',
+        visibilityTime: 4000,
         autoHide: true,
         topOffset: 50,
       });

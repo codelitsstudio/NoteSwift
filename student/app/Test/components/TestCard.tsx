@@ -1,8 +1,22 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Test } from '../testData';
+
+interface Test {
+  id: string;
+  title: string;
+  description?: string;
+  type: 'mcq' | 'pdf' | 'mixed';
+  courseId: string;
+  courseName: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  status?: 'not-started' | 'in-progress' | 'completed';
+  score?: number;
+  thumbnail?: any;
+  duration?: number;
+  totalQuestions?: number;
+  totalMarks?: number;
+}
 
 interface TestCardProps {
   test: Test;
@@ -53,16 +67,15 @@ export default function TestCard({ test, onPress }: TestCardProps) {
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      className="bg-white rounded-2xl p-3 mb-3 border border-gray-100"
+      className="bg-white rounded-2xl p-4 mb-3 border border-gray-100"
     >
-      <View className="flex-row">
-        {/* Thumbnail */}
-        <View className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 mr-3">
-          <Image
-            source={test.thumbnail}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            transition={300}
+      <View className="flex-row items-start">
+        {/* Type Icon */}
+        <View className="w-12 h-12 rounded-xl bg-customBlue/10 items-center justify-center mr-3 mt-1">
+          <MaterialIcons 
+            name={getTypeIcon(test.type)} 
+            size={24} 
+            color="#3B82F6" 
           />
         </View>
 
@@ -79,7 +92,7 @@ export default function TestCard({ test, onPress }: TestCardProps) {
           </Text>
 
           {/* Meta Info */}
-          <View className="flex-row items-center flex-wrap gap-2">
+          <View className="flex-row items-center flex-wrap gap-2 mb-2">
             {/* Type Badge */}
             <View className="flex-row items-center bg-customBlue/10 px-2 py-1 rounded-md">
               <Text className="text-sm text-customBlue font-medium">
@@ -95,20 +108,20 @@ export default function TestCard({ test, onPress }: TestCardProps) {
 
           {/* Status or Score */}
           {test.status === 'completed' && test.score !== undefined ? (
-            <View className="flex-row items-center mt-1">
-              <Text className="text-sm font-semibold text-customBlue ml-0.5">
+            <View className="flex-row items-center">
+              <Text className="text-sm font-semibold text-customBlue">
                 Score: {test.score}/{test.totalMarks}
               </Text>
             </View>
           ) : test.status === 'in-progress' ? (
-            <View className="flex-row items-center mt-1">
+            <View className="flex-row items-center">
               <Text className="text-sm font-medium text-customBlue">
                 Continue
               </Text>
               <MaterialIcons name="chevron-right" size={18} color="#3B82F6" />
             </View>
           ) : (
-            <View className="flex-row items-center mt-1">
+            <View className="flex-row items-center">
               <Text className="text-sm font-medium text-gray-500">
                 Start Test
               </Text>

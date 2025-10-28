@@ -6,7 +6,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import RecordedVideo from "./RecordedVideo";
 import AttachmentPage from "./AttachmentPage";
 import TagPill from "./TagPill";
+import AskQuestionModal from "./AskQuestionModal";
 import api from "@/api/axios";
+import FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
+import * as WebBrowser from 'expo-web-browser';
 
 
 type Comment = {
@@ -26,11 +31,11 @@ type ChapterData = {
   imageUri?: string;        // used as video thumbnail
   tags?: { type: "video" | "notes" | "live"; label: string; count?: number }[];
   teacher?: string;
-  teacherAvatar?: string;
   uploadDate?: string;
   hasVideo?: boolean;
   hasNotes?: boolean;
-  videoUrl?: string;
+  videos?: { url: string; title: string; duration?: string; uploadedAt?: Date }[]; // Support multiple videos
+  videoUrl?: string; // Backward compatibility
   notesUrl?: string;
   notesTitle?: string;
   videoTitle?: string;
@@ -51,48 +56,86 @@ type TabType = 'video' | 'attachments';
 
 const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, moduleNumber, onPrevious, onBack, onNext }) => {
   const [activeTab, setActiveTab] = useState<TabType>('video');
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0); // Track selected video
   const videoRef = useRef(null);
   const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState<number>(0);
   const [commentText, setCommentText] = useState('');
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [teacherInfo, setTeacherInfo] = useState<{ name: string; avatar: string } | null>(null);
+  const [showAskModal, setShowAskModal] = useState(false);
+  
+  // Get videos array, supporting both new format and backward compatibility
+  const videos = chapter.videos || (chapter.videoUrl ? [{
+    url: chapter.videoUrl,
+    title: chapter.videoTitle || 'Video',
+    duration: undefined,
+    uploadedAt: undefined
+  }] : []);
   
   // Determine available content types
-  const hasVideo = chapter.hasVideo && chapter.videoUrl;
+  const hasVideo = chapter.hasVideo && videos.length > 0;
   const hasNotes = chapter.hasNotes && chapter.notesUrl;
   const onlyNotes = hasNotes && !hasVideo;
   const onlyVideo = hasVideo && !hasNotes;
   const bothContent = hasVideo && hasNotes;
+  const hasMultipleVideos = videos.length > 1;
   
-  // Fetch teacher info for video modules
+  // Set teacher info from props or fetch if not available
   useEffect(() => {
-    const fetchTeacherInfo = async () => {
-      if (hasVideo && chapter.teacherId) {
-        try {
-          const response = await api.get(`/courses/teacher/${chapter.teacherId}/profile`);
-          if (response.data.success) {
-            const teacherData = response.data.data.teacher;
+    if (hasVideo) {
+      if (chapter.teacher) {
+        // Use teacher name from props with default avatar
+        setTeacherInfo({
+          name: chapter.teacher,
+          avatar: 'https://placehold.co/56x56.png'
+        });
+      } else if (chapter.teacherId) {
+        // Fallback: fetch teacher info via API
+        const fetchTeacherInfo = async () => {
+          try {
+            const response = await api.get(`/courses/teacher/${chapter.teacherId}/profile`);
+            if (response.data.success) {
+              const teacherData = response.data.data.teacher;
+              setTeacherInfo({
+                name: teacherData.name || chapter.teacher || 'Instructor',
+                avatar: teacherData.avatar || teacherData.profilePic || 'https://placehold.co/56x56.png'
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching teacher info:', error);
+            // Fallback to default teacher info
             setTeacherInfo({
-              name: teacherData.name,
-              avatar: teacherData.avatar
+              name: chapter.teacher || 'Instructor',
+              avatar: 'https://placehold.co/56x56.png'
             });
           }
-        } catch (error) {
-          console.error('Error fetching teacher info:', error);
-          // Fallback to default teacher info
-          setTeacherInfo({
-            name: 'Prof. Rajesh Sharma',
-            avatar: 'https://randomuser.me/api/portraits/men/32.jpg'
-          });
-        }
+        };
+        fetchTeacherInfo();
+      } else {
+        // No teacher info available
+        setTeacherInfo({
+          name: 'Instructor',
+          avatar: 'https://placehold.co/56x56.png'
+        });
       }
-    };
-    
-    if (hasVideo && chapter.teacherId) {
-      fetchTeacherInfo();
     }
-  }, [hasVideo, chapter.teacherId]);
+  }, [hasVideo, chapter.teacher, chapter.teacherId]);
+
+  // Initialize like state from chapter data when available
+  useEffect(() => {
+    try {
+      // Backend may return likes as a number or an array of ids
+      const likes = (chapter as any).likes ?? (chapter as any).likeCount ?? 0;
+      const likeCountNumeric = Array.isArray(likes) ? likes.length : Number(likes) || 0;
+      setLikeCount(likeCountNumeric);
+      const likedByUser = Boolean((chapter as any).likedByUser || (chapter as any).liked);
+      setLiked(likedByUser);
+    } catch (e) {
+      // ignore and keep defaults
+    }
+  }, [chapter]);
   
   // Set default active tab based on available content
   React.useEffect(() => {
@@ -103,33 +146,99 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
     }
   }, [hasVideo, hasNotes]);
   
-  // Demo comments data
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: '1',
-      user: 'Rahul Kumar',
-      avatar: 'RK',
-      time: '2 days ago',
-      text: 'Great explanation! This really helped me understand the concept better.',
-      likes: 12
-    },
-    {
-      id: '2',
-      user: 'Priya Sharma',
-      avatar: 'PS',
-      time: '1 day ago',
-      text: 'Could you please explain the last part again? I didn\'t quite get it.',
-      likes: 5
-    },
-    {
-      id: '3',
-      user: 'Amit Patel',
-      avatar: 'AP',
-      time: '3 hours ago',
-      text: 'Excellent teaching! Looking forward to more lessons like this.',
-      likes: 8
+  // Comments state - will be loaded from API
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+
+  // Fetch comments for this chapter
+  const fetchComments = async () => {
+    try {
+      setIsLoadingComments(true);
+      // TODO: Implement API call to fetch comments for this chapter
+      // For now, keep empty array
+      setComments([]);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setComments([]);
+    } finally {
+      setIsLoadingComments(false);
     }
-  ]);
+  };
+
+  // Fetch comments when component mounts
+  useEffect(() => {
+    fetchComments();
+  }, []);
+
+  // Toggle like (call backend)
+  const handleToggleLike = async () => {
+    // optimistic UI
+    setLiked(prev => !prev);
+    try {
+      const resp = await api.post(`/courses/${courseId}/subject/${encodeURIComponent(subjectName)}/module/${moduleNumber}/like`);
+      if (resp?.data?.success && resp.data.data) {
+        const likesResp = resp.data.data.likes;
+        const likeCountNumeric = Array.isArray(likesResp) ? likesResp.length : Number(likesResp) || 0;
+        setLikeCount(likeCountNumeric);
+        setLiked(Boolean(resp.data.data.liked));
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      // rollback optimistic
+      setLiked(prev => !prev);
+    }
+  };
+
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadVideo = async () => {
+    if (!hasVideo) {
+      Toast.show({ type: 'error', text1: 'No video available for download.' });
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const signedResp = await api.get(`/courses/${courseId}/subject/${encodeURIComponent(subjectName)}/module/${moduleNumber}/video?videoIndex=${selectedVideoIndex}`);
+      if (!signedResp?.data?.success) {
+        throw new Error('Failed to get video URL');
+      }
+      const { signedUrl, title, downloadUrl } = signedResp.data.data;
+      const safeSubject = subjectName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const fileName = `${courseId}_${safeSubject}_module${moduleNumber}_video${selectedVideoIndex}_${Date.now()}.mp4`;
+      
+      // Use signed URL and open in browser for download (similar to notes/PDFs viewing)
+      try {
+        await WebBrowser.openBrowserAsync(signedUrl, { showInRecents: true, enableBarCollapsing: true });
+      } catch (browserErr) {
+        console.error('WebBrowser error:', browserErr);
+        Toast.show({ type: 'error', text1: 'Failed to open video download in browser.' });
+        setIsDownloading(false);
+        return;
+      }
+      
+      // Register download with remote URL (same pattern as PDF)
+      try {
+        await api.post('/downloads', {
+          fileName,
+          fileUri: downloadUrl, // Use downloadUrl like PDF uses fileUri
+          size: undefined, // Size not available for browser downloads
+          pages: undefined // Videos don't have pages
+        });
+      } catch (apiErr) {
+        console.error('api.post(/downloads) error:', apiErr);
+        Toast.show({ type: 'error', text1: 'Failed to save download to backend.' });
+        setIsDownloading(false);
+        return;
+      }
+
+      Toast.show({ type: 'success', text1: 'Video download opened in browser!', text2: 'Download will start automatically.' });
+    } catch (error) {
+      console.error('Download video unknown error:', error);
+      Toast.show({ type: 'error', text1: 'Failed to open video download.' });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const handleAddComment = () => {
     if (commentText.trim()) {
@@ -149,19 +258,58 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
 
 
   return (
+    <>
     <ScrollView className="flex-1 bg-white">
       {/* Video Player - Only show if video is available */}
       {hasVideo && (
-        <RecordedVideo
-          ref={videoRef}
-          courseId={courseId}
-          subjectName={subjectName}
-          moduleNumber={moduleNumber}
-          thumbnailUri={chapter.imageUri}
-          onPressPlay={() => {}}
-          onPlayPauseChange={(playing) => {}}
-          onTimeUpdate={(ms: number) => {}}
-        />
+        <>
+          {/* Video Selection - Only show if multiple videos */}
+          {hasMultipleVideos && (
+            <View className="bg-white border-b border-gray-200 px-4 py-3">
+              <Text className="text-sm font-semibold text-gray-900 mb-2">Select Video</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {videos.map((video, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setSelectedVideoIndex(index)}
+                    className={`mr-3 px-4 py-2 rounded-full border ${
+                      selectedVideoIndex === index
+                        ? 'bg-blue-500 border-blue-500'
+                        : 'bg-white border-gray-300'
+                    }`}
+                    activeOpacity={0.7}
+                  >
+                    <Text className={`text-sm font-medium ${
+                      selectedVideoIndex === index ? 'text-white' : 'text-gray-700'
+                    }`}>
+                      {video.title}
+                    </Text>
+                    {video.duration && (
+                      <Text className={`text-xs mt-1 ${
+                        selectedVideoIndex === index ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                        {video.duration}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          <RecordedVideo
+            ref={videoRef}
+            courseId={courseId}
+            subjectName={subjectName}
+            moduleNumber={moduleNumber}
+            videoUrl={videos[selectedVideoIndex]?.url}
+            videoIndex={selectedVideoIndex}
+            thumbnailUri={chapter.imageUri}
+            onPressPlay={() => {}}
+            onPlayPauseChange={(playing) => {}}
+            onTimeUpdate={(ms: number) => {}}
+          />
+        </>
       )}
 
       {/* Content Container */}
@@ -208,6 +356,12 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
               }}
               className="w-14 h-14 rounded-full mr-3"
               resizeMode="cover"
+              onError={(error) => {
+                console.log('Avatar load error:', error.nativeEvent, 'URL:', teacherInfo.avatar);
+              }}
+              onLoad={() => {
+                console.log('Avatar loaded successfully:', teacherInfo.avatar);
+              }}
             />
             <View className="flex-1">
               <Text className="text-base font-semibold text-gray-900">
@@ -222,22 +376,23 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
         {hasVideo && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 mt-2">
             <TagPill
-              label="Like"
+              label={`Like${likeCount > 0 ? ' ' + likeCount : ''}`}
               type="like"
               active={liked}
-              onPress={() => setLiked(!liked)}
+              onPress={handleToggleLike}
             />
 
             <TagPill
               label="Ask"
               type="ask"
-              onPress={() => {}}
+              onPress={() => setShowAskModal(true)}
             />
 
             <TagPill
               label="Download"
               type="download"
-              onPress={() => {}}
+              onPress={handleDownloadVideo}
+              disabled={isDownloading}
             />
 
             {/* Comments pill - only shows when in attachments tab and has content */}
@@ -263,7 +418,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
             {hasVideo && (
               <TagPill
                 label="Video"
-                type="video"
+                type="comment"
                 active={activeTab === 'video'}
                 onPress={() => setActiveTab('video')}
               />
@@ -275,7 +430,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
         {/* Content based on available content */}
         {onlyNotes ? (
           /* Only notes - show AttachmentPage directly */
-          <AttachmentPage courseId={courseId} subjectName={subjectName} moduleNumber={moduleNumber} notesTitle={chapter.notesTitle} />
+          <AttachmentPage courseId={courseId} subjectName={subjectName} moduleNumber={moduleNumber} notesTitle={chapter.notesTitle} notesUrl={chapter.notesUrl} />
         ) : hasVideo ? (
           /* Video content (with or without notes) */
           activeTab === 'video' ? (
@@ -374,7 +529,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
               )}
             </View>
           ) : activeTab === 'attachments' && hasNotes ? (
-            <AttachmentPage courseId={courseId} subjectName={subjectName} moduleNumber={moduleNumber} notesTitle={chapter.notesTitle} />
+            <AttachmentPage courseId={courseId} subjectName={subjectName} moduleNumber={moduleNumber} notesTitle={chapter.notesTitle} notesUrl={chapter.notesUrl} />
           ) : (
             /* No content available */
             <View className="mb-6 items-center justify-center py-12">
@@ -391,6 +546,17 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
         )}
       </View>
     </ScrollView>
+
+    <AskQuestionModal
+      visible={showAskModal}
+      onClose={() => setShowAskModal(false)}
+      courseId={courseId}
+      subjectName={subjectName}
+      moduleNumber={moduleNumber}
+      chapterTitle={chapter.title}
+      teacherName={teacherInfo?.name}
+    />
+    </>
   );
 };
 

@@ -7,7 +7,6 @@ export interface Module {
   description?: string;
   imageUri?: string;
   teacher?: string;
-  teacherAvatar?: string;
   uploadDate?: string;
   tags: { type: "live" | "video" | "notes"; label: string; count?: number }[];
 }
@@ -63,7 +62,6 @@ export const courses: Record<string, Course> = {
             description: 'Learn about mechanics and its fundamental concepts. Understand motion, forces, energy, and the laws governing physical bodies.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Rajesh Kumar',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/45.jpg',
             uploadDate: 'Jan 10, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 5 },
@@ -77,7 +75,6 @@ export const courses: Record<string, Course> = {
             description: 'Understand the law of inertia and how objects behave when no external force is applied.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Rajesh Kumar',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/45.jpg',
             uploadDate: 'Jan 12, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 4 },
@@ -91,7 +88,6 @@ export const courses: Record<string, Course> = {
             description: 'Learn about the relationship between force, mass, and acceleration.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Rajesh Kumar',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/45.jpg',
             uploadDate: 'Jan 15, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 6 },
@@ -120,7 +116,6 @@ export const courses: Record<string, Course> = {
             description: 'Explore the world of carbon-based compounds and their properties.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Dr. Patel',
-            teacherAvatar: 'https://randomuser.me/api/portraits/women/32.jpg',
             uploadDate: 'Jan 8, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 5 },
@@ -134,7 +129,6 @@ export const courses: Record<string, Course> = {
             description: 'Study different types of hydrocarbons and their chemical properties.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Dr. Patel',
-            teacherAvatar: 'https://randomuser.me/api/portraits/women/32.jpg',
             uploadDate: 'Jan 11, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 6 },
@@ -163,7 +157,6 @@ export const courses: Record<string, Course> = {
             description: 'Learn the fundamental concept of limits in calculus.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Kumar',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/50.jpg',
             uploadDate: 'Jan 5, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 6 },
@@ -177,7 +170,6 @@ export const courses: Record<string, Course> = {
             description: 'Understand derivatives and their applications in real-world problems.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Kumar',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/50.jpg',
             uploadDate: 'Jan 9, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 7 },
@@ -191,7 +183,6 @@ export const courses: Record<string, Course> = {
             description: 'Apply derivative concepts to solve practical problems.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Kumar',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/50.jpg',
             uploadDate: 'Jan 13, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 5 },
@@ -220,7 +211,6 @@ export const courses: Record<string, Course> = {
             description: 'Dive into cellular biology and understand cell components.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Dr. Singh',
-            teacherAvatar: 'https://randomuser.me/api/portraits/women/40.jpg',
             uploadDate: 'Jan 7, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 4 },
@@ -234,7 +224,6 @@ export const courses: Record<string, Course> = {
             description: 'Learn about cell reproduction and genetic inheritance.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Dr. Singh',
-            teacherAvatar: 'https://randomuser.me/api/portraits/women/40.jpg',
             uploadDate: 'Jan 14, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 5 },
@@ -263,7 +252,6 @@ export const courses: Record<string, Course> = {
             description: 'Start your programming journey with Python basics.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Gupta',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/55.jpg',
             uploadDate: 'Jan 6, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 4 },
@@ -277,7 +265,6 @@ export const courses: Record<string, Course> = {
             description: 'Master control structures in programming.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Gupta',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/55.jpg',
             uploadDate: 'Jan 16, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 6 },
@@ -291,7 +278,6 @@ export const courses: Record<string, Course> = {
             description: 'Learn to write clean, modular code.',
             imageUri: 'https://i.postimg.cc/9Fg6yxdf/course-1-thumbnail.jpg',
             teacher: 'Prof. Gupta',
-            teacherAvatar: 'https://randomuser.me/api/portraits/men/55.jpg',
             uploadDate: 'Jan 18, 2025',
             tags: [
               { type: 'video', label: 'Videos', count: 5 },

@@ -91,7 +91,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const fetchFeed = useLearnStore(state=>state.fetchFeed);
   const { user } = useAuthStore();
-  const { fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse, is_loading, selectedCourse, enrolledCourses, courses, selectCourse } = useCourseStore();
+  const { fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse, is_loading, selectedCourse, enrolledCourses, courses, selectCourse, userClearedSelection } = useCourseStore();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -132,11 +132,11 @@ export default function HomePage() {
     }, [user?.id, fetchFeed, fetchUserEnrollments, fetchAllCourses, fetchFeaturedCourse])
   );
 
-  // Auto-select first enrolled course if none selected
+  // Auto-select first enrolled course if none selected AND user hasn't explicitly cleared selection
   useFocusEffect(
     useCallback(() => {
       const autoSelectCourse = () => {
-        if (!selectedCourse && enrolledCourses.length > 0 && courses.length > 0) {
+        if (!selectedCourse && !userClearedSelection && enrolledCourses.length > 0 && courses.length > 0) {
           // Find the first enrolled course from the courses array
           const firstEnrolledCourse = courses.find(course => 
             enrolledCourses.includes(course.id || course._id)
@@ -151,7 +151,7 @@ export default function HomePage() {
       // Small delay to ensure data is loaded
       const timeoutId = setTimeout(autoSelectCourse, 100);
       return () => clearTimeout(timeoutId);
-    }, [selectedCourse, enrolledCourses, courses])
+    }, [selectedCourse, enrolledCourses, courses, userClearedSelection])
   );
 
   // Pull-to-refresh handler for the whole Learn page

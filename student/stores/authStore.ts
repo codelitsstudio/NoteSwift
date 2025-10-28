@@ -6,6 +6,9 @@ import { ApiState } from './common';
 import { TStudentWithNoSensitive } from "@core/models/students/Student";
 import { avatarStore } from './avatarStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { generateDeviceFingerprint } from '../lib/deviceFingerprint';
+import { useCourseStore } from './courseStore';
+import api from '@/api/axios';
 
 type User = TStudentWithNoSensitive;
 
@@ -53,7 +56,8 @@ const defaultSignupData: SignupStudentData = {
 
 const defaultLoginData: LoginStudent.Req = {
     password: "",
-    email: ""
+    email: "",
+    deviceFingerprint: ""
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -107,7 +111,17 @@ export const useAuthStore = create<AuthState>()(
     login: async (email, password) => {
         try {
             set({is_loading: true, api_message: ""});
-            const res = await signInStudent({email: email, password});
+            
+            // Generate device fingerprint for security
+            console.log('🔐 Generating device fingerprint for login...');
+            const deviceFingerprint = await generateDeviceFingerprint();
+            console.log('🔐 Device fingerprint generated:', deviceFingerprint.substring(0, 8) + '...');
+            
+            const res = await signInStudent({
+                email: email, 
+                password,
+                deviceFingerprint
+            });
             
             if (!res.error && res.result) {
                 // Use the permanent avatar emoji from database
@@ -126,6 +140,17 @@ export const useAuthStore = create<AuthState>()(
                     isLoggedIn: true,
                     token: res.result.token 
                 });
+                
+                // Clear previous course data and fetch user enrollments after successful login
+                console.log('📚 Clearing previous course data and fetching user enrollments after login...');
+                useCourseStore.getState().reset();
+                try {
+                    await useCourseStore.getState().fetchUserEnrollments(updatedUser.id || updatedUser._id);
+                    console.log('✅ User enrollments fetched successfully');
+                } catch (enrollmentError) {
+                    console.error('❌ Failed to fetch user enrollments:', enrollmentError);
+                    // Don't fail login if enrollment fetch fails
+                }
             }
             
             set({is_loading: false, api_message: res.message});
@@ -268,7 +293,19 @@ export const useAuthStore = create<AuthState>()(
         }
     },
     
-    logout: () => {
+    logout: async () => {
+        try {
+            // Call backend logout endpoint to clear device binding
+            const token = get().token;
+            if (token) {
+                await api.post('/auth/logout');
+            }
+        } catch (error) {
+            console.error('Logout API call failed:', error);
+            // Continue with local logout even if API call fails
+        }
+        
+        // Clear local state regardless of API call result
         set({
             user: null,
             isLoggedIn: false,
@@ -278,6 +315,8 @@ export const useAuthStore = create<AuthState>()(
         });
         // Clear avatar data
         avatarStore.clearAvatar();
+        // Clear course store data to prevent cross-user data leakage
+        useCourseStore.getState().reset();
     },
     
     updateUser: (userData: Partial<User>) => {

@@ -5,12 +5,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import HeaderFifth from "../../components/Headers/HeaderFifth";
 import ChapterTabs from "../Chapter/ChapterTabs";
 import { useCourseStore } from "../../stores/courseStore";
+import api from "../../api/axios";
 
 export default function SubjectPage() {
   const router = useRouter();
   const { subject, courseKey } = useLocalSearchParams(); // subject is subjectId
   const subjectId = decodeURIComponent(String(subject));
   const { selectedCourse, courses, currentSubjectContent, subjectContentLoading, subjectContentError, fetchSubjectContent: fetchSubjectContentFromStore } = useCourseStore();
+  const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
   
   // Debug selectedCourse state
   console.log('🎯 [subject].tsx INITIAL STATE:', {
@@ -46,6 +48,30 @@ export default function SubjectPage() {
     fetchSubjectContent();
   }, [subjectId, courseKey, selectedCourse]);
   
+  // Fetch course teachers
+  useEffect(() => {
+    const fetchCourseTeachers = async () => {
+      if (!selectedCourse?._id && !selectedCourse?.id) return;
+
+      try {
+        const courseId = selectedCourse._id || selectedCourse.id;
+        console.log('👨‍🏫 Fetching teachers for course:', courseId);
+        
+        const response = await api.get(`/courses/${courseId}/teachers`);
+        
+        if (response.data.success) {
+          setCourseTeachers(response.data.data.subjects || []);
+          console.log('👨‍🏫 Course teachers loaded:', response.data.data.subjects?.length || 0);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching course teachers:', error);
+        setCourseTeachers([]);
+      }
+    };
+
+    fetchCourseTeachers();
+  }, [selectedCourse]);
+  
   const data = currentSubjectContent ? {
     id: currentSubjectContent.subjectName,
     _id: selectedCourse?._id || selectedCourse?.id || (courseKey ? String(courseKey) : ""),
@@ -63,11 +89,7 @@ export default function SubjectPage() {
       notesUrl: module.notesUrl || null,
       videoTitle: module.videoTitle || null,
       notesTitle: module.notesTitle || null,
-      tags: [
-        { type: module.hasVideo ? 'video' : null, label: module.hasVideo ? 'Video' : null, count: module.hasVideo ? 1 : 0 },
-        { type: module.hasNotes ? 'notes' : null, label: module.hasNotes ? 'Notes' : null, count: module.hasNotes ? 1 : 0 },
-        { type: module.hasLiveClass ? 'live' : null, label: module.hasLiveClass ? 'Live Class' : null, count: module.hasLiveClass ? 1 : 0 }
-      ].filter(tag => tag.type !== null)
+      tags: module.tags || [] // Use tags from backend response
     }))
   } : null;
   
@@ -150,6 +172,8 @@ export default function SubjectPage() {
           courseId={finalCourseId}
           moduleProgress={moduleProgress}
           onRefreshProgress={refreshModuleProgress}
+          courseTeachers={courseTeachers}
+          courseOfferedBy={selectedCourse?.offeredBy}
         />
       </View>
     </SafeAreaView>

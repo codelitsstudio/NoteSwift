@@ -106,37 +106,43 @@ export default function SubjectTabs({ packageData, courseKey = 'course-1', enrol
             });
           }}
         >
-          <View>
-            {/* Tutor name */}
-            <Text className="text-xs text-customBlue font-semibold mb-1">
+          <View className="flex-row items-center">
+            <View className="flex-1">
+            
+  {/* Tutor name */}
+            <Text className="text-xs italic text-customBlue font-semibold mb-1">
               {tutorName}
             </Text>
 
-            {/* Subject title */}
-            <Text className="text-base font-semibold text-gray-900 mb-1">
-              {subject.name}
-            </Text>
+              {/* Subject title */}
+              <Text className="text-base font-semibold text-gray-900 mb-1">
+                {subject.name}
+              </Text>
 
-            {/* Description */}
-            <Text className="text-xs text-gray-500 mb-2">
-              {subject.description}
-            </Text>
+              {/* Description */}
+              <Text className="text-xs text-gray-500 mb-3">
+                {subject.description}
+              </Text>
 
-            {/* Tags/Stats */}
-            <View className="flex-row flex-wrap">
-              <View className="flex-row items-center mr-3 mb-1 px-2 py-1 bg-gray-50 border rounded-full border-gray-200">
-                <MaterialIcons name="auto-stories" size={13} color="#2563eb" />
-                <Text className="ml-1 text-xs font-medium text-gray-700">
-                  {subject.totalLessons} Lessons
-                </Text>
-              </View>
-              <View className="flex-row items-center mr-3 mb-1 px-2 py-1 bg-gray-50 border rounded-full border-gray-200">
-                <MaterialIcons name="schedule" size={13} color="#2563eb" />
-                <Text className="ml-1 text-xs font-medium text-gray-700">
-                  ~1 Year
-                </Text>
+              {/* Tags/Stats */}
+              <View className="flex-row flex-wrap">
+                <View className="flex-row items-center mr-3 mb-1 px-2 py-1 bg-gray-50 border rounded-full border-gray-200">
+                  <MaterialIcons name="auto-stories" size={13} color="#2563eb" />
+                  <Text className="ml-1 text-xs font-medium text-gray-700">
+                    {subject.totalLessons} Lessons
+                  </Text>
+                </View>
+                <View className="flex-row items-center mr-3 mb-1 px-2 py-1 bg-gray-50 border rounded-full border-gray-200">
+                  <MaterialIcons name="schedule" size={13} color="#2563eb" />
+                  <Text className="ml-1 text-xs font-medium text-gray-700">
+                    ~1 Year
+                  </Text>
+                </View>
               </View>
             </View>
+
+            {/* Chevron Icon */}
+            <MaterialIcons name="chevron-right" size={24} color="#9ca3af" />
           </View>
         </TouchableOpacity>
 

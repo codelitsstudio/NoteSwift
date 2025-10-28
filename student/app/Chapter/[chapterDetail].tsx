@@ -58,19 +58,37 @@ export default function ChapterDetailPage() {
     title: chapterData.moduleName || `Module ${chapterData.moduleNumber}`,
     subtitle: chapterData.description || 'Module content',
     description: chapterData.description || 'Module description',
-    hasVideo: chapterData.hasVideo || false,
+    hasVideo: chapterData.hasVideo || (chapterData.videos && chapterData.videos.length > 0) || false,
     hasNotes: chapterData.hasNotes || false,
-    videoUrl: chapterData.videoUrl || null,
+    videos: chapterData.videos || (chapterData.videoUrl ? [{
+      url: chapterData.videoUrl,
+      title: chapterData.videoTitle || 'Video',
+      duration: chapterData.videoDuration,
+      uploadedAt: chapterData.videoUploadedAt
+    }] : []),
+    videoUrl: chapterData.videos && chapterData.videos.length > 1 ? null : (chapterData.videoUrl || (chapterData.videos && chapterData.videos.length > 0 ? chapterData.videos[0].url : null)),
     notesUrl: chapterData.notesUrl || null,
-    videoTitle: chapterData.videoTitle || null,
+    videoTitle: chapterData.videos && chapterData.videos.length > 1 ? null : (chapterData.videoTitle || (chapterData.videos && chapterData.videos.length > 0 ? chapterData.videos[0].title : null)),
     notesTitle: chapterData.notesTitle || null,
     teacherId: currentSubjectContent?.teacherId || null,
+    teacher: currentSubjectContent?.teacherName || null,
     tags: [
-      chapterData.hasVideo ? { type: 'video' as const, label: 'Video', count: 1 } : null,
+      (chapterData.hasVideo || (chapterData.videos && chapterData.videos.length > 0)) ? { 
+        type: 'video' as const, 
+        label: 'Videos', 
+        count: chapterData.videos ? chapterData.videos.length : (chapterData.videoUrl ? 1 : 1) 
+      } : null,
       chapterData.hasNotes ? { type: 'notes' as const, label: 'Notes', count: 1 } : null,
       chapterData.hasLiveClass ? { type: 'live' as const, label: 'Live Class', count: 1 } : null
     ].filter((tag): tag is { type: "video" | "notes" | "live"; label: string; count: number } => tag !== null)
   } : null;
+
+  console.log('🎯 Chapter data being passed to component:', {
+    teacher: data?.teacher,
+    currentSubjectContent: {
+      teacherName: currentSubjectContent?.teacherName
+    }
+  });
 
   // Show loading state while fetching subject content
   if (subjectContentLoading) {

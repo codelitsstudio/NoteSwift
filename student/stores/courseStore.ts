@@ -88,6 +88,13 @@ interface CourseState extends ApiState {
   hasShownPopupToday: boolean;
   lastPopupDate: string | null;
   
+  // Loading states
+  coursesLoading: boolean;
+  enrollmentsLoading: boolean;
+  
+  // User selection tracking
+  userClearedSelection: boolean;
+  
   // Actions
   fetchFeaturedCourse: () => Promise<void>;
   fetchAllCourses: () => Promise<void>;
@@ -126,6 +133,9 @@ const initialState = {
   subjectContentError: null,
   hasShownPopupToday: false,
   lastPopupDate: null,
+  coursesLoading: false,
+  enrollmentsLoading: false,
+  userClearedSelection: false,
 };
 
 export const useCourseStore = create<CourseState>()(
@@ -181,16 +191,21 @@ export const useCourseStore = create<CourseState>()(
 
       fetchAllCourses: async () => {
         try {
+          console.log('📚 Fetching all courses...');
+          set({ coursesLoading: true });
           const response = await axios.get('/courses');
           if (response.data.success) {
             // Extract the courses array from the response data
             const coursesData = response.data.data.courses || [];
-            set({ courses: coursesData });
+            console.log('📚 Fetched courses:', coursesData.length);
+            set({ courses: coursesData, coursesLoading: false });
           } else {
-            set({ api_message: response.data.message || 'Failed to fetch courses' });
+            console.log('❌ Courses API returned success: false');
+            set({ api_message: response.data.message || 'Failed to fetch courses', coursesLoading: false });
           }
         } catch (error: any) {
-          set({ api_message: error.response?.data?.message || 'Something went wrong' });
+          console.log('❌ Error fetching all courses:', error.message);
+          set({ api_message: error.response?.data?.message || 'Something went wrong', coursesLoading: false });
           console.error('Error fetching all courses:', error);
         }
       },
@@ -249,6 +264,7 @@ export const useCourseStore = create<CourseState>()(
       fetchUserEnrollments: async (userId: string) => {
         try {
           console.log('🔄 Fetching enrollments for user:', userId);
+          set({ enrollmentsLoading: true });
           const response = await axios.get(`/courses/enrollments/${userId}`);
           
           console.log('📥 Enrollment API response:', response.data);
@@ -269,13 +285,15 @@ export const useCourseStore = create<CourseState>()(
             console.log('✅ User enrolled in courses:', enrolledCourseIds);
             set({ 
               enrolledCourses: enrolledCourseIds,
-              enrollments: enrollments
+              enrollments: enrollments,
+              enrollmentsLoading: false
             });
           } else {
             console.log('❌ Enrollment API returned success: false');
             set({ 
               enrolledCourses: [],
-              enrollments: []
+              enrollments: [],
+              enrollmentsLoading: false
             });
           }
         } catch (error: any) {
@@ -284,14 +302,26 @@ export const useCourseStore = create<CourseState>()(
           console.error('❌ Error data:', error.response?.data);
           if (error.response?.status === 403) {
             console.error('❌ Access denied - authentication issue');
+            // Clear data on auth errors
+            set({ 
+              enrolledCourses: [],
+              enrollments: [],
+              enrollmentsLoading: false
+            });
           } else if (error.response?.status === 404) {
             console.error('❌ Enrollments endpoint not found');
+            // Clear data if endpoint doesn't exist
+            set({ 
+              enrolledCourses: [],
+              enrollments: [],
+              enrollmentsLoading: false
+            });
+          } else {
+            // For other errors (network, server errors), don't clear cached data
+            // This preserves enrollment data during temporary issues
+            console.log('⚠️ Preserving cached enrollment data due to temporary error');
+            set({ enrollmentsLoading: false });
           }
-          // Set empty array on error to prevent undefined issues
-          set({ 
-            enrolledCourses: [],
-            enrollments: []
-          });
         }
       },
 
@@ -354,7 +384,10 @@ export const useCourseStore = create<CourseState>()(
       // Course Selection Actions
       selectCourse: (course: Course | null) => {
         console.log('🎯 Selecting course:', course?.title || 'None');
-        set({ selectedCourse: course });
+        set({ 
+          selectedCourse: course,
+          userClearedSelection: course === null // Track if user explicitly cleared selection
+        });
       },
 
       getSelectedCourse: () => {

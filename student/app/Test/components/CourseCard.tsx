@@ -1,8 +1,19 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Course } from '../testData';
+
+interface Course {
+  id?: string;
+  _id?: string;
+  name: string;
+  grade?: string;
+  subject?: string;
+  testsCount?: number;
+  completedTests?: number;
+  thumbnail?: any;
+  title?: string;
+  description?: string;
+}
 
 interface CourseCardProps {
   course: Course;
@@ -10,8 +21,8 @@ interface CourseCardProps {
 }
 
 export default function CourseCard({ course, onPress }: CourseCardProps) {
-  const progressPercentage = course.testsCount > 0 
-    ? Math.round((course.completedTests / course.testsCount) * 100) 
+  const progressPercentage = (course.testsCount || 0) > 0 
+    ? Math.round(((course.completedTests || 0) / (course.testsCount || 0)) * 100) 
     : 0;
 
   return (
@@ -20,35 +31,30 @@ export default function CourseCard({ course, onPress }: CourseCardProps) {
       activeOpacity={0.7}
       className="bg-white rounded-2xl overflow-hidden border border-gray-100"
     >
-      {/* Thumbnail */}
-      <View className="h-28 bg-gray-100">
-        <Image
-          source={course.thumbnail}
-          style={{ width: '100%', height: '100%' }}
-          contentFit="cover"
-          transition={300}
-        />
+      {/* Header with Icon */}
+      <View className="h-28 bg-customBlue/10 flex items-center justify-center">
+        <MaterialIcons name="school" size={48} color="#3B82F6" />
       </View>
 
       {/* Content */}
       <View className="p-3">
         {/* Title */}
         <Text className="text-sm font-bold text-gray-900 mb-1" numberOfLines={2}>
-          {course.name}
+          {course.name || course.title}
         </Text>
 
         {/* Grade & Subject */}
         <Text className="text-xs text-gray-500 mb-2">
-          {course.grade} • {course.subject}
+          {course.grade || 'Grade 12'} • {course.subject || 'Multiple Subjects'}
         </Text>
 
         {/* Tests Info */}
         <View className="flex-row items-center justify-between mb-2">
           <Text className="text-sm text-gray-600">
-            {course.testsCount} Tests
+            {course.testsCount || 0} Tests
           </Text>
           <Text className="text-sm font-medium text-customBlue">
-            {course.completedTests} Done
+            {course.completedTests || 0} Done
           </Text>
         </View>
 

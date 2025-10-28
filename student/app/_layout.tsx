@@ -16,7 +16,7 @@ import "../global.css";
 import Header from "../components/Headers/Header";
 import HeaderTwo from "../components/Headers/HeaderTwo";
 import HeaderThree from "@/components/Headers/HeaderThree";
-import CourseTestListHeader from "@/components/Headers/TestHeaders/CourseTestListHeader";
+import ModuleTestListHeader from "@/components/Headers/TestHeaders/ModuleTestListHeader";
 import MCQTestHeader from "@/components/Headers/TestHeaders/MCQTestHeader";
 import PDFTestHeader from "@/components/Headers/TestHeaders/PDFTestHeader";
 import TestResultHeader from "@/components/Headers/TestHeaders/TestResultHeader";
@@ -33,8 +33,10 @@ import { OfflineBanner } from "../components/Container/OfflineBanner";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useNavStore } from "../stores/navigationStore";
 import { useAuthStore } from "../stores/authStore";
+import { getPushToken, registerPushToken, setupNotificationListener } from '../lib/notificationService';
 
 import HeaderFifth from "@/components/Headers/HeaderFifth";
+import AppBlock from "../components/AppBlock";
 
 cssInterop(AntDesign, { className: { target: "style" } });
 cssInterop(MaterialIcons, { className: { target: "style" } });
@@ -80,6 +82,42 @@ export default function RootLayout() {
     }
   }, [isLoggedIn, user, segments, loaded, showSplash]);
 
+  // Register push notifications when user is authenticated
+  useEffect(() => {
+    let foregroundSubscription: any = null;
+    let responseSubscription: any = null;
+
+    if (isLoggedIn && user && !showSplash) {
+      const registerNotifications = async () => {
+        try {
+          const pushToken = await getPushToken();
+          if (pushToken) {
+            await registerPushToken(pushToken);
+          }
+        } catch (error) {
+          console.error('Error registering for push notifications:', error);
+        }
+      };
+
+      registerNotifications();
+
+      // Set up notification listeners
+      const listeners = setupNotificationListener();
+      foregroundSubscription = listeners.foregroundSubscription;
+      responseSubscription = listeners.responseSubscription;
+    }
+
+    // Cleanup function
+    return () => {
+      if (foregroundSubscription) {
+        foregroundSubscription.remove();
+      }
+      if (responseSubscription) {
+        responseSubscription.remove();
+      }
+    };
+  }, [isLoggedIn, user, showSplash]);
+
 
   useEffect(() => {
     const prepare = async () => {
@@ -115,9 +153,10 @@ export default function RootLayout() {
       {showSplash ? (
         <SplashScreen onFinish={() => setShowSplash(false)} />
       ) : (
-        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <BottomSheetModalProvider>
+        <AppBlock>
+          <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <BottomSheetModalProvider>
 
 
                 <Stack
@@ -217,6 +256,10 @@ export default function RootLayout() {
                   <Stack.Screen name="onboarding/Register/address" options={{ headerShown: false }} />
                   <Stack.Screen name="onboarding/Register/registerNumber" options={{ headerShown: false }} />
 
+                  <Stack.Screen name="onboarding/ForgotPassword/forgotEmail" options={{ headerShown: false }} />
+                  <Stack.Screen name="onboarding/ForgotPassword/forgotOTP" options={{ headerShown: false }} />
+                  <Stack.Screen name="onboarding/ForgotPassword/forgotReset" options={{ headerShown: false }} />
+
                   <Stack.Screen name="onboarding/Register/registerEmail" options={{ headerShown: false }} />
                   <Stack.Screen name="onboarding/Register/emailVerify" options={{ headerShown: false }} />
                   <Stack.Screen name="onboarding/Register/PasswordPage" options={{ headerShown: false }} />
@@ -244,14 +287,15 @@ export default function RootLayout() {
                   <Stack.Screen name="Settings/ReportIssue" options={{ headerShown: false }} />
 
                   {/* Test Module Screens */}
-                  <Stack.Screen name="Test/CourseTestList" options={{ header: () => <CourseTestListHeader /> }} />
+                  <Stack.Screen name="Test/ModuleTestList" options={{ header: () => <ModuleTestListHeader /> }} />
                   <Stack.Screen name="Test/MCQTest" options={{ header: () => <MCQTestHeader /> }} />
                   <Stack.Screen name="Test/PDFTest" options={{ header: () => <PDFTestHeader /> }} />
                   <Stack.Screen name="Test/TestResult" options={{ header: () => <TestResultHeader /> }} />
 
                   {/* Ask Module Screens */}
-                  <Stack.Screen name="Ask/AIChatBot" options={{ header: () => <AIChatBotHeader /> }} />
+                  <Stack.Screen name="Ask/AIChatBot"  options={{ headerShown: false }}  />
                   <Stack.Screen name="Ask/QuestionGenerator" options={{ header: () => <QuestionGeneratorHeader /> }} />
+                  <Stack.Screen name="Ask/AllQuestions" options={{ header: () => <AllQuestionsHeader /> }} />
                   <Stack.Screen name="Ask/DoubtSolver" options={{ header: () => <DoubtSolverHeader /> }} />
                   <Stack.Screen name="Ask/StudyTips" options={{ header: () => <StudyTipsHeader /> }} />
                   <Stack.Screen name="Ask/Community" options={{ header: () => <CommunityHeader /> }} />
@@ -271,6 +315,7 @@ export default function RootLayout() {
             </BottomSheetModalProvider>
           </GestureHandlerRootView>
         </Animated.View>
+        </AppBlock>
       )}
     </View>
   );

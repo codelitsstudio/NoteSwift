@@ -153,7 +153,7 @@ export default function ForgotEmail() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <ImageHeader source={require('../../../assets/images/illl-4.png')} />
+            <ImageHeader source={require('../../../assets/images/illl-2.png')} />
 
             <View className="flex-grow justify-center">
               <Text

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { demoCommunityPosts } from './askData';
 
 export default function Community() {
   const router = useRouter();
@@ -12,10 +11,57 @@ export default function Community() {
 
   const subjects = ['All', 'Mathematics', 'Physics', 'Chemistry', 'Biology'];
 
+  const demoCommunityPosts = [
+    {
+      id: '1',
+      userName: 'Alice Johnson',
+      timestamp: '2 hours ago',
+      question: 'How do I solve quadratic equations?',
+      subject: 'Mathematics',
+      replies: 3,
+      upvotes: 12,
+      hasAnswer: true,
+    },
+    {
+      id: '2',
+      userName: 'Bob Smith',
+      timestamp: '5 hours ago',
+      question: 'What is the difference between speed and velocity?',
+      subject: 'Physics',
+      replies: 1,
+      upvotes: 8,
+      hasAnswer: false,
+    },
+    {
+      id: '3',
+      userName: 'Carol Davis',
+      timestamp: '1 day ago',
+      question: 'How does photosynthesis work?',
+      subject: 'Biology',
+      replies: 5,
+      upvotes: 15,
+      hasAnswer: true,
+    },
+  ];
+
   return (
     <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Header */}
+      {/* Coming Soon */}
+        <View className="flex-1 justify-center pb-8 items-center mt-6 px-6">
+          <Image
+            source={require('../../assets/images/coming-soon.gif')}
+            style={{ width: 360, height: 360, marginBottom: 16 }}
+            resizeMode="contain"
+          />
+          <Text className="text-lg font-semibold text-gray-700">
+Coming Soon          </Text>
+          <Text className="text-sm text-gray-400 mt-2 text-center px-4">
+            We're working on AI-powered question generation. Check back soon!
+          </Text>
+        </View>
+
+{/* 
         <View className="px-6 pt-6 pb-4">
           <Text className="text-2xl font-bold text-gray-900 mb-2">
             Community
@@ -23,10 +69,9 @@ export default function Community() {
           <Text className="text-sm text-gray-500">
             Ask questions & help your peers
           </Text>
-        </View>
+        </View> */}
 
-        {/* Search Bar */}
-        <View className="px-6 pb-4">
+{/* \        <View className="px-6 pb-4">
           <View className="flex-row items-center bg-white rounded-3xl px-4 py-3 border border-gray-100">
             <MaterialIcons name="search" size={22} color="#9CA3AF" />
             <TextInput
@@ -39,7 +84,6 @@ export default function Community() {
           </View>
         </View>
 
-        {/* Subject Filter */}
         <View className="px-6 pb-4">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View className="flex-row gap-2">
@@ -67,7 +111,6 @@ export default function Community() {
           </ScrollView>
         </View>
 
-        {/* Stats Card */}
         <View className="px-6 pb-4">
           <View className="bg-white rounded-2xl p-4 border border-gray-100">
             <View className="flex-row justify-between items-center">
@@ -89,7 +132,6 @@ export default function Community() {
           </View>
         </View>
 
-        {/* New Question Button */}
         <View className="px-6 pb-4">
           <TouchableOpacity
             activeOpacity={0.7}
@@ -102,69 +144,9 @@ export default function Community() {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
-        {/* Community Posts */}
-        <View className="px-6 pb-20">
-          <Text className="text-lg font-bold text-gray-900 mb-3">
-            Recent Questions
-          </Text>
-
-          {demoCommunityPosts.map((post) => (
-            <TouchableOpacity
-              key={post.id}
-              activeOpacity={0.7}
-              className="bg-white rounded-xl p-4 mb-3 border border-gray-100"
-            >
-              {/* User Info */}
-              <View className="flex-row items-center mb-3">
-                <View className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center">
-                  <Text className="text-base font-bold text-customBlue">
-                    {post.userName.charAt(0)}
-                  </Text>
-                </View>
-                <View className="flex-1 ml-3">
-                  <Text className="text-base font-bold text-gray-900">
-                    {post.userName}
-                  </Text>
-                  <Text className="text-sm text-gray-500">{post.timestamp}</Text>
-                </View>
-                {post.hasAnswer && (
-                  <View className="bg-green-50 px-2 py-1 rounded-md">
-                    <Text className="text-sm font-medium text-green-600">Answered</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Question */}
-              <Text className="text-base font-bold text-gray-900 mb-2">
-                {post.question}
-              </Text>
-
-              {/* Subject Badge */}
-              <View className="flex-row items-center mb-3">
-                <View className="bg-blue-50 px-2 py-1 rounded-md">
-                  <Text className="text-sm font-medium text-customBlue">
-                    {post.subject}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Footer */}
-              <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
-                <View className="flex-row items-center">
-                  <MaterialIcons name="chat-bubble-outline" size={18} color="#9CA3AF" />
-                  <Text className="text-sm text-gray-500 ml-1">{post.replies} replies</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <MaterialIcons name="thumb-up" size={18} color="#9CA3AF" />
-                  <Text className="text-sm text-gray-500 ml-1">{post.upvotes} upvotes</Text>
-                </View>
-                <MaterialIcons name="chevron-right" size={20} color="#9CA3AF" />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        
       </ScrollView>
     </SafeAreaView>
   );

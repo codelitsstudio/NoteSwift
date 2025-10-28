@@ -11,12 +11,33 @@ const StatCard = () => {
   const router = useRouter();
   const { avatarEmoji } = useAvatarStore();
   const { user } = useAuthStore();
-  const { courses, enrolledCourses, enrollments, selectedCourse, selectCourse } = useCourseStore();
+  const { courses, enrolledCourses, enrollments, selectedCourse, selectCourse, is_loading, coursesLoading, enrollmentsLoading } = useCourseStore();
   
   // Get enrolled courses with full course data
-  const enrolledCoursesData = courses.filter(course => 
+  const enrolledCoursesData = courses.filter(course =>
     enrolledCourses.includes(course.id || course._id)
   );
+
+  // Debug enrollment data
+  console.log('🔍 StatCard Enrollment Debug:', {
+    enrolledCourses: enrolledCourses,
+    enrolledCoursesLength: enrolledCourses.length,
+    coursesLength: courses.length,
+    enrolledCoursesDataLength: enrolledCoursesData.length,
+    courses: courses.map(c => ({ id: c.id, _id: c._id, title: c.title })),
+    hasEnrolledCourses: enrolledCoursesData.length > 0,
+    is_loading: is_loading,
+    coursesLoading: coursesLoading,
+    enrollmentsLoading: enrollmentsLoading
+  });
+
+  console.log('🔍 StatCard Debug:', {
+    coursesLength: courses.length,
+    enrolledCoursesLength: enrolledCourses.length,
+    enrolledCoursesDataLength: enrolledCoursesData.length,
+    enrolledCourses,
+    courses: courses.map(c => ({ id: c.id, _id: c._id, title: c.title }))
+  });
   
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(
     selectedCourse ? (selectedCourse.id || selectedCourse._id) : 
@@ -28,19 +49,46 @@ const StatCard = () => {
   const hasEnrolledCourses = enrolledCoursesData.length > 0;
 
   // When user taps a course in the modal, just mark it as pending (tick). Apply only on confirm.
-  const handleCourseSelect = (courseId: string) => {
+  const handleCourseSelect = (courseId: string | null) => {
     setPendingSelectedId(courseId);
   };
 
   const applyPendingSelection = () => {
-    if (!pendingSelectedId) return;
-    const course = enrolledCoursesData.find((c) => (c.id || c._id) === pendingSelectedId);
-    if (course) {
-      selectCourse(course);
-      setSelectedCourseId(pendingSelectedId);
+    if (pendingSelectedId === null) {
+      // Clear selection
+      selectCourse(null);
+      setSelectedCourseId(null);
+    } else {
+      const course = enrolledCoursesData.find((c) => (c.id || c._id) === pendingSelectedId);
+      if (course) {
+        selectCourse(course);
+        setSelectedCourseId(pendingSelectedId);
+      }
     }
     setShowDropdown(false);
   };
+
+  // Show loading state if data is still loading
+  if (is_loading || coursesLoading || enrollmentsLoading) {
+    return (
+      <View className="px-5 mt-6 mb-2">
+        <View className="bg-white rounded-3xl border border-gray-200 overflow-hidden">
+          <View className="bg-blue-500 h-16" />
+          <View className="px-6 pb-6">
+            <View className="-mt-8 mb-4">
+              <View className="w-20 h-20 bg-white rounded-full items-center justify-center border border-gray-200 overflow-hidden">
+                <MaterialIcons name="person" size={32} color="#9CA3AF" />
+              </View>
+            </View>
+            <View className="items-center py-8">
+              <MaterialIcons name="hourglass-empty" size={48} color="#9CA3AF" />
+              <Text className="text-gray-500 text-sm mt-2">Loading courses...</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   if (!hasEnrolledCourses) {
     return (
@@ -165,6 +213,29 @@ const StatCard = () => {
 
             {/* Course List */}
             <ScrollView className="px-5 py-6">
+              {/* Clear Selection Option */}
+              <TouchableOpacity
+                className={`p-4 rounded-xl mb-2 ${
+                  pendingSelectedId === null ? 'bg-blue-50 border-2 border-blue-500' : 'bg-gray-50'
+                }`}
+                onPress={() => handleCourseSelect(null)}
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <Text className="text-gray-900 text-base font-bold">
+                      Clear Selection
+                    </Text>
+                    <Text className="text-gray-500 text-xs mt-1">
+                      No course selected
+                    </Text>
+                  </View>
+                  {pendingSelectedId === null && (
+                    <MaterialIcons name="check-circle" size={24} color="#3B82F6" />
+                  )}
+                </View>
+              </TouchableOpacity>
+
               {enrolledCoursesData.map((course) => {
                 const courseId = course.id || course._id;
                 return (

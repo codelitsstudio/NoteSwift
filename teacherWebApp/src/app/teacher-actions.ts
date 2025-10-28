@@ -124,28 +124,103 @@ const testSchema = z.object({
   title: z.string().min(2),
   description: z.string().optional(),
   scheduledAt: z.string().datetime().optional(),
+  deadline: z.string().datetime().optional(),
   durationMinutes: z.number().int().optional(),
+  testType: z.enum(["mcq", "pdf", "mixed"]).optional(),
+  difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+  totalQuestions: z.number().int().optional(),
+  passingScore: z.number().int().optional(),
+
+  // Test Settings
+  settings: z.object({
+    randomizeQuestions: z.boolean().optional(),
+    randomizeOptions: z.boolean().optional(),
+    showResultsImmediately: z.boolean().optional(),
+    allowRetakes: z.boolean().optional(),
+    maxRetakes: z.number().int().optional(),
+    timePerQuestion: z.number().int().optional(),
+    allowCalculator: z.boolean().optional(),
+    partialCredit: z.boolean().optional()
+  }).optional(),
+
+  // Access Control
+  accessControl: z.object({
+    requirePassword: z.boolean().optional(),
+    password: z.string().optional(),
+    restrictIp: z.boolean().optional(),
+    allowedIps: z.string().optional()
+  }).optional(),
+
+  // Notifications
+  notifications: z.object({
+    notifyStudents: z.boolean().optional(),
+    sendReminders: z.boolean().optional(),
+    reminderHours: z.number().int().optional()
+  }).optional(),
+
+  // Advanced
+  instructions: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  isDraft: z.boolean().optional(),
+
+  // Recurring
+  isRecurring: z.boolean().optional(),
+  recurringType: z.enum(["daily", "weekly", "monthly"]).optional(),
+  recurringCount: z.number().int().optional()
 });
 
 export async function createTest(input: z.infer<typeof testSchema>) {
   await dbConnect();
   const data = testSchema.parse(input);
-  const test = await Test.create({
+
+  const testData: any = {
     course: data.courseId,
     chapter: data.chapterId,
     title: data.title,
     description: data.description,
     scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+    deadline: data.deadline ? new Date(data.deadline) : undefined,
     durationMinutes: data.durationMinutes,
-  });
-  console.log('📝 Create Test:', data);
+    testType: data.testType || 'mcq',
+    difficulty: data.difficulty || 'medium',
+    totalQuestions: data.totalQuestions,
+    passingScore: data.passingScore,
+    isDraft: data.isDraft || false,
+    instructions: data.instructions,
+    tags: data.tags,
+  };
+
+  // Add settings if provided
+  if (data.settings) {
+    testData.settings = data.settings;
+  }
+
+  // Add access control if provided
+  if (data.accessControl) {
+    testData.accessControl = data.accessControl;
+  }
+
+  // Add notifications if provided
+  if (data.notifications) {
+    testData.notifications = data.notifications;
+  }
+
+  // Add recurring if provided
+  if (data.isRecurring) {
+    testData.isRecurring = data.isRecurring;
+    testData.recurringType = data.recurringType;
+    testData.recurringCount = data.recurringCount;
+  }
+
+  const test = await Test.create(testData);
+  console.log('📝 Create Test:', testData);
   revalidatePath("/dashboard/tests");
   return { success: true, testId: (test._id as any).toString() };
 }
 
 const questionSchema = z.object({
   testId: z.string(),
-  type: z.enum(["mcq", "numerical", "short", "long"]),
+  type: z.enum(["mcq", "numerical", "short", "long", "pdf", "mixed"]),
   text: z.string().min(2),
   options: z.array(z.object({ key: z.string(), text: z.string() })).optional(),
   correctAnswer: z.any().optional(),
@@ -157,19 +232,97 @@ const questionSchema = z.object({
 export async function addQuestion(input: z.infer<typeof questionSchema>) {
   await dbConnect();
   const data = questionSchema.parse(input);
-  await Question.create({
-    test: data.testId,
-    type: data.type,
-    text: data.text,
-    options: data.options,
-    correctAnswer: data.correctAnswer,
-    points: data.points,
-    difficulty: data.difficulty,
-    usesLatex: data.usesLatex ?? false,
-  });
-  console.log('📝 Add Question:', data);
-  revalidatePath("/dashboard/tests");
-  return { success: true };
+
+  try {
+    // Get current test to determine question number
+    const currentTest = await Test.findById(data.testId).lean();
+    if (!currentTest) {
+      throw new Error('Test not found');
+    }
+
+    const currentQuestions = (currentTest as any).questions || [];
+    const questionNumber = currentQuestions.length + 1;
+
+    // Map frontend question format to backend format
+    const question: any = {
+      questionNumber,
+      questionText: data.text,
+      questionType: data.type === 'mcq' ? 'mcq' : data.type === 'numerical' ? 'short-answer' : 'essay',
+      marks: data.points,
+      difficulty: data.difficulty,
+      options: data.options?.map(opt => opt.text) || [],
+      correctAnswer: data.correctAnswer,
+      explanation: '', // Can be added later
+      imageUrl: undefined, // Can be added later
+      negativeMarking: 0
+    };
+
+    // Update the test document directly without validation
+    const updatedTest = await Test.findByIdAndUpdate(
+      data.testId,
+      {
+        $push: { questions: question },
+        $set: { updatedAt: new Date() }
+      },
+      { new: true, runValidators: false }
+    );
+
+    console.log('📝 Add Question to Test:', { testId: data.testId, questionNumber, totalQuestions: updatedTest?.questions?.length || 0 });
+    revalidatePath("/dashboard/tests");
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding question:', error);
+    throw error;
+  }
+}
+
+const publishTestSchema = z.object({
+  testId: z.string(),
+  teacherEmail: z.string(),
+});
+
+export async function publishTest(input: z.infer<typeof publishTestSchema>) {
+  await dbConnect();
+  const data = publishTestSchema.parse(input);
+
+  try {
+    // Get the test document
+    const test = await Test.findById(data.testId).lean();
+    if (!test) {
+      throw new Error('Test not found');
+    }
+
+    const testDoc = test as any;
+
+    console.log('Publishing test - stored teacherEmail:', testDoc.teacherEmail, 'provided teacherEmail:', data.teacherEmail);
+
+    if (testDoc.teacherEmail !== data.teacherEmail) {
+      throw new Error('Not authorized to publish this test');
+    }
+
+    // Check if test has questions (except for PDF tests)
+    if (testDoc.type !== 'pdf' && (!testDoc.questions || testDoc.questions.length === 0)) {
+      throw new Error('Cannot publish test without questions');
+    }
+
+    // Update the test status directly using MongoDB update
+    await Test.updateOne(
+      { _id: data.testId },
+      { 
+        $set: { 
+          status: 'active',
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    console.log('📝 Publish Test:', data);
+    revalidatePath("/dashboard/tests");
+    return { success: true };
+  } catch (error) {
+    console.error('Error publishing test:', error);
+    throw error;
+  }
 }
 
 // -------- Announcements --------
@@ -314,5 +467,36 @@ export async function suggestQuestions(input: z.infer<typeof questionSuggestSche
     console.log('📝 Suggest Questions:', data);
   } catch (e) {
     return { success: false, error: "Suggestion service unavailable" };
+  }
+}
+
+// -------- AI Option Arrangement --------
+const arrangeOptionsSchema = z.object({
+  correctAnswer: z.string().min(1),
+  wrongAnswers: z.array(z.string()).min(1).max(3)
+});
+export async function arrangeOptions(input: z.infer<typeof arrangeOptionsSchema>) {
+  try {
+    const data = arrangeOptionsSchema.parse(input);
+    const result = await import("@/ai/flows/arrange-options").then(m => m.arrangeOptions(data));
+    return { success: true, options: result.options };
+  } catch (e) {
+    return { success: false, error: "Option arrangement service unavailable" };
+  }
+}
+
+// -------- AI Wrong Options Generation --------
+const generateWrongOptionsSchema = z.object({
+  question: z.string().min(10),
+  correctAnswer: z.string().min(1),
+  count: z.number().int().min(1).max(3).default(3)
+});
+export async function generateWrongOptions(input: z.infer<typeof generateWrongOptionsSchema>) {
+  try {
+    const data = generateWrongOptionsSchema.parse(input);
+    const result = await import("@/ai/flows/generate-wrong-options").then(m => m.generateWrongOptions(data));
+    return { success: true, wrongOptions: result.wrongOptions };
+  } catch (e) {
+    return { success: false, error: "Wrong options generation service unavailable" };
   }
 }

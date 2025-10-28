@@ -118,7 +118,7 @@ const PackageDetails = () => {
       </SafeAreaView>
     );
   }
-  const { isEnrolled, enrollInCourse } = useCourseStore();
+  const { isEnrolled, enrollInCourse, selectedCourse } = useCourseStore();
   const { addNotification } = useNotificationStore();
   
   // Bottom sheet states and refs
@@ -181,7 +181,7 @@ const PackageDetails = () => {
 
   const toggleFaq = (question: string) => setExpandedFaq(expandedFaq === question ? null : question);
 
-  // Generate proper device fingerprint
+  // Generate signed URL for video access
   const generateDeviceFingerprint = async () => {
     try {
       const deviceInfo = {
@@ -258,16 +258,8 @@ const PackageDetails = () => {
 
     setIsRedeeming(true);
     try {
-      // Generate proper device fingerprint
-      const deviceHash = await generateDeviceFingerprint();
-
-      console.log('🔓 Calling redeemUnlockCode with:', {
-        code: unlockCode.trim(),
-        courseId: pkg.id,
-        deviceHash: deviceHash.substring(0, 16) + '...'
-      });
-
-      const result = await redeemUnlockCode(unlockCode.trim(), pkg.id, deviceHash);
+      // Call redeemUnlockCode without device hash - enrollment is account-based
+      const result = await redeemUnlockCode(unlockCode.trim(), pkg.id);
       
       Toast.show({
         type: 'success',
@@ -327,7 +319,10 @@ const PackageDetails = () => {
 
         // Navigate to learn page for free packages
         if (pkg.type === 'free') {
-          router.push('/Learn/LearnPage');
+          // Add a small delay to ensure state updates are complete
+          setTimeout(() => {
+            router.push('/Learn/LearnPage');
+          }, 100);
         }
       } else {
         Toast.show({
@@ -587,9 +582,9 @@ const PackageDetails = () => {
         // Free Package - Single Enroll Button
         <View style={{ width: '100%' }}>
           <FloatingEnrollButton
-            title={alreadyEnrolled ? "Go to Learn" : "Enroll to Unlock Full Access"}
+            title={alreadyEnrolled ? "Go to More" : "Enroll to Unlock Full Access"}
             subtitle={alreadyEnrolled ? `Enrolled: ${enrollmentDate || 'Today'}` : "Start Learning Today"}
-            onPress={alreadyEnrolled ? () => router.push('/Learn/LearnPage') : handleEnroll}
+            onPress={alreadyEnrolled ? () => router.push('/More/MorePage') : handleEnroll}
           />
         </View>
       ) : (
@@ -603,11 +598,11 @@ const PackageDetails = () => {
                   onPress={() => router.push('/More/MorePage')}
                 >
                   <Text className="text-center text-lg font-bold text-white">
-                    Select the Course
+                    {(selectedCourse?.id === pkg.id || selectedCourse?._id === pkg.id) ? 'Already Selected' : 'Select the Course'}
                   </Text>
                 </TouchableOpacity>
                 <Text className="text-gray-400 text-center mt-2 mb-3 text-sm">
-                  Choose this course to start learning
+                  {(selectedCourse?.id === pkg.id || selectedCourse?._id === pkg.id) ? 'This course is currently selected' : 'Choose this course to start learning'}
                 </Text>
               </>
             ) : (
@@ -800,7 +795,7 @@ const PackageDetails = () => {
                 style={{ pointerEvents: 'none' }}
               >
                 <Text className="text-gray-500 text-center font-semibold text-lg">
-                  Available Soon
+                  Enter Code
                 </Text>
               </View>
             )}

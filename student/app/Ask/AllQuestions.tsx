@@ -1,25 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { demoQuestions } from './askData';
 import QuestionCard from './components/QuestionCard';
+import api from '../../api/axios';
 
 export default function AllQuestions() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'answered' | 'pending'>('all');
   const [selectedSubject, setSelectedSubject] = useState('All');
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const subjects = ['All', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
 
+  // Fetch questions from API
+  const fetchQuestions = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get('/questions');
+      // Accept both { success, result: { questions } } and { error, result: { questions } }
+      if (
+        response.data &&
+        response.data.result &&
+        Array.isArray(response.data.result.questions)
+      ) {
+        setQuestions(response.data.result.questions);
+      } else if (
+        response.data &&
+        Array.isArray(response.data.questions)
+      ) {
+        setQuestions(response.data.questions);
+      } else {
+        // Log unexpected response for debugging
+        console.warn('Unexpected questions API response:', response.data);
+        setQuestions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      setQuestions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch questions on component mount
+  useEffect(() => {
+    fetchQuestions();
+  }, []);
+
   // Filter questions
-  const filteredQuestions = demoQuestions.filter((question) => {
+  const filteredQuestions = questions.filter((question) => {
     const matchesSearch =
       searchQuery.trim() === '' ||
-      question.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      question.subject.toLowerCase().includes(searchQuery.toLowerCase());
+      (question.title && question.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (question.subjectName && question.subjectName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (question.questionText && question.questionText.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus =
       selectedStatus === 'all' ||
@@ -27,15 +65,15 @@ export default function AllQuestions() {
 
     const matchesSubject =
       selectedSubject === 'All' ||
-      question.subject === selectedSubject;
+      question.subjectName === selectedSubject;
 
     return matchesSearch && matchesStatus && matchesSubject;
   });
 
   // Statistics
-  const totalQuestions = demoQuestions.length;
-  const answeredQuestions = demoQuestions.filter((q) => q.status === 'answered').length;
-  const pendingQuestions = demoQuestions.filter((q) => q.status === 'pending').length;
+  const totalQuestions = questions.length;
+  const answeredQuestions = questions.filter((q: any) => q.status === 'answered').length;
+  const pendingQuestions = questions.filter((q: any) => q.status === 'pending' || q.status === 'in-progress').length;
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
@@ -177,9 +215,9 @@ export default function AllQuestions() {
           ) : (
             filteredQuestions.map((question) => (
               <QuestionCard 
-                key={question.id} 
+                key={question._id || question.id} 
                 question={question} 
-                onPress={() => router.push({ pathname: '/Ask/QuestionDetail', params: { id: question.id } })}
+                onPress={() => router.push({ pathname: '/Ask/QuestionDetail', params: { questionId: question._id || question.id } })}
               />
             ))
           )}

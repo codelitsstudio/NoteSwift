@@ -12,6 +12,8 @@ type LiveVideoProps = {
   courseId: string;
   subjectName: string;
   moduleNumber: number;
+  videoUrl?: string;
+  videoIndex?: number; // Add videoIndex prop
   thumbnailUri?: string;
   onPressPlay?: () => void;
   onTimeUpdate?: (ms: number) => void;
@@ -24,7 +26,7 @@ type LiveVideoProps = {
 const BLUE = "#3b82f6";
 
 const LiveVideo = forwardRef<any, LiveVideoProps>(
-  ({ courseId, subjectName, moduleNumber, thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate, onVideoCompletionStatusChange, videoCompleted: initialVideoCompleted = false }, ref) => {
+  ({ courseId, subjectName, moduleNumber, videoUrl, videoIndex = 0, thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate, onVideoCompletionStatusChange, videoCompleted: initialVideoCompleted = false }, ref) => {
     const videoRef = useRef<Video | null>(null);
     const [videoState, setVideoState] = useState({
       status: {} as any,
@@ -50,25 +52,45 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
     // Fetch signed URL on component mount
     useEffect(() => {
       const fetchSignedUrl = async () => {
-        try {
-          setUrlLoading(true);
-          setUrlError(null);
-          const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/video`);
-          if (response.data.success && response.data.signedUrl) {
-            setSignedUrl(response.data.signedUrl);
-          } else {
-            throw new Error('Failed to get signed URL');
-          }
-        } catch (err) {
-          console.error('Error fetching video signed URL:', err);
-          setUrlError('Failed to load video. Please try again.');
-        } finally {
+        // If we have a videoUrl that looks like a full URL, use it directly
+        if (videoUrl && (videoUrl.startsWith('http://') || videoUrl.startsWith('https://'))) {
+          setSignedUrl(videoUrl);
           setUrlLoading(false);
+          return;
+        }
+
+        // If videoUrl is a Firebase storage path, construct Firebase Storage URL
+        if (videoUrl && (videoUrl.startsWith('videos/') || videoUrl.startsWith('notes/'))) {
+          const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${videoUrl}`;
+          setSignedUrl(firebaseUrl);
+          setUrlLoading(false);
+          console.log('Using Firebase Storage URL:', firebaseUrl);
+          return;
+        }
+
+        // If videoUrl is a storage path but not Firebase format, try backend API as last resort
+        if (videoUrl && !videoUrl.startsWith('http')) {
+          try {
+            setUrlLoading(true);
+            setUrlError(null);
+            const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/video?videoIndex=${videoIndex}`);
+            if (response.data.success && response.data.signedUrl) {
+              setSignedUrl(response.data.signedUrl);
+            } else {
+              throw new Error('Failed to get signed URL');
+            }
+          } catch (err) {
+            console.error('Error fetching video signed URL:', err);
+            setUrlError('Unable to load video. Please try again or contact support if the problem persists.');
+          } finally {
+            setUrlLoading(false);
+          }
+          return;
         }
       };
 
       fetchSignedUrl();
-    }, [courseId, subjectName, moduleNumber]);
+    }, [courseId, subjectName, moduleNumber, videoUrl, videoIndex]);
 
     // Track if we've already marked video as completed
     const hasMarkedCompletedRef = useRef(false);
@@ -336,24 +358,62 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
                     setUrlLoading(true);
                     // Re-fetch signed URL
                     const fetchSignedUrl = async () => {
+                      // If we have a videoUrl that looks like a full URL, use it directly
+                      if (videoUrl && (videoUrl.startsWith('http://') || videoUrl.startsWith('https://'))) {
+                        setSignedUrl(videoUrl);
+                        setUrlLoading(false);
+                        return;
+                      }
+
+                      // If videoUrl is a storage path, construct Firebase URL
+                      if (videoUrl && !videoUrl.startsWith('http')) {
+                        if (videoUrl.startsWith('videos/') || videoUrl.startsWith('notes/')) {
+                          const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${videoUrl}`;
+                          setSignedUrl(firebaseUrl);
+                          console.log('Using Firebase Storage URL:', firebaseUrl);
+                        } else {
+                          throw new Error('Invalid storage path format');
+                        }
+                        setUrlLoading(false);
+                        return;
+                      }
+
+                      // Otherwise, try to fetch signed URL from backend
                       try {
-                        const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/video`);
+                        const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/video?videoIndex=${videoIndex}`);
                         if (response.data.success && response.data.signedUrl) {
                           setSignedUrl(response.data.signedUrl);
                         } else {
                           throw new Error('Failed to get signed URL');
                         }
                       } catch (err) {
-                        setUrlError('Failed to load video. Please try again.');
+                        console.error('Error fetching video signed URL:', err);
+                        
+                        // Fallback: if we have a videoUrl, construct Firebase URL
+                        if (videoUrl) {
+                          // If videoUrl is already a full URL, use it directly
+                          if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+                            setSignedUrl(videoUrl);
+                          } else if (videoUrl.startsWith('videos/') || videoUrl.startsWith('notes/')) {
+                            // If videoUrl is a Firebase storage path, construct Firebase Storage URL
+                            const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${videoUrl}`;
+                            setSignedUrl(firebaseUrl);
+                            console.log('Using Firebase Storage URL as fallback for video:', firebaseUrl);
+                          } else {
+                            // Invalid path format - don't try local URL
+                            setUrlError('Unable to load video. Please try again or contact support if the problem persists.');
+                          }
+                          console.log('Using fallback video URL:', videoUrl);
+                        } else {
+                          setUrlError('Video is not available for this lesson.');
+                        }
                       } finally {
                         setUrlLoading(false);
                       }
                     };
                     fetchSignedUrl();
                   }}
-                  style={{ marginTop: 16, backgroundColor: BLUE, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
                 >
-                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Retry</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -372,6 +432,18 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
                     // Exited fullscreen, lock to portrait
                     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
                   }
+                }}
+                onLoadStart={() => {
+                  console.log('🎬 Video load started for URL:', signedUrl);
+                }}
+                onLoad={(status) => {
+                  console.log('🎬 Video loaded successfully:', status);
+                }}
+                onError={(error) => {
+                  console.error('🎬 Video loading error:', error);
+                  console.error('🎬 Failed URL:', signedUrl);
+                  setUrlError('Video failed to load. Please check your internet connection and try again.');
+                  setSignedUrl(null);
                 }}
                 shouldPlay={false}
                 usePoster={!!thumbnailUri}

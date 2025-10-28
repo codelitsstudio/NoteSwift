@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { View, ScrollView, TouchableOpacity, Text, ActivityIndicator } from "react-native";
+import { View, ScrollView, TouchableOpacity, Text, ActivityIndicator, TextInput, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import TabNav, { TabKey } from "../../components/Tabs/TabNav";
 import ChapterCard from "../../components/Container/ChapterCard";
 import Resources from "../../components/Tabs/Resources";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import api from "../../api/axios";
+import { useAuthStore } from "../../stores/authStore";
 
 type ModuleShape = { id?: string; title: string; subtitle?: string; tags?: any[] };
 type DataShape = {
@@ -30,13 +32,97 @@ interface ChapterTabsProps {
   courseId?: string;
   moduleProgress?: {[key: number]: number};
   onRefreshProgress?: (moduleNumber?: number) => void;
+  courseTeachers?: Array<{
+    subjectName: string;
+    teacher: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+  }>;
+  courseOfferedBy?: string;
 }
 
-const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLessons, onLessonProgress, loading, courseId, moduleProgress = {}, onRefreshProgress }) => {
+const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLessons, onLessonProgress, loading, courseId, moduleProgress = {}, onRefreshProgress, courseTeachers, courseOfferedBy }) => {
   const [active, setActive] = useState<TabKey>("Dashboard");
   // Track the most recently started chapter module (or first if none)
   const [currentLesson, setCurrentLesson] = useState<string | null>(completedLessons.length > 0 ? completedLessons[completedLessons.length-1] : (data.modules?.[0]?.id ?? null));
   const router = useRouter();
+  
+  // Question form state
+  const [questionTitle, setQuestionTitle] = useState('');
+  const [questionText, setQuestionText] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
+  
+  const { user } = useAuthStore();
+
+  // Get teacher name using the same logic as SubjectTabs.tsx
+  const getSubjectTeacher = (): string => {
+    if (courseTeachers) {
+      const subjectTeacher = courseTeachers.find(ct => ct.subjectName === data.name);
+      if (subjectTeacher?.teacher) {
+        return subjectTeacher.teacher.name;
+      }
+    }
+    return courseOfferedBy || 'Subject Teacher';
+  };
+
+  // Handle question submission
+  const handleSubmitQuestion = async () => {
+    if (!questionTitle.trim() || !questionText.trim()) {
+      Alert.alert('Error', 'Please fill in both title and question details');
+      return;
+    }
+
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to ask questions');
+      return;
+    }
+
+    setIsSubmittingQuestion(true);
+    try {
+      const mongoCourseId = (data._id) ? data._id : courseId;
+      const response = await api.post('/student/questions', {
+        title: questionTitle.trim(),
+        questionText: questionText.trim(),
+        courseId: mongoCourseId,
+        subjectName: data.name,
+        moduleNumber: 1, // Default module number since we're in subject context
+        moduleName: data.name,
+        topicName: data.name,
+        isAnonymous,
+        isPublic: true,
+        tags: ['student-question']
+      });
+
+      console.log('Question submission response:', response);
+
+      // Handle different response formats
+      if (response.data?.success || response.status === 200 || response.status === 201) {
+        Alert.alert(
+          'Question Submitted',
+          'Your question has been sent to the teacher. You will receive a notification when they respond.',
+          [{ text: 'OK' }]
+        );
+        // Reset form
+        setQuestionTitle('');
+        setQuestionText('');
+        setIsAnonymous(false);
+      } else {
+        throw new Error(response.data?.message || 'Failed to submit question');
+      }
+    } catch (error: any) {
+      console.error('Error submitting question:', error);
+      console.error('Error response:', error.response);
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || error.message || 'Failed to submit question. Please try again.'
+      );
+    } finally {
+      setIsSubmittingQuestion(false);
+    }
+  };
 
   console.log('🎯 ChapterTabs received data:', data);
   console.log('🎯 ChapterTabs modules:', data.modules);
@@ -140,8 +226,8 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                     <View className="flex-1 h-px bg-gray-300" />
                   </View>
                   {data.modules.slice(1).map((module: ModuleShape, i: number) => {
-                    // Only show Notes tag for non-first modules
-                    const notesTag = (module.tags || []).find((t: any) => t.type === 'notes');
+                    // Only show Notes and Video tags for non-first modules
+                    const relevantTags = (module.tags || []).filter((t: any) => t.type === 'notes' || t.type === 'video');
                     // Use the real module number from the API data
                     const moduleNumber = (module as any).moduleNumber || (i + 2);
                     // Use backend-calculated module progress only
@@ -152,7 +238,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                       <React.Fragment key={module.id ?? `idx-${i+1}`}>
                         <ChapterCard
                           title={module.title}
-                          tags={notesTag ? [notesTag] : []}
+                          tags={relevantTags}
                           subtitle={module.subtitle}
                           onPress={() => openLesson(module.id)}
                           isActive={currentLesson === module.id}
@@ -210,16 +296,94 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
       {/* Ask */}
       {active === "Ask" && (
         <ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
-          {(data.notes || []).length ? (
-            (data.notes ?? []).map((n: any, i: number) => (
-              <View key={i} className="mb-3 p-5 bg-white rounded-3xl shadow">
-                <Text className="text-base font-medium text-gray-900">{n.title}</Text>
-                {n.snippet ? <Text className="text-sm text-gray-600 mt-2">{n.snippet}</Text> : null}
+          <View className="p-6 mb-2">
+            {/* Context Info */}
+            <View className="bg-blue-50 rounded-lg p-4 mb-6">
+              <Text className="text-sm font-medium text-gray-900 mb-2">Question Context</Text>
+              <View className="space-y-1">
+                <Text className="text-sm text-gray-800">
+                  <Text className="font-medium">Subject:</Text> {data.name}
+                </Text>
+                <Text className="text-sm text-gray-800">
+                  <Text className="font-medium">Instructor:</Text> {getSubjectTeacher()}
+                </Text>
               </View>
-            ))
-          ) : (
-            <Text className="text-gray-500 text-base">Feature not available for this chapter.</Text>
-          )}
+            </View>
+
+                {/* Title Input */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">Question Title</Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-xl px-4 py-3 text-sm"
+                    placeholder="Brief title for your question..."
+                    value={questionTitle}
+                    onChangeText={setQuestionTitle}
+                    maxLength={100}
+                    multiline={false}
+                  />
+                  <Text className="text-xs text-gray-500 mt-1">{questionTitle.length}/100 characters</Text>
+                </View>
+
+                {/* Question Text Input */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">Question Details</Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-[120px]"
+                    placeholder="Describe your question in detail. Include what you don't understand, specific examples, or what you've tried..."
+                    value={questionText}
+                    onChangeText={setQuestionText}
+                    multiline={true}
+                    textAlignVertical="top"
+                    maxLength={1000}
+                  />
+                  <Text className="text-xs text-gray-500 mt-1">{questionText.length}/1000 characters</Text>
+                </View>
+
+                {/* Anonymous Option */}
+                <View className="flex-row items-center mb-6">
+                  <TouchableOpacity
+                    onPress={() => setIsAnonymous(!isAnonymous)}
+                    className="flex-row items-center"
+                  >
+                    <View className={`w-5 h-5 border-2 rounded mr-3 items-center justify-center ${
+                      isAnonymous ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                    }`}>
+                      {isAnonymous && <Icon name="check" size={14} color="white" />}
+                    </View>
+                    <Text className="text-sm text-gray-700">Ask anonymously</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Guidelines */}
+                <View className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <Text className="text-sm font-medium text-gray-900 mb-2">Question Guidelines</Text>
+                  <View className="space-y-1">
+                    <Text className="text-xs text-gray-600">• Be specific about what you don't understand</Text>
+                    <Text className="text-xs text-gray-600">• Include relevant context or examples</Text>
+                    <Text className="text-xs text-gray-600">• Teachers typically respond within 24-48 hours</Text>
+                    <Text className="text-xs text-gray-600">• Check notifications for responses</Text>
+                  </View>
+                </View>
+
+                {/* Submit Button */}
+                <TouchableOpacity
+                  onPress={handleSubmitQuestion}
+                  disabled={isSubmittingQuestion || !questionTitle.trim() || !questionText.trim()}
+                  className={`py-3 rounded-lg items-center ${
+                    isSubmittingQuestion || !questionTitle.trim() || !questionText.trim()
+                      ? 'bg-gray-300'
+                      : 'bg-blue-500'
+                  }`}
+                >
+                  <Text className={`text-base font-semibold ${
+                    isSubmittingQuestion || !questionTitle.trim() || !questionText.trim()
+                      ? 'text-gray-500'
+                      : 'text-white'
+                  }`}>
+                    {isSubmittingQuestion ? 'Submitting...' : 'Submit Question'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
         </ScrollView>
       )}
 

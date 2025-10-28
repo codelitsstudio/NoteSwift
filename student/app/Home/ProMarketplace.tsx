@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from "expo-router";
 import axios from '../../api/axios';
+import { useCourseStore } from '../../stores/courseStore';
 
 interface Package {
   id: string;
+  _id?: string;
   name: string;
   price: number;
   description: string;
@@ -40,6 +42,13 @@ export default function ProMarketplace() {
   const [expandedSections, setExpandedSections] = useState<string[]>(['see', 'plus2']);
   const [courses, setCourses] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const { enrolledCourses } = useCourseStore();
+
+  // Check if user has any Pro course enrollments
+  const hasProEnrollment = enrolledCourses.some(enrolledCourseId => {
+    const course = courses.find(c => (c.id || c._id) === enrolledCourseId);
+    return course?.type === 'pro';
+  });
 
   useEffect(() => {
     fetchCourses();
@@ -106,47 +115,29 @@ export default function ProMarketplace() {
     }
   }
 
-  // Group packages by educational level
+  // Group packages by educational level - exclude already enrolled courses if user has pro
   const packageSections = [
     {
       id: 'see',
       title: 'SEE (Secondary Level)',
       description: 'Grade 10 - Secondary Education Examination',
-      packages: courses.filter(pkg => pkg.program === 'SEE' || pkg.name?.toLowerCase().includes('grade 10') || pkg.name?.toLowerCase().includes('10'))
+      packages: courses
+        .filter(pkg => !hasProEnrollment || !enrolledCourses.includes(pkg.id || pkg._id || ''))
+        .filter(pkg => pkg.program === 'SEE' || pkg.name?.toLowerCase().includes('grade 10') || pkg.name?.toLowerCase().includes('10'))
     },
     {
       id: 'plus2',
       title: '+2 (High School)',
       description: 'Grades 11 & 12 - Higher Secondary Education',
-      packages: courses.filter(pkg => pkg.program === '+2' || pkg.name?.toLowerCase().includes('grade 11') || pkg.name?.toLowerCase().includes('grade 12') || pkg.name?.toLowerCase().includes('11') || pkg.name?.toLowerCase().includes('12'))
+      packages: courses
+        .filter(pkg => !hasProEnrollment || !enrolledCourses.includes(pkg.id || pkg._id || ''))
+        .filter(pkg => pkg.program === '+2' || pkg.name?.toLowerCase().includes('grade 11') || pkg.name?.toLowerCase().includes('grade 12') || pkg.name?.toLowerCase().includes('11') || pkg.name?.toLowerCase().includes('12'))
     }
   ];
 
-  // Add default modules and features if not present
+  // Enhance package data with actual data from API
   const enhancePackageData = (pkg: Package) => {
-    return {
-      ...pkg,
-      modules: pkg.modules || [
-        {
-          name: 'Live Classes',
-          description: 'Interactive live sessions with expert instructors',
-          duration: trialType === 'free' ? 'Limited access' : 'Regular sessions'
-        },
-        {
-          name: 'Study Materials',
-          description: 'Comprehensive study materials and resources',
-          duration: trialType === 'free' ? 'Sample materials' : 'Full access'
-        },
-        {
-          name: 'Practice Tests',
-          description: 'Mock tests and practice questions',
-          duration: trialType === 'free' ? 'Limited attempts' : 'Unlimited attempts'
-        }
-      ],
-      features: pkg.features || (trialType === 'free'
-        ? ['7-day trial access', 'Sample materials', 'Limited practice tests']
-        : ['Live classes', 'Full study materials', 'Unlimited practice tests', 'Progress tracking'])
-    };
+    return pkg;
   };
 
   const handleBack = () => {
@@ -166,8 +157,12 @@ export default function ProMarketplace() {
 
   {/* Centered Title + Pro */}
   <View className="flex-row items-center space-x-2">
-    <Text className="text-lg font-semibold text-gray-900">Packages</Text>
-    
+    <Text className="text-lg font-semibold text-gray-900">Premium Packages</Text>
+    {hasProEnrollment && (
+      <View className="bg-blue-100 ml-2 px-2 py-1 rounded-full">
+        <Text className="text-xs text-blue-600 font-bold">PRO</Text>
+      </View>
+    )}
   </View>
 
   {/* Placeholder for alignment */}
@@ -198,6 +193,14 @@ export default function ProMarketplace() {
           </View>
         ) : (
           <View>
+            {/* Pro Marketplace Description */}
+            <View className="px-5 mb-6">
+              <Text className="text-lg font-bold text-gray-900 mb-2">Pro Marketplace</Text>
+              <Text className="text-gray-600 text-base">
+                Check these other premium courses below to expand your learning journey.
+              </Text>
+            </View>
+
             <Text className="text-base text-gray-800 mb-4 px-5">
               {trialType === 'free' 
                 ? 'Choose one grade package you want to try free for 7 days'
@@ -299,6 +302,54 @@ export default function ProMarketplace() {
               </View>
             ))}
           </View>
+
+          {/* Enrolled Pro Courses Section */}
+          {hasProEnrollment && (
+            <View className="px-5 mt-8 mb-6">
+              {/* Section Header */}
+              <View className="bg-gray-50 rounded-lg p-4 mb-4">
+                <View className="flex-row items-center mb-2">
+                  <MaterialIcons name="check-circle" size={24} color="#6B7280" />
+                  <Text className="text-lg font-bold text-gray-900 ml-2">Your Enrolled Pro Courses</Text>
+                </View>
+                <Text className="text-gray-600 text-sm">
+                  These premium courses are already enrolled by you. Keep up the great learning!
+                </Text>
+              </View>
+
+              {/* Enrolled Courses List */}
+              <View className="ml-4">
+                {enrolledCourses
+                  .map(enrolledCourseId => courses.find(c => (c.id || c._id) === enrolledCourseId))
+                  .filter(course => course && course.type === 'pro')
+                  .map(course => (
+                    <View key={course!.id} className="border border-gray-300 rounded-xl p-4 mb-3 bg-gray-50">
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-1">
+                          <View className="flex-row items-center mb-2">
+                            <MaterialIcons name="school" size={20} color="#6B7280" />
+                            <Text className="text-lg font-bold text-gray-900 ml-2">
+                              {course!.name}
+                            </Text>
+                            <View className="ml-2 px-2 py-1 bg-zinc-100 rounded-full">
+                              <Text className="text-xs text-zinc-600 font-semibold">ENROLLED</Text>
+                            </View>
+                          </View>
+                          <Text className="text-sm text-gray-600 ml-7">
+                            {course!.description}
+                          </Text>
+                          <View className="flex-row items-center mt-2 ml-7">
+                            <Text className="text-sm text-zinc-500">
+                              Already enrolled - Access anytime
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+              </View>
+            </View>
+          )}
           </View>
         )}
       </ScrollView>

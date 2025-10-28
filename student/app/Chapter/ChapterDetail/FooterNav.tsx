@@ -60,7 +60,7 @@ const FooterNav: React.FC<Props> = ({ onPrevious, onSave, onNext, currentModule 
           >
             <Text className={`text-sm font-medium ${
               videoCompleted ? 'text-white' : 'text-gray-500'
-            }`}>Notes</Text>
+            }`}>Next</Text>
           </Pressable>
         </View>
       </View>

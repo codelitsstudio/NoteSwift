@@ -163,6 +163,7 @@ export default function NotificationsPage() {
       const notificationData = {
         type: 'push',
         title: formData.get('pushTitle'),
+        subject: formData.get('pushSubject'),
         message: formData.get('pushMessage'),
         status: 'sent',
         sentAt: new Date().toISOString(),
@@ -180,11 +181,11 @@ export default function NotificationsPage() {
       if (data.success) {
         toast({
           title: "Push Notification Sent!",
-          description: "The notification has been sent to students' devices.",
+          description: `The notification has been sent to all students with registered devices.`,
         });
         fetchNotifications(); // Refresh the list
       } else {
-        throw new Error(data.message);
+        throw new Error(data.error || data.message || 'Failed to send notification');
       }
     } catch (error) {
       console.error('Error sending push notification:', error);
@@ -291,17 +292,21 @@ export default function NotificationsPage() {
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle>Push Notifications</CardTitle>
-            <CardDescription>Send direct notifications to students' mobile devices.</CardDescription>
+            <CardDescription>Send direct notifications to students' mobile devices. Notifications will appear in their native notification tray.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSendPushNotification} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="pushTitle">Title</Label>
-                <Input id="pushTitle" placeholder="Notification title" required />
+                <Input id="pushTitle" name="pushTitle" placeholder="Notification title" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pushSubject">Subject (optional)</Label>
+                <Input id="pushSubject" name="pushSubject" placeholder="Brief subject line" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pushMessage">Message</Label>
-                <Textarea id="pushMessage" placeholder="Notification message..." className="min-h-[80px]" required />
+                <Textarea id="pushMessage" name="pushMessage" placeholder="Notification message..." className="min-h-[80px]" required />
               </div>
               <Button type="submit" className="w-full" disabled={isSendingPush}>
                 {isSendingPush && <Loader2 className="animate-spin" />}
@@ -364,7 +369,12 @@ export default function NotificationsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {item.title}
+                        <div>
+                          <div className="font-semibold">{item.title}</div>
+                          {item.subject && (
+                            <div className="text-sm text-muted-foreground">{item.subject}</div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={item.status === "sent" ? "default" : "secondary"}>
@@ -445,6 +455,15 @@ export default function NotificationsPage() {
                   <Label className="text-sm font-medium">Description</Label>
                   <div className="mt-1 p-3 bg-muted rounded-md whitespace-pre-wrap">
                     {selectedNotification.description}
+                  </div>
+                </div>
+              )}
+
+              {selectedNotification.subject && (
+                <div>
+                  <Label className="text-sm font-medium">Subject</Label>
+                  <div className="mt-1 p-3 bg-muted rounded-md">
+                    {selectedNotification.subject}
                   </div>
                 </div>
               )}

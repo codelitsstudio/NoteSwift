@@ -87,7 +87,7 @@ export default function Register() {
     }
 
     try {
-      router.push('./address');
+      router.push('./registerNumber');
     } catch (error: any) {
       Toast.show({
         type: "error",

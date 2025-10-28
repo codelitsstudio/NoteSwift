@@ -4,7 +4,7 @@
     "dev": "nodemon -r tsconfig-paths/register src/index.ts",
     "start": "node compiled/index.js",
     "file-server": "node file-server.js",
-    "build": "tsc && tsc-alias",
+    "build": "tsc && npx tsc-alias",
     "db:health": "curl -X GET $API_URL/api/admin/database/health",
     "db:maintenance": "curl -X POST $API_URL/api/admin/database/maintenance",
     "db:seed": "curl -X POST $API_URL/api/admin/database/seed",

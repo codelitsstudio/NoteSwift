@@ -24,9 +24,9 @@ export default function UploadContentPage() {
 
     const fetchModules = async () => {
       try {
-        const response = await teacherAPI.courses.getSubjectContent(teacherEmail);
-        if (response.data?.subjectContent?.modules) {
-          setModules(response.data.subjectContent.modules);
+        const response = await teacherAPI.courses.getSubjectContent(teacherEmail) as any;
+        if (response.success && response.result?.subjects?.[0]?.modules) {
+          setModules(response.result.subjects[0].modules);
         }
       } catch (error) {
         console.error('Error fetching modules:', error);

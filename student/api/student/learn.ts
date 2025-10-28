@@ -6,11 +6,10 @@ export const getLearnFeed = async() => {
     return res.data as GetStudentLearnFeed.ApiRes;
 }
 
-export const redeemUnlockCode = async (code: string, courseId: string, deviceHash: string) => {
+export const redeemUnlockCode = async (code: string, courseId: string) => {
     const res = await api.post("/student/learn/redeem-code", {
         code,
-        courseId,
-        deviceHash
+        courseId
     });
     return res.data;
 }

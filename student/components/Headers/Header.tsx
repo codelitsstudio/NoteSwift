@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAvatarStore } from '../../stores/avatarStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useCourseStore } from '../../stores/courseStore';
 import { useRouter, usePathname } from 'expo-router';
 import Entypo from '@expo/vector-icons/Entypo';
 
@@ -12,8 +13,15 @@ export default function Header() {
   const { avatarEmoji } = useAvatarStore();
   const { user } = useAuthStore();
   const { unreadCount } = useNotificationStore();
+  const { enrolledCourses, courses } = useCourseStore();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Check if user has any Pro course enrollments
+  const hasProEnrollment = enrolledCourses.some(enrolledCourseId => {
+    const course = courses.find(c => (c.id || c._id) === enrolledCourseId);
+    return course?.type === 'pro';
+  });
 
   // Get avatar source with same priority logic as ProfileHeader
   const getAvatarSource = () => {
@@ -87,8 +95,16 @@ export default function Header() {
           </Text>
         </View>
 
-        {/* Right: Notifications Icon + Settings Icon */}
+        {/* Right: Crown Icon (if Pro) + Notifications Icon + Settings Icon */}
         <View className="flex-row items-center gap-4">
+          {hasProEnrollment && (
+            <TouchableOpacity
+              onPress={() => router.push('/Home/ProMarketplace')}
+              accessibilityLabel="Pro Marketplace"
+            >
+              <MaterialCommunityIcons name="crown" size={26} color="#2563eb" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={() => router.push('/Notification/NotificationPage')}
             className="relative"

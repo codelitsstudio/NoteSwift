@@ -1,20 +1,81 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { demoQuestions } from './askData';
+import api from '../../api/axios';
 
 export default function QuestionDetail() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const questionId = params.id as string;
+  const questionId = params.questionId as string;
 
-  // Find the question by ID
-  const question = demoQuestions.find((q) => q.id === questionId);
-
+  const [question, setQuestion] = useState<any>(null);
+  const [relatedQuestions, setRelatedQuestions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [upvoted, setUpvoted] = useState(false);
-  const [answer, setAnswer] = useState('');
+
+  // Fetch question details
+  const fetchQuestion = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get(`/questions/${questionId}`);
+      console.log('Full question response:', response.data);
+      if (response.data.result && response.data.result.question) {
+  setQuestion(response.data.result.question);
+} else if (response.data.question) {
+  setQuestion(response.data.question);
+} else {
+  setQuestion(null);
+}
+    } catch (error) {
+      console.error('Error fetching question:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch related questions
+  const fetchRelatedQuestions = async () => {
+    try {
+      const response = await api.get('/questions');
+      console.log('Full related questions response:', response.data);
+      if (response.data.result && response.data.result.questions) {
+        const allQuestions = response.data.result.questions;
+        // Filter questions with same subject, excluding current question
+        const related = allQuestions
+          .filter((q: any) => q._id !== questionId && q.subjectName === question?.subjectName)
+          .slice(0, 3);
+        setRelatedQuestions(related);
+      }
+    } catch (error) {
+      console.error('Error fetching related questions:', error);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    if (questionId) {
+      fetchQuestion();
+    }
+  }, [questionId]);
+
+  // Fetch related questions when question is loaded
+  useEffect(() => {
+    if (question) {
+      fetchRelatedQuestions();
+    }
+  }, [question]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#3B82F6" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!question) {
     return (
@@ -39,19 +100,27 @@ export default function QuestionDetail() {
     );
   }
 
-  const handleUpvote = () => {
-    setUpvoted(!upvoted);
+  const handleUpvote = async () => {
+    if (!question) return;
+    
+    try {
+      const response = await api.post(`/student/questions/${question._id}/vote`, { voteType: 'upvote' });
+      if (response.data.success) {
+        setUpvoted(!upvoted);
+        // Update question with new vote counts
+        setQuestion((prev: any) => ({
+          ...prev,
+          upvotes: response.data.data.upvotes,
+          downvotes: response.data.data.downvotes
+        }));
+      }
+    } catch (error) {
+      console.error('Error voting:', error);
+    }
   };
 
   const handleShare = () => {
     console.log('Share question');
-  };
-
-  const handleSubmitAnswer = () => {
-    if (answer.trim()) {
-      console.log('Answer submitted:', answer);
-      setAnswer('');
-    }
   };
 
   return (
@@ -81,26 +150,28 @@ export default function QuestionDetail() {
                 </View>
                 <View className="bg-blue-50 px-2 py-1 rounded-md ml-2">
                   <Text className="text-sm font-medium text-customBlue">
-                    {question.subject}
+                    {question.subjectName}
                   </Text>
                 </View>
-                <Text className="text-sm text-gray-400 ml-auto">{question.askedAt}</Text>
+                <Text className="text-sm text-gray-400 ml-auto">
+                  {new Date(question.createdAt).toLocaleDateString()}
+                </Text>
               </View>
 
               {/* Question Text */}
               <Text className="text-lg font-bold text-gray-900 mb-2">
-                {question.question}
+                {question.title}
               </Text>
               <Text className="text-base text-gray-700 leading-6 mb-4">
-                {question.description || 'No additional description provided.'}
+                {question.questionText || 'No additional description provided.'}
               </Text>
 
               {/* Attachments */}
-              {question.hasAttachment && (
+              {question.attachments && question.attachments.length > 0 && (
                 <View className="flex-row items-center bg-gray-50 rounded-xl px-3 py-2 mb-4">
                   <MaterialIcons name="attach-file" size={18} color="#3B82F6" />
                   <Text className="text-sm text-gray-700 ml-2">
-                    Has attachment
+                    {question.attachments.length} attachment{question.attachments.length > 1 ? 's' : ''}
                   </Text>
                 </View>
               )}
@@ -124,7 +195,7 @@ export default function QuestionDetail() {
                       upvoted ? 'text-customBlue' : 'text-gray-700'
                     }`}
                   >
-                    {upvoted ? question.upvotes + 1 : question.upvotes}
+                    {upvoted ? (question.upvotes?.length || 0) + 1 : (question.upvotes?.length || 0)}
                   </Text>
                 </TouchableOpacity>
 
@@ -141,38 +212,46 @@ export default function QuestionDetail() {
 
                 <View className="flex-row items-center ml-auto">
                   <MaterialIcons name="visibility" size={18} color="#9CA3AF" />
-                  <Text className="text-sm text-gray-500 ml-1">234 views</Text>
+                  <Text className="text-sm text-gray-500 ml-1">{question.views || 0} views</Text>
                 </View>
               </View>
             </View>
           </View>
 
           {/* Answer Section */}
-          {question.status === 'answered' && question.answer && (
+          {question.answers && question.answers.length > 0 && (
             <View className="px-6 pb-4">
               <Text className="text-lg font-bold text-gray-900 mb-3">
-                Answer
+                Answer{question.answers.length > 1 ? 's' : ''}
               </Text>
-              <View className="bg-green-50 rounded-2xl p-4 border border-green-100">
-                <View className="flex-row items-center mb-3">
-                  <View className="w-8 h-8 bg-green-600 rounded-full items-center justify-center">
-                    <Text className="text-base font-bold text-white">A</Text>
-                  </View>
-                  <View className="ml-3">
-                    <Text className="text-base font-bold text-gray-900">AI Assistant</Text>
-                    <Text className="text-sm text-gray-500">Answered 2 hours ago</Text>
-                  </View>
-                  <View className="ml-auto bg-green-600 rounded-full px-2 py-1">
-                    <View className="flex-row items-center">
-                      <MaterialIcons name="verified" size={14} color="#FFFFFF" />
-                      <Text className="text-sm font-medium text-white ml-1">Verified</Text>
+              {question.answers.map((answer: any, index: number) => (
+                <View key={answer._id || index} className="bg-green-50 rounded-2xl p-4 border border-green-100 mb-3">
+                  <View className="flex-row items-center mb-3">
+                    <View className="w-8 h-8 bg-green-600 rounded-full items-center justify-center">
+                      <Text className="text-base font-bold text-white">
+                        {answer.answeredBy?.fullName?.charAt(0) || 'T'}
+                      </Text>
+                    </View>
+                    <View className="ml-3">
+                      <Text className="text-base font-bold text-gray-900">
+                        {answer.answeredBy?.fullName || 'Teacher'}
+                      </Text>
+                      <Text className="text-sm text-gray-500">
+                        Answered {new Date(answer.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <View className="ml-auto bg-green-600 rounded-full px-2 py-1">
+                      <View className="flex-row items-center">
+                        <MaterialIcons name="verified" size={14} color="#FFFFFF" />
+                        <Text className="text-sm font-medium text-white ml-1">Verified</Text>
+                      </View>
                     </View>
                   </View>
+                  <Text className="text-base text-gray-900 leading-6">
+                    {answer.answerText}
+                  </Text>
                 </View>
-                <Text className="text-base text-gray-900 leading-6">
-                  {question.answer}
-                </Text>
-              </View>
+              ))}
             </View>
           )}
 
@@ -181,23 +260,31 @@ export default function QuestionDetail() {
             <Text className="text-lg font-bold text-gray-900 mb-3">
               Related Questions
             </Text>
-            {demoQuestions
-              .filter((q) => q.id !== questionId && q.subject === question.subject)
-              .slice(0, 3)
-              .map((relatedQ) => (
+            {relatedQuestions.length === 0 ? (
+              <View className="bg-white rounded-2xl p-8 items-center border border-gray-100">
+                <MaterialIcons name="search-off" size={48} color="#9CA3AF" />
+                <Text className="text-lg font-bold text-gray-900 mt-4">
+                  No Related Questions
+                </Text>
+                <Text className="text-base text-gray-500 text-center mt-2">
+                  No other questions found in this subject
+                </Text>
+              </View>
+            ) : (
+              relatedQuestions.map((relatedQ: any) => (
                 <TouchableOpacity
-                  key={relatedQ.id}
+                  key={relatedQ._id}
                   activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: '/Ask/QuestionDetail', params: { id: relatedQ.id } })}
+                  onPress={() => router.push({ pathname: '/Ask/QuestionDetail', params: { questionId: relatedQ._id } })}
                   className="bg-white rounded-xl p-4 mb-3 border border-gray-100"
                 >
                   <Text className="text-base font-bold text-gray-900 mb-1" numberOfLines={2}>
-                    {relatedQ.question}
+                    {relatedQ.title}
                   </Text>
                   <View className="flex-row items-center mt-2">
                     <View className="bg-blue-50 px-2 py-1 rounded-md">
                       <Text className="text-sm font-medium text-customBlue">
-                        {relatedQ.subject}
+                        {relatedQ.subjectName}
                       </Text>
                     </View>
                     <View
@@ -215,42 +302,27 @@ export default function QuestionDetail() {
                     </View>
                   </View>
                 </TouchableOpacity>
-              ))}
+              ))
+            )}
           </View>
 
-          {/* Add Your Answer */}
+          {/* Follow-up Section for Students */}
           {question.status === 'pending' && (
             <View className="px-6 pb-20">
               <Text className="text-lg font-bold text-gray-900 mb-3">
-                Add Your Answer
+                Need More Help?
               </Text>
               <View className="bg-white rounded-2xl p-4 border border-gray-100">
-                <View className="bg-gray-50 rounded-xl px-4 py-4 mb-3 border border-gray-200">
-                  <TextInput
-                    placeholder="Share your knowledge..."
-                    value={answer}
-                    onChangeText={setAnswer}
-                    className="text-base text-gray-900"
-                    placeholderTextColor="#9CA3AF"
-                    multiline
-                    numberOfLines={6}
-                    textAlignVertical="top"
-                  />
-                </View>
+                <Text className="text-base text-gray-700 mb-4">
+                  Your question is being reviewed by our teachers. You'll receive a notification when an answer is posted.
+                </Text>
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  className={`rounded-xl py-4 items-center ${
-                    answer.trim() ? 'bg-customBlue' : 'bg-gray-200'
-                  }`}
-                  onPress={handleSubmitAnswer}
-                  disabled={!answer.trim()}
+                  className="bg-customBlue rounded-xl py-3 items-center"
+                  onPress={() => router.push('/Ask/AskPage')}
                 >
-                  <Text
-                    className={`text-base font-bold ${
-                      answer.trim() ? 'text-white' : 'text-gray-500'
-                    }`}
-                  >
-                    Submit Answer
+                  <Text className="text-base font-bold text-white">
+                    Ask Another Question
                   </Text>
                 </TouchableOpacity>
               </View>

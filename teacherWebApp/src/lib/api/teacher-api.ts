@@ -30,12 +30,24 @@ async function fetchAPI<T = any>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
+    // Get the JWT token from localStorage
+    const token = typeof window !== 'undefined' ? localStorage.getItem('teacherToken') : null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add existing headers if they exist
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     const data = await response.json();
@@ -198,6 +210,13 @@ export const testAPI = {
     });
   },
 
+  uploadPDF: (testId: string, pdfFile: File, teacherEmail: string) => {
+    const formData = new FormData();
+    formData.append('pdf', pdfFile);
+    // teacherEmail is now obtained from JWT token in backend, no need to send it
+    return uploadFileAPI(`/teacher/tests/${testId}/upload-pdf`, formData);
+  },
+
   getAttempts: (id: string, teacherEmail: string) => {
     return fetchAPI(`/teacher/tests/${id}/attempts?teacherEmail=${teacherEmail}`);
   },
@@ -225,11 +244,18 @@ export const testAPI = {
 
 // ==================== QUESTION/DOUBT APIs ====================
 export const questionAPI = {
-  getAll: (teacherEmail: string, status?: string, priority?: string) => {
-    const params = new URLSearchParams({ teacherEmail });
+  getAll: (teacherEmail?: string, status?: string, priority?: string, fetchAll?: boolean) => {
+    const params = new URLSearchParams();
+    if (teacherEmail) params.append('teacherEmail', teacherEmail);
     if (status) params.append('status', status);
     if (priority) params.append('priority', priority);
+    if (fetchAll) params.append('all', 'true');
     return fetchAPI(`/teacher/questions?${params}`);
+  },
+
+  getAllUnassigned: (status?: string, priority?: string) => {
+    // Same as getAll but without teacherEmail to get all questions
+    return questionAPI.getAll(undefined, status, priority, true);
   },
 
   getById: (id: string, teacherEmail: string) => {
@@ -412,7 +438,7 @@ export const resourceAPI = {
 // ==================== COURSE/MODULE APIs ====================
 export const courseAPI = {
   getSubjectContent: (teacherEmail: string) => {
-    return fetchAPI(`/teacher/courses/subject-content?teacherEmail=${teacherEmail}`);
+    return fetchAPI(`/teacher/courses/all-subject-content`);
   },
 
   createModule: (teacherEmail: string, data: any) => {
@@ -435,13 +461,18 @@ export const courseAPI = {
     });
   },
 
-  uploadVideo: (teacherEmail: string, moduleNumber: number, videoFile: File, videoTitle: string, videoDuration?: number) => {
+  uploadVideo: (teacherEmail: string, moduleNumber: number, videoFiles: File[], videoTitles: string[], videoDurations?: (number | string | undefined)[], replaceVideoIndex?: number) => {
     const formData = new FormData();
-    formData.append('video', videoFile);
+    videoFiles.forEach((file, index) => {
+      formData.append('videos', file);
+    });
     formData.append('moduleNumber', moduleNumber.toString());
-    formData.append('videoTitle', videoTitle);
-    if (videoDuration) {
-      formData.append('videoDuration', videoDuration.toString());
+    formData.append('videoTitles', JSON.stringify(videoTitles));
+    if (videoDurations) {
+      formData.append('videoDurations', JSON.stringify(videoDurations));
+    }
+    if (replaceVideoIndex !== undefined) {
+      formData.append('replaceVideoIndex', replaceVideoIndex.toString());
     }
     return uploadFileAPI(`/teacher/upload/video?teacherEmail=${teacherEmail}`, formData);
   },

@@ -29,12 +29,19 @@ export default function EditModulePage() {
 
     const fetchData = async () => {
       try {
-        const response = await teacherAPI.courses.getSubjectContent(teacherEmail);
-        if (response.data?.course) {
-          setCourse(response.data.course);
+        const response = await teacherAPI.courses.getSubjectContent(teacherEmail) as any;
+        if (response.success && response.result?.subjects?.[0]) {
+          const subject = response.result.subjects[0];
+          setCourse({
+            _id: subject.courseId,
+            title: subject.courseName,
+            subjectName: subject.subjectName,
+            description: subject.description,
+            program: subject.courseProgram
+          });
         }
-        if (response.data?.subjectContent?.modules) {
-          const foundModule = response.data.subjectContent.modules.find(
+        if (response.success && response.result?.subjects?.[0]?.modules) {
+          const foundModule = response.result.subjects[0].modules.find(
             (m: any) => m.moduleNumber === moduleNumber
           );
           if (foundModule) {

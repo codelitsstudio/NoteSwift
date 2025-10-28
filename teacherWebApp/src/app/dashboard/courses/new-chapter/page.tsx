@@ -24,9 +24,16 @@ export default function NewChapterPage() {
 
     const fetchCourse = async () => {
       try {
-        const response = await teacherAPI.courses.getSubjectContent(teacherEmail);
-        if (response.data?.course) {
-          setCourse(response.data.course);
+        const response = await teacherAPI.courses.getSubjectContent(teacherEmail) as any;
+        if (response.success && response.result?.subjects?.[0]) {
+          const subject = response.result.subjects[0];
+          setCourse({
+            _id: subject.courseId,
+            title: subject.courseName,
+            subjectName: subject.subjectName,
+            description: subject.description,
+            program: subject.courseProgram
+          });
         }
       } catch (error) {
         console.error('Error fetching course:', error);

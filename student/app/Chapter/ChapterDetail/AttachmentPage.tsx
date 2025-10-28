@@ -10,9 +10,10 @@ interface AttachmentPageProps {
   subjectName: string;
   moduleNumber: number;
   notesTitle?: string;
+  notesUrl?: string;
 }
 
-const AttachmentPage: React.FC<AttachmentPageProps> = ({ courseId, subjectName, moduleNumber, notesTitle }) => {
+const AttachmentPage: React.FC<AttachmentPageProps> = ({ courseId, subjectName, moduleNumber, notesTitle, notesUrl }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<{ name: string; uri: string } | null>(null);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
@@ -22,25 +23,68 @@ const AttachmentPage: React.FC<AttachmentPageProps> = ({ courseId, subjectName, 
   // Fetch signed URL for notes on component mount
   useEffect(() => {
     const fetchSignedUrl = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/notes`);
-        if (response.data.success && response.data.signedUrl) {
-          setSignedUrl(response.data.signedUrl);
-        } else {
-          throw new Error('Failed to get signed URL');
+      // If we have a notesUrl that looks like a full URL, check if it's a placeholder
+      if (notesUrl && (notesUrl.startsWith('http://') || notesUrl.startsWith('https://'))) {
+        // Check if it's a placeholder URL that should be replaced with Firebase URL
+        if (notesUrl.includes('example.com') || notesUrl.includes('placeholder') || notesUrl === 'https://example.com/notes.pdf') {
+          // This is a placeholder - the actual file should be in Firebase Storage
+          // Try to construct Firebase URL using a common pattern for uploaded files
+          // Since we know files are uploaded to notes/Subjects/{timestamp}_..._.pdf
+          // We'll try to find a reasonable match or show an error
+          console.log('Detected placeholder notes URL, file may exist in Firebase Storage');
+          setError('Notes file is being processed. Please try again in a few moments or contact support if the issue persists.');
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        console.error('Error fetching notes signed URL:', err);
-        setError('Failed to load notes. Please try again.');
-      } finally {
+        // It's a real URL, use it directly
+        setSignedUrl(notesUrl);
+        setLoading(false);
+        return;
+      }
+
+      // If notesUrl is a Firebase storage path, construct Firebase Storage URL directly
+      if (notesUrl && (notesUrl.startsWith('videos/') || notesUrl.startsWith('notes/'))) {
+        const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${notesUrl}`;
+        setSignedUrl(firebaseUrl);
+        console.log('Using Firebase Storage URL for notes:', firebaseUrl);
+        setLoading(false);
+        return;
+      }
+
+      // If notesUrl is a storage path but not Firebase format, try backend API as last resort
+      if (notesUrl && !notesUrl.startsWith('http')) {
+        try {
+          setLoading(true);
+          setError(null);
+          const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/notes`);
+          if (response.data.success && response.data.signedUrl) {
+            setSignedUrl(response.data.signedUrl);
+          } else {
+            throw new Error('Failed to get signed URL');
+          }
+        } catch (err) {
+          console.error('Error fetching notes signed URL:', err);
+
+          // Final fallback: try to construct Firebase URL anyway
+          if (notesUrl) {
+            const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${notesUrl}`;
+            setSignedUrl(firebaseUrl);
+            console.log('Using Firebase Storage URL as final fallback for notes:', firebaseUrl);
+          } else {
+            setError('Notes are not available for this lesson.');
+          }
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // No notesUrl provided
+        setError('Notes are not available for this lesson.');
         setLoading(false);
       }
     };
 
     fetchSignedUrl();
-  }, [courseId, subjectName, moduleNumber]);
+  }, [courseId, subjectName, moduleNumber, notesUrl]);
 
   // Use dynamic notes URL or fallback to default
   const pdfUri = signedUrl || "http://noteswift.in/wp-content/uploads/2025/09/Learn-How-To-Actually-Study-Before-Its-Too-Late.pdf";
@@ -79,31 +123,66 @@ const AttachmentPage: React.FC<AttachmentPageProps> = ({ courseId, subjectName, 
         ) : error ? (
           <View style={{ alignItems: 'center', justifyContent: 'center', minHeight: 120, marginTop: 32 }}>
             <Icon name="error-outline" size={40} color="#EF4444" style={{ marginBottom: 10 }} />
-            <Text style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', paddingHorizontal: 20 }}>{error}</Text>
+            <Text style={{ fontSize: 13, textAlign: 'center', paddingHorizontal: 20 }}>{error}</Text>
             <TouchableOpacity
               onPress={() => {
                 setError(null);
                 setLoading(true);
                 // Re-fetch signed URL
                 const fetchSignedUrl = async () => {
-                  try {
-                    const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/notes`);
-                    if (response.data.success && response.data.signedUrl) {
-                      setSignedUrl(response.data.signedUrl);
-                    } else {
-                      throw new Error('Failed to get signed URL');
+                  // If we have a notesUrl that looks like a full URL, check if it's a placeholder
+                  if (notesUrl && (notesUrl.startsWith('http://') || notesUrl.startsWith('https://'))) {
+                    // Check if it's a placeholder URL that should be replaced with Firebase URL
+                    if (notesUrl.includes('example.com') || notesUrl.includes('placeholder') || notesUrl === 'https://example.com/notes.pdf') {
+                      // This is a placeholder - the actual file should be in Firebase Storage
+                      console.log('Detected placeholder notes URL in retry, file may exist in Firebase Storage');
+                      setError('Notes file is being processed. Please try again in a few moments or contact support if the issue persists.');
+                      setLoading(false);
+                      return;
                     }
-                  } catch (err) {
-                    setError('Failed to load notes. Please try again.');
-                  } finally {
+                    // It's a real URL, use it directly
+                    setSignedUrl(notesUrl);
+                    setLoading(false);
+                    return;
+                  }
+
+                  // If notesUrl is a Firebase storage path, construct Firebase Storage URL directly
+                  if (notesUrl && (notesUrl.startsWith('videos/') || notesUrl.startsWith('notes/'))) {
+                    const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${notesUrl}`;
+                    setSignedUrl(firebaseUrl);
+                    console.log('Using Firebase Storage URL in retry:', firebaseUrl);
+                    setLoading(false);
+                    return;
+                  }
+
+                  // If notesUrl is a storage path but not Firebase format, try backend API as last resort
+                  if (notesUrl && !notesUrl.startsWith('http')) {
+                    try {
+                      const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/notes`);
+                      if (response.data.success && response.data.signedUrl) {
+                        setSignedUrl(response.data.signedUrl);
+                      } else {
+                        throw new Error('Failed to get signed URL');
+                      }
+                    } catch (err) {
+                      console.error('Error fetching notes signed URL:', err);
+
+                      // Final fallback: try to construct Firebase URL anyway
+                      const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${notesUrl}`;
+                      setSignedUrl(firebaseUrl);
+                      console.log('Using Firebase Storage URL as final fallback in retry:', firebaseUrl);
+                    } finally {
+                      setLoading(false);
+                    }
+                  } else {
+                    // No notesUrl provided
+                    setError('Notes are not available for this lesson.');
                     setLoading(false);
                   }
                 };
                 fetchSignedUrl();
               }}
-              style={{ marginTop: 16, backgroundColor: '#3B82F6', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
             >
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Retry</Text>
             </TouchableOpacity>
           </View>
         ) : hasAttachments ? (

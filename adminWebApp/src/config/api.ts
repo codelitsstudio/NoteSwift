@@ -102,6 +102,16 @@ export const API_ENDPOINTS = {
     DEMOTE_SUPER_ADMIN: `${API_BASE_URL}/api/admin/admins/demote-super-admin`,
   },
 
+  // ==================== APP UPDATE =================
+
+  // ==================== APP UPDATE ====================
+  APP_UPDATE: {
+    CREATE: `${API_BASE_URL}/api/admin/app-update`,
+    DEACTIVATE: `${API_BASE_URL}/api/admin/app-update/deactivate`,
+    STATUS: `${API_BASE_URL}/api/admin/app-update`,
+  },
+
+
   // ==================== ORDERS & PAYMENTS ====================
   ORDERS_PAYMENTS: {
     TRANSACTIONS: {

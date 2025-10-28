@@ -63,12 +63,26 @@ const Downloads: React.FC = () => {
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-            {downloads.map(dl => (
+            {downloads.map(dl => {
+              // Determine if this is a video download
+              const isVideo = dl.fileName.toLowerCase().includes('video') || 
+                            dl.fileName.toLowerCase().includes('.mp4') || 
+                            dl.fileName.toLowerCase().includes('.mov') || 
+                            dl.fileName.toLowerCase().includes('.avi') ||
+                            dl.fileUri.includes('video');
+              
+              return (
               <View key={dl._id} className="bg-white rounded-xl border border-slate-100 px-5 py-4 mb-4 mx-4 flex-row items-center gap-x-4">
-                <MaterialIcons name="picture-as-pdf" size={32} color="#2563eb" />
+                <MaterialIcons 
+                  name={isVideo ? "videocam" : "picture-as-pdf"} 
+                  size={32} 
+                  color="#2563eb" 
+                />
                 <View className="flex-1">
                   <Text className="font-bold text-slate-800 text-base" numberOfLines={1}>{dl.fileName}</Text>
-                  <Text className="text-slate-500 text-xs mt-0.5">{dl.size || 'Unknown size'} • {dl.pages || '?'} pages</Text>
+                  <Text className="text-slate-500 text-xs mt-0.5">
+                    {dl.size || 'Unknown size'} • {isVideo ? 'Video' : `${dl.pages || '?'} pages`}
+                  </Text>
                   <Text className="text-slate-400 text-xs mt-0.5">Downloaded {new Date(dl.downloadedAt).toLocaleDateString()}</Text>
                 </View>
                 <TouchableOpacity
@@ -77,6 +91,9 @@ const Downloads: React.FC = () => {
                     let localUri = null;
                     try {
                       localUri = await AsyncStorage.getItem(`pdf_${dl.fileName}`);
+                      if (!localUri) {
+                        localUri = await AsyncStorage.getItem(`video_${dl.fileName}`);
+                      }
                     } catch {}
                     let uriToOpen = dl.fileUri;
                     try {
@@ -86,7 +103,7 @@ const Downloads: React.FC = () => {
                         if (localUri) {
                           uriToOpen = localUri;
                         } else {
-                          alert('Offline: No local PDF available for offline viewing.');
+                          alert('Offline: No local file available for offline viewing.');
                           return;
                         }
                       }
@@ -100,7 +117,8 @@ const Downloads: React.FC = () => {
                   <MaterialIcons name="open-in-new" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
-            ))}
+              );
+            })}
           </ScrollView>
         )}
       </View>

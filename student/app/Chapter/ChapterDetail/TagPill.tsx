@@ -3,7 +3,7 @@ import React from "react";
 import { TouchableOpacity, Text } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
-type TagType = "like" | "ask" | "download" | "comment" | "attachments" | "video";
+type TagType = "like" | "ask" | "download" | "comment" | "attachments";
 
 type TagPillProps = {
   label: string;
@@ -22,11 +22,9 @@ const iconFor = (type: TagType) => {
     case "download":
       return "download";
     case "comment":
-      return "comment";
+      return "videocam";
     case "attachments":
       return "attach-file";
-    case "video":
-      return "videocam";
     default:
       return "label";
   }
@@ -35,7 +33,7 @@ const iconFor = (type: TagType) => {
 const getActiveBgColor = (type: TagType, active: boolean) => {
   if (type === "like" && active) return "bg-blue-500";
   if (type === "attachments" && active) return "bg-black";
-  if (type === "video" && active) return "bg-red-500";
+  if (type === "comment" && active) return "bg-red-500";
   return "bg-gray-200";
 };
 
@@ -54,11 +52,11 @@ const TagPill: React.FC<TagPillProps> = ({ label, type, active = false, onPress,
       <MaterialIcons 
         name={iconName as any} 
         size={14}
-        color={active && (type === "like" || type === "attachments" || type === "video") ? "#fff" : "#374151"} 
+        color={active && (type === "like" || type === "attachments" || type === "comment") ? "#fff" : "#374151"} 
       />
       <Text
         className={`ml-1 text-sm font-medium ${
-          active && (type === "like" || type === "attachments" || type === "video") ? "text-white" : "text-gray-900"
+          active && (type === "like" || type === "attachments" || type === "comment") ? "text-white" : "text-gray-900"
         }`}
         style={disabled ? { color: '#a1a1aa' } : undefined}
       >

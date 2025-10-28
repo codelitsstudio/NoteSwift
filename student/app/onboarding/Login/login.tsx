@@ -258,7 +258,7 @@ export default function Login() {
                   }
                 />
               </View>
-{/* 
+
               <View className="flex-row justify-end mb-4">
                 <TouchableOpacity
                   onPress={() => {
@@ -269,7 +269,7 @@ export default function Login() {
                     Forgot Password?
                   </Text>
                 </TouchableOpacity>
-              </View> */}
+              </View>
 
               <ButtonPrimary title="Login" onPress={handleLogin} />
 

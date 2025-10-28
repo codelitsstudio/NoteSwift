@@ -10,22 +10,29 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { demoTests, demoMCQQuestions, MCQQuestion, MCQOption } from './testData';
+import { studentTestAPI, TestDetail } from '../../api/student/test';
 
 export default function MCQTest() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const testId = params.testId as string;
 
-  const test = demoTests.find(t => t.id === testId);
-  const questions = demoMCQQuestions[testId] || [];
+  const [testDetail, setTestDetail] = useState<TestDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [timeRemaining, setTimeRemaining] = useState(test?.duration ? test.duration * 60 : 0);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [timeRemaining, setTimeRemaining] = useState(0);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isTestStarted, setIsTestStarted] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchTestDetails();
+  }, [testId]);
 
   useEffect(() => {
     if (!isTestStarted || timeRemaining <= 0) return;
@@ -44,20 +51,92 @@ export default function MCQTest() {
     return () => clearInterval(timer);
   }, [isTestStarted, timeRemaining]);
 
-  if (!test) {
+  const fetchTestDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await studentTestAPI.getTestDetails(testId);
+      if (response.success && response.data) {
+        setTestDetail(response.data);
+        // Set timer based on test duration (convert minutes to seconds)
+        setTimeRemaining(response.data.duration * 60);
+        
+        // If there's existing attempt info, set the attemptId and mark as started
+        if (response.data.attemptInfo) {
+          console.log('📝 Found existing attempt:', response.data.attemptInfo.attemptId);
+          setAttemptId(response.data.attemptInfo.attemptId);
+          setIsTestStarted(true);
+          setStartTime(Date.now() - (response.data.attemptInfo.timeSpent || 0) * 1000);
+          
+          // Restore selected answers
+          if (response.data.attemptInfo.answers) {
+            const restoredAnswers: { [key: number]: number } = {};
+            response.data.attemptInfo.answers.forEach((answer: any) => {
+              // Convert letter answer back to index
+              const letterToIndex = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+              restoredAnswers[answer.questionNumber] = letterToIndex[answer.answer as keyof typeof letterToIndex] || 0;
+            });
+            setSelectedAnswers(restoredAnswers);
+          }
+        }
+      } else {
+        setError('Failed to load test details');
+      }
+    } catch (err) {
+      console.error('Error fetching test details:', err);
+      setError('Failed to load test details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startTestAttempt = async () => {
+    try {
+      console.log('🎯 Starting test attempt for testId:', testId);
+      const response = await studentTestAPI.startTestAttempt(testId);
+      console.log('📤 Start attempt response:', JSON.stringify(response, null, 2));
+      console.log('📤 Start attempt response data:', response.data);
+      if (response.success && response.data) {
+        console.log('✅ Setting attemptId:', response.data.attemptId);
+        setAttemptId(response.data.attemptId);
+        setIsTestStarted(true);
+        setStartTime(Date.now());
+      } else {
+        console.log('❌ Start attempt failed:', response.error);
+        Alert.alert('Error', response.error || 'Failed to start test attempt');
+      }
+    } catch (err) {
+      console.error('Error starting test:', err);
+      Alert.alert('Error', 'Failed to start test attempt');
+    }
+  };
+
+  if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
         <View className="flex-1 items-center justify-center">
-          <MaterialIcons name="error-outline" size={64} color="#9CA3AF" />
-          <Text className="text-lg text-gray-600 mt-4">Test not found</Text>
+          <MaterialIcons name="refresh" size={48} color="#9CA3AF" />
+          <Text className="text-lg text-gray-600 mt-4">Loading test...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
+  if (error || !testDetail) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
+        <View className="flex-1 items-center justify-center">
+          <MaterialIcons name="error-outline" size={64} color="#9CA3AF" />
+          <Text className="text-lg text-gray-600 mt-4">
+            {error || 'Test not found'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const currentQuestion = testDetail.questions?.[currentQuestionIndex];
   const answeredCount = Object.keys(selectedAnswers).length;
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const progress = testDetail.questions ? ((currentQuestionIndex + 1) / testDetail.questions.length) * 100 : 0;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -65,15 +144,15 @@ export default function MCQTest() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleAnswerSelect = (questionId: string, optionId: string) => {
+  const handleAnswerSelect = (questionNumber: number, optionIndex: number) => {
     setSelectedAnswers((prev) => ({
       ...prev,
-      [questionId]: optionId,
+      [questionNumber]: optionIndex,
     }));
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
+    if (testDetail.questions && currentQuestionIndex < testDetail.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
@@ -88,22 +167,71 @@ export default function MCQTest() {
     setCurrentQuestionIndex(index);
   };
 
-  const handleAutoSubmit = () => {
-    Alert.alert('Time Up!', 'Your test has been automatically submitted.', [
-      {
-        text: 'View Results',
-        onPress: () => router.push(`/Test/TestResult?testId=${testId}` as any),
-      },
-    ]);
+  const handleAutoSubmit = async () => {
+    if (!attemptId) return;
+    
+    try {
+      const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+      const answers = Object.entries(selectedAnswers)
+        .filter(([_, selectedOption]) => selectedOption !== undefined && selectedOption !== null)
+        .map(([questionNumber, selectedOption]) => ({
+          questionNumber: parseInt(questionNumber),
+          answer: ['A', 'B', 'C', 'D'][selectedOption as number], // Convert index to letter
+        }));
+      console.log('📤 Submitting answers:', answers);
+
+      const response = await studentTestAPI.submitTest(testId, { answers, timeSpent });
+      
+      Alert.alert('Time Up!', 'Your test has been automatically submitted.', [
+        {
+          text: 'View Results',
+          onPress: () => {
+            const resultAttemptId = attemptId;
+            router.push(`/Test/TestResult?testId=${testId}&attemptId=${resultAttemptId}` as any);
+          },
+        },
+      ]);
+    } catch (err) {
+      console.error('Error auto-submitting test:', err);
+      Alert.alert('Error', 'Failed to submit test automatically');
+    }
   };
 
   const handleSubmit = () => {
     setShowSubmitModal(true);
   };
 
-  const confirmSubmit = () => {
-    setShowSubmitModal(false);
-    router.push(`/Test/TestResult?testId=${testId}` as any);
+  const confirmSubmit = async () => {
+    if (!attemptId) return;
+    
+    try {
+      setShowSubmitModal(false);
+      const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+      const answers = Object.entries(selectedAnswers)
+        .filter(([_, selectedOption]) => selectedOption !== undefined && selectedOption !== null)
+        .map(([questionNumber, selectedOption]) => ({
+          questionNumber: parseInt(questionNumber),
+          answer: ['A', 'B', 'C', 'D'][selectedOption as number], // Convert index to letter
+        }));
+
+      const response = await studentTestAPI.submitTest(testId, { answers, timeSpent });
+      console.log('📤 Submit response:', JSON.stringify(response, null, 2));
+      console.log('📤 Submit response data:', response.data);
+      console.log('📤 Attempt ID from response:', response.data?.attemptId);
+      
+      if (response.success) {
+        // Use attemptId from state (should be set from start or attemptInfo)
+        const resultAttemptId = attemptId;
+        console.log('🎯 Navigating to results with attemptId:', resultAttemptId);
+        router.push(`/Test/TestResult?testId=${testId}&attemptId=${resultAttemptId}` as any);
+      } else {
+        console.log('❌ Submit failed:', response.error);
+        Alert.alert('Error', response.error || 'Failed to submit test');
+      }
+    } catch (err) {
+      console.error('Error submitting test:', err);
+      Alert.alert('Error', 'Failed to submit test');
+    }
   };
 
   const handleExit = () => {
@@ -124,10 +252,7 @@ export default function MCQTest() {
             {/* Test Info Card */}
             <View className="bg-white rounded-2xl p-4 mb-4 border border-gray-100">
               <Text className="text-xl font-bold text-gray-900 mb-1">
-                {test.title}
-              </Text>
-              <Text className="text-base text-gray-600 mb-3">
-                {test.courseName}
+                {testDetail.title}
               </Text>
 
               {/* Stats */}
@@ -135,19 +260,19 @@ export default function MCQTest() {
                 <View>
                   <Text className="text-sm text-gray-500">Questions</Text>
                   <Text className="text-base font-semibold text-gray-900 mt-0.5">
-                    {questions.length}
+                    {testDetail.questions?.length || 0}
                   </Text>
                 </View>
                 <View className="items-center">
                   <Text className="text-sm text-gray-500">Duration</Text>
                   <Text className="text-base font-semibold text-gray-900 mt-0.5">
-                    {test.duration} min
+                    {testDetail.duration} min
                   </Text>
                 </View>
                 <View className="items-end">
                   <Text className="text-sm text-gray-500">Total Marks</Text>
                   <Text className="text-base font-semibold text-gray-900 mt-0.5">
-                    {test.totalMarks}
+                    {testDetail.totalMarks}
                   </Text>
                 </View>
               </View>
@@ -183,7 +308,7 @@ export default function MCQTest() {
                 About this test
               </Text>
               <Text className="text-xs text-gray-700">
-                {test.description}
+                {testDetail.description}
               </Text>
             </View>
           </ScrollView>
@@ -191,7 +316,7 @@ export default function MCQTest() {
           {/* Start Button */}
           <View className="px-6 py-4 bg-white border-t border-gray-100">
             <TouchableOpacity
-              onPress={() => setIsTestStarted(true)}
+              onPress={startTestAttempt}
               className="bg-customBlue py-3 rounded-xl items-center"
               activeOpacity={0.8}
             >
@@ -244,10 +369,10 @@ export default function MCQTest() {
         <View>
           <View className="flex-row justify-between mb-1.5">
             <Text className="text-xs text-gray-500">
-              Question {currentQuestionIndex + 1} of {questions.length}
+              Question {currentQuestionIndex + 1} of {testDetail.questions?.length || 0}
             </Text>
             <Text className="text-xs text-gray-500">
-              Answered: {answeredCount}/{questions.length}
+              Answered: {answeredCount}/{testDetail.questions?.length || 0}
             </Text>
           </View>
           <View className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -276,12 +401,12 @@ export default function MCQTest() {
 
             {/* Options */}
             <View className="space-y-3">
-              {currentQuestion?.options.map((option) => {
-                const isSelected = selectedAnswers[currentQuestion.id] === option.id;
+              {currentQuestion?.options.map((option: string, optionIndex: number) => {
+                const isSelected = selectedAnswers[currentQuestion.questionNumber] === optionIndex;
                 return (
                   <TouchableOpacity
-                    key={option.id}
-                    onPress={() => handleAnswerSelect(currentQuestion.id, option.id)}
+                    key={optionIndex}
+                    onPress={() => handleAnswerSelect(currentQuestion.questionNumber, optionIndex)}
                     className={`p-3.5 rounded-xl border mb-2 ${
                       isSelected
                         ? 'border-customBlue bg-customBlue/5'
@@ -306,7 +431,7 @@ export default function MCQTest() {
                           isSelected ? 'text-customBlue font-medium' : 'text-gray-700'
                         }`}
                       >
-                        {option.text}
+                        {option}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -343,9 +468,9 @@ export default function MCQTest() {
 
             <TouchableOpacity
               onPress={handleNext}
-              disabled={currentQuestionIndex === questions.length - 1}
+              disabled={currentQuestionIndex === (testDetail.questions?.length || 0) - 1}
               className={`flex-1 py-3 rounded-xl ml-2 flex-row items-center justify-center ${
-                currentQuestionIndex === questions.length - 1
+                currentQuestionIndex === (testDetail.questions?.length || 0) - 1
                   ? 'bg-gray-200'
                   : 'bg-customBlue'
               }`}
@@ -353,7 +478,7 @@ export default function MCQTest() {
             >
               <Text
                 className={`text-sm font-semibold ${
-                  currentQuestionIndex === questions.length - 1
+                  currentQuestionIndex === (testDetail.questions?.length || 0) - 1
                     ? 'text-gray-400'
                     : 'text-white'
                 }`}
@@ -363,7 +488,7 @@ export default function MCQTest() {
               <MaterialIcons 
                 name="chevron-right" 
                 size={20} 
-                color={currentQuestionIndex === questions.length - 1 ? '#9CA3AF' : '#FFFFFF'} 
+                color={currentQuestionIndex === (testDetail.questions?.length || 0) - 1 ? '#9CA3AF' : '#FFFFFF'} 
               />
             </TouchableOpacity>
           </View>
@@ -374,12 +499,12 @@ export default function MCQTest() {
               Question Navigator
             </Text>
             <View className="flex-row flex-wrap gap-2">
-              {questions.map((q, index) => {
-                const isAnswered = !!selectedAnswers[q.id];
+              {testDetail.questions?.map((q: any, index: number) => {
+                const isAnswered = !!selectedAnswers[q.questionNumber];
                 const isCurrent = index === currentQuestionIndex;
                 return (
                   <TouchableOpacity
-                    key={q.id}
+                    key={q.questionNumber}
                     onPress={() => handleQuestionJump(index)}
                     className={`w-10 h-10 rounded-lg items-center justify-center ${
                       isCurrent
@@ -477,12 +602,12 @@ export default function MCQTest() {
               Submit Test?
             </Text>
             <Text className="text-sm text-gray-600 mb-3">
-              You have answered {answeredCount} out of {questions.length} questions.
+              You have answered {answeredCount} out of {testDetail.questions?.length || 0} questions.
             </Text>
-            {answeredCount < questions.length && (
+            {answeredCount < (testDetail.questions?.length || 0) && (
               <View className="bg-orange-50 p-3 rounded-xl mb-3 border border-orange-100">
                 <Text className="text-xs text-orange-800">
-                  ⚠️ You have {questions.length - answeredCount} unanswered question(s).
+                  ⚠️ You have {(testDetail.questions?.length || 0) - answeredCount} unanswered question(s).
                 </Text>
               </View>
             )}

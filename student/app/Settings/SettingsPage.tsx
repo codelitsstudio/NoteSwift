@@ -154,14 +154,7 @@ const SettingsPage = () => {
               onPress={() => setAppearance('light')}
             />
             <Divider />
-            <SettingsListItem
-              icon="phonelink-setup"
-              label="Use Device Settings"
-              type="select"
-              isSelected={appearance === 'system'}
-              onPress={() => setAppearance('system')}
-              description="Uses your device's display & brightness settings"
-            />
+            
           </View>
 
           <SettingsSection title="Course Content" />

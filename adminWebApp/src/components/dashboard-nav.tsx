@@ -16,6 +16,7 @@ import {
   Sparkles,
   BotMessageSquare,
   Receipt,
+  Smartphone,
 } from "lucide-react";
 import {
   SidebarMenu,
@@ -33,6 +34,7 @@ const links = [
   { href: "/dashboard/teacher-management", label: "Teacher Management", icon: Users },
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
   { href: "/dashboard/recommendations", label: "Course Recommendations", icon: BotMessageSquare },
+  { href: "/dashboard/app-block", label: "App Block", icon: Smartphone },
 
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/reports", label: "Reports", icon: LineChart },

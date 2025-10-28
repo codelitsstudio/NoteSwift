@@ -138,7 +138,7 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
               let subjects: AssignedSubject[] = [];
               try {
                 // Use the correct endpoint that returns SubjectContent data with uploaded materials
-                const subjectResponse = await fetch(`${API_ENDPOINTS.COURSES}/subject-content?teacherEmail=${encodeURIComponent(teacher.email)}`, {
+                const subjectResponse = await fetch(`${API_ENDPOINTS.COURSES}/all-subject-content`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -147,26 +147,8 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
 
                 if (subjectResponse.ok) {
                   const subjectData = await subjectResponse.json();
-                  if (subjectData.success && subjectData.data.subjectContent) {
-                    const subjectContent = subjectData.data.subjectContent;
-                    subjects = [{
-                      _id: subjectContent._id,
-                      courseId: subjectContent.courseId,
-                      courseName: subjectContent.courseName,
-                      courseProgram: subjectData.data.course?.program || '',
-                      courseThumbnail: '',
-                      subjectName: subjectContent.subjectName,
-                      description: subjectContent.description,
-                      syllabus: '',
-                      objectives: [],
-                      modules: subjectContent.modules || [],
-                      lastUpdated: subjectContent.lastUpdated,
-                      assignedAt: subjectContent.createdAt,
-                      totalModules: subjectContent.modules?.length || 0,
-                      modulesWithVideo: subjectContent.modules?.filter((m: any) => m.hasVideo).length || 0,
-                      modulesWithNotes: subjectContent.modules?.filter((m: any) => m.hasNotes).length || 0,
-                      scheduledLiveClasses: 0,
-                    }];
+                  if (subjectData.success && subjectData.result.subjects) {
+                    subjects = subjectData.result.subjects;
                     console.log('Subject content fetched:', subjects.length, 'subjects with modules');
                     console.log('First subject modules:', subjects[0]?.modules?.length || 0);
                   }
@@ -194,57 +176,44 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
 
       // Fallback: Fetch teacher's assigned subjects from Express backend (old method)
       if (teacherEmail) {
-        const apiUrl = `${API_ENDPOINTS.COURSES}/subject-content?teacherEmail=${encodeURIComponent(teacherEmail)}`;
+        const apiUrl = `${API_ENDPOINTS.COURSES}/all-subject-content`;
         console.log('Fetching teacher data from fallback:', apiUrl);
         
-        const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         console.log('Fallback response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
           console.log('Fallback response data:', JSON.stringify(data, null, 2));
 
-          if (data.success && data.data.subjectContent) {
-            const subjectContent = data.data.subjectContent;
-            const course = data.data.course;
+          if (data.success && data.result.subjects) {
+            const subjects = data.result.subjects;
+            const courses = data.result.courses;
             
-            // Convert to assignedSubjects format
-            const subjects: AssignedSubject[] = [{
-              _id: subjectContent._id,
-              courseId: subjectContent.courseId,
-              courseName: subjectContent.courseName,
-              courseProgram: course?.program || '',
-              courseThumbnail: course?.thumbnail,
-              subjectName: subjectContent.subjectName,
-              description: subjectContent.description,
-              syllabus: subjectContent.syllabus,
-              objectives: subjectContent.objectives,
-              modules: subjectContent.modules || [],
-              lastUpdated: subjectContent.lastUpdated,
-              assignedAt: subjectContent.createdAt,
-              totalModules: subjectContent.modules?.length || 0,
-              modulesWithVideo: subjectContent.modules?.filter((m: any) => m.hasVideo).length || 0,
-              modulesWithNotes: subjectContent.modules?.filter((m: any) => m.hasNotes).length || 0,
-              scheduledLiveClasses: subjectContent.modules?.reduce((acc: number, m: any) => 
-                acc + (m.liveClassSchedule?.length || 0), 0) || 0,
-            }];
+            // Use the first subject for backward compatibility
+            const firstSubject = subjects[0];
             
             // Convert to old format for backward compatibility
-            const courses: IAssignedCourse[] = [{
-              courseId: subjectContent.courseId,
-              courseName: subjectContent.courseName,
-              subject: subjectContent.subjectName,
-              assignedAt: subjectContent.createdAt,
-            }];
+            const oldCourses: IAssignedCourse[] = courses.map((course: any) => ({
+              courseId: course._id,
+              courseName: course.title,
+              subject: firstSubject.subjectName,
+              assignedAt: firstSubject.assignedAt,
+            }));
 
             setTeacherData((prev) => ({
               ...prev,
-              teacherId: subjectContent.teacherId,
-              teacherName: subjectContent.teacherName,
-              teacherEmail: subjectContent.teacherEmail,
+              teacherId: firstSubject.teacherId,
+              teacherName: firstSubject.teacherName,
+              teacherEmail: teacherEmail,
               teacherProfilePic: profilePic,
-              assignedCourses: courses,
-              assignedSubjects: [subjects[0]], // Wrap in array since it's a single subject
+              assignedCourses: oldCourses,
+              assignedSubjects: subjects,
               isLoading: false,
             }));
           }

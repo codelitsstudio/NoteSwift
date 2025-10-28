@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText, Video, CheckCircle, Edit, Trash2, RefreshCw, MoreHorizontal, Upload, X, Eye, EyeOff, Replace } from "lucide-react";
+import { BookOpen, FileText, Video, CheckCircle, Edit, Trash2, RefreshCw, MoreHorizontal, Upload, X, Eye, EyeOff, Replace, Plus } from "lucide-react";
 import teacherAPI from "@/lib/api/teacher-api";
 import Link from "next/link";
 import { useTeacher } from "@/context/teacher-context";
@@ -50,10 +50,11 @@ export default function CoursesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingContent, setUpdatingContent] = useState<string | null>(null);
 
-  // Replace upload dialog state
+  // Replace upload dialog state - updated for multiple videos
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
   const [moduleToReplace, setModuleToReplace] = useState<any>(null);
   const [replaceType, setReplaceType] = useState<'video' | 'notes' | null>(null);
+  const [videoToReplace, setVideoToReplace] = useState<number | null>(null); // Index of video to replace
   const [replaceForm, setReplaceForm] = useState({
     file: null as File | null,
     title: '',
@@ -115,10 +116,10 @@ export default function CoursesPage() {
     try {
       const response = await teacherAPI.courses.updateModule(teacherEmail, module.moduleNumber, {
         hasVideo: false,
-        videoUrl: null,
-        videoTitle: null,
-        videoDuration: null,
-        videoUploadedAt: null,
+        videoUrl: undefined,
+        videoTitle: undefined,
+        videoDuration: undefined,
+        videoUploadedAt: undefined,
       });
 
       if (response.success) {
@@ -153,9 +154,9 @@ export default function CoursesPage() {
     try {
       const response = await teacherAPI.courses.updateModule(teacherEmail, module.moduleNumber, {
         hasNotes: false,
-        notesUrl: null,
-        notesTitle: null,
-        notesUploadedAt: null,
+        notesUrl: undefined,
+        notesTitle: undefined,
+        notesUploadedAt: undefined,
       });
 
       if (response.success) {
@@ -218,14 +219,48 @@ export default function CoursesPage() {
     }
   };
 
-  const handleReplaceUpload = (module: any, type: 'video' | 'notes') => {
+  const handleReplaceUpload = (module: any, type: 'video' | 'notes', videoIndex?: number) => {
+    // Determine if this is replacing a single video (legacy) or adding/replacing in array
+    const isSingleVideoReplace = type === 'video' && videoIndex === undefined && module.videoTitle && (!module.videos || module.videos.length === 0);
+    const actualVideoIndex = videoIndex ?? (isSingleVideoReplace ? 0 : null);
+    
     setModuleToReplace(module);
     setReplaceType(type);
-    setReplaceForm({
-      file: null,
-      title: type === 'video' ? (module.videoTitle || '') : (module.notesTitle || ''),
-      duration: type === 'video' ? (module.videoDuration || '') : ''
-    });
+    setVideoToReplace(actualVideoIndex);
+
+    // Set form defaults based on content type and video index
+    if (type === 'video') {
+      if (actualVideoIndex !== null && actualVideoIndex !== undefined && module.videos && module.videos[actualVideoIndex]) {
+        // Replacing specific video in array
+        const video = module.videos[actualVideoIndex];
+        setReplaceForm({
+          file: null,
+          title: video.title || '',
+          duration: video.duration || ''
+        });
+      } else if (module.videoTitle && isSingleVideoReplace) {
+        // Replacing legacy single video
+        setReplaceForm({
+          file: null,
+          title: module.videoTitle || '',
+          duration: module.videoDuration || ''
+        });
+      } else {
+        // Adding new video
+        setReplaceForm({
+          file: null,
+          title: '',
+          duration: ''
+        });
+      }
+    } else {
+      // Notes
+      setReplaceForm({
+        file: null,
+        title: module.notesTitle || '',
+        duration: ''
+      });
+    }
     setReplaceDialogOpen(true);
   };
 
@@ -235,48 +270,69 @@ export default function CoursesPage() {
     setUploadingFile(true);
     setUpdatingContent(`replace-${moduleToReplace.uniqueKey}`);
     try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append(replaceType, replaceForm.file);
-      formData.append('moduleNumber', moduleToReplace.moduleNumber.toString());
-      if (replaceForm.title) formData.append('title', replaceForm.title);
-      if (replaceType === 'video' && replaceForm.duration) formData.append('videoDuration', replaceForm.duration);
+      if (replaceType === 'video') {
+        // Handle video replacement/addition
+        const response = await teacherAPI.courses.uploadVideo(
+          teacherEmail,
+          moduleToReplace.moduleNumber,
+          [replaceForm.file],
+          [replaceForm.title],
+          replaceForm.duration ? [parseInt(replaceForm.duration)] : undefined,
+          videoToReplace !== null ? videoToReplace : undefined
+        );
 
-      // Upload to backend (which will handle Firebase upload)
-      const endpoint = replaceType === 'video' ? '/upload/video' : '/upload/notes';
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/teacher${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('teacherToken')}`,
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: `${replaceType === 'video' ? 'Video' : 'Notes'} replaced successfully!`,
-        });
-        await refreshAssignments();
-        setReplaceDialogOpen(false);
-        setModuleToReplace(null);
-        setReplaceType(null);
-        setReplaceForm({ file: null, title: '', duration: '' });
+        if (response.success) {
+          toast({
+            title: "Success",
+            description: videoToReplace !== null && videoToReplace !== undefined ? "Video replaced successfully!" : "Video added successfully!",
+          });
+          await refreshAssignments();
+          setReplaceDialogOpen(false);
+          setModuleToReplace(null);
+          setReplaceType(null);
+          setVideoToReplace(null);
+          setReplaceForm({ file: null, title: '', duration: '' });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: response.message || "Failed to update video",
+          });
+        }
       } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: result.message || `Failed to replace ${replaceType}`,
-        });
+        // Handle notes replacement (existing logic)
+        const response = await teacherAPI.courses.uploadNotes(
+          teacherEmail,
+          moduleToReplace.moduleNumber,
+          replaceForm.file,
+          replaceForm.title
+        );
+
+        if (response.success) {
+          toast({
+            title: "Success",
+            description: "Notes replaced successfully!",
+          });
+          await refreshAssignments();
+          setReplaceDialogOpen(false);
+          setModuleToReplace(null);
+          setReplaceType(null);
+          setVideoToReplace(null);
+          setReplaceForm({ file: null, title: '', duration: '' });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: response.message || "Failed to replace notes",
+          });
+        }
       }
     } catch (error: any) {
       console.error("Error replacing content:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || `Failed to replace ${replaceType}`,
+        description: error.message || `Failed to ${videoToReplace !== null && videoToReplace !== undefined ? 'replace' : 'add'} ${replaceType}`,
       });
     } finally {
       setUploadingFile(false);
@@ -512,10 +568,10 @@ export default function CoursesPage() {
                           {module.subjectName} - {module.courseName}
                         </p>
                         <div className="flex gap-2 mt-2">
-                          {module.hasVideo && (
+                          {((module.hasVideo && module.videoTitle) || (module.videos && module.videos.length > 0)) && (
                             <Badge variant="secondary" className="gap-1">
                               <Video className="h-3 w-3" />
-                              Video
+                              Video{(module.videos && module.videos.length > 1) ? `s (${module.videos.length})` : ''}
                             </Badge>
                           )}
                           {module.hasNotes && (
@@ -536,7 +592,7 @@ export default function CoursesPage() {
                               Live Class
                             </Badge>
                           )}
-                          {!module.hasVideo && !module.hasNotes && (
+                          {!((module.hasVideo && module.videoTitle) || (module.videos && module.videos.length > 0)) && !module.hasNotes && (
                             <Badge variant="outline">No content yet</Badge>
                           )}
                         </div>
@@ -560,18 +616,52 @@ export default function CoursesPage() {
                               <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                   <Replace className="h-4 w-4 mr-2" />
-                                  Replace Upload
+                                  Replace Content
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent>
-                                  {module.hasVideo && (
-                                    <DropdownMenuItem
-                                      onClick={() => handleReplaceUpload(module, 'video')}
-                                      disabled={updatingContent === `replace-${module.uniqueKey}`}
-                                    >
-                                      <Video className="h-4 w-4 mr-2" />
-                                      Replace Video
-                                    </DropdownMenuItem>
+                                  {/* Video replace options */}
+                                  {((module.hasVideo && module.videoTitle) || (module.videos && module.videos.length > 0)) && (
+                                    <DropdownMenuSub>
+                                      <DropdownMenuSubTrigger>
+                                        <Video className="h-4 w-4 mr-2" />
+                                        Replace Video
+                                      </DropdownMenuSubTrigger>
+                                      <DropdownMenuSubContent>
+                                        {module.videos && module.videos.length > 0 ? (
+                                          // Multiple videos - show individual options
+                                          module.videos.map((video: any, index: number) => (
+                                            <DropdownMenuItem
+                                              key={index}
+                                              onClick={() => handleReplaceUpload(module, 'video', index)}
+                                              disabled={updatingContent === `replace-${module.uniqueKey}`}
+                                            >
+                                              <Video className="h-4 w-4 mr-2" />
+                                              Replace "{video.title}" (Video {index + 1})
+                                            </DropdownMenuItem>
+                                          ))
+                                        ) : (
+                                          // Single video fallback
+                                          <DropdownMenuItem
+                                            onClick={() => handleReplaceUpload(module, 'video')}
+                                            disabled={updatingContent === `replace-${module.uniqueKey}`}
+                                          >
+                                            <Video className="h-4 w-4 mr-2" />
+                                            Replace Video
+                                          </DropdownMenuItem>
+                                        )}
+                                        {/* Option to add new video */}
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() => handleReplaceUpload(module, 'video')}
+                                          disabled={updatingContent === `replace-${module.uniqueKey}`}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          Add New Video
+                                        </DropdownMenuItem>
+                                      </DropdownMenuSubContent>
+                                    </DropdownMenuSub>
                                   )}
+                                  {/* Notes replace option */}
                                   {module.hasNotes && (
                                     <DropdownMenuItem
                                       onClick={() => handleReplaceUpload(module, 'notes')}
@@ -631,15 +721,37 @@ export default function CoursesPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {module.hasVideo && module.videoTitle && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Video className="h-4 w-4 text-blue-500" />
-                          <div className="flex-1">
-                            <p className="font-medium">{module.videoTitle}</p>
-                            <p className="text-xs text-muted-foreground">Video lecture</p>
+                      {/* Display all videos */}
+                      {((module.hasVideo && module.videoTitle) || (module.videos && module.videos.length > 0)) && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm font-medium text-blue-700">
+                            <Video className="h-4 w-4" />
+                            Video Content
                           </div>
+                          {module.videos && module.videos.length > 0 ? (
+                            // Display multiple videos
+                            module.videos.map((video: any, index: number) => (
+                              <div key={index} className="flex items-center gap-2 text-sm pl-6 border-l-2 border-blue-200">
+                                <div className="flex-1">
+                                  <p className="font-medium">{video.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Video {index + 1} {video.duration && `• ${video.duration}`}
+                                  </p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            // Fallback for single video (backward compatibility)
+                            <div className="flex items-center gap-2 text-sm pl-6 border-l-2 border-blue-200">
+                              <div className="flex-1">
+                                <p className="font-medium">{module.videoTitle}</p>
+                                <p className="text-xs text-muted-foreground">Video lecture</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
+
                       {module.hasNotes && module.notesTitle && (
                         <div className="flex items-center gap-2 text-sm">
                           <FileText className="h-4 w-4 text-green-500" />
@@ -650,7 +762,7 @@ export default function CoursesPage() {
                         </div>
                       )}
                     </div>
-                    {!module.hasVideo && !module.hasNotes && (
+                    {!((module.hasVideo && module.videoTitle) || (module.videos && module.videos.length > 0)) && !module.hasNotes && (
                       <div className="text-center py-4">
                         <p className="text-sm text-muted-foreground mb-3">No content uploaded yet</p>
                         <Button asChild size="sm" variant="outline">
@@ -704,10 +816,13 @@ export default function CoursesPage() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              Replace {replaceType === 'video' ? 'Video' : 'Notes'}
+              {videoToReplace !== null && videoToReplace !== undefined ? 'Replace' : 'Add'} {replaceType === 'video' ? 'Video' : 'Notes'}
             </DialogTitle>
             <DialogDescription>
-              Update the {replaceType} content for Module {moduleToReplace?.moduleNumber}: {moduleToReplace?.moduleName}
+              {videoToReplace !== null && videoToReplace !== undefined
+                ? `Update the ${replaceType} content for Module ${moduleToReplace?.moduleNumber}: ${moduleToReplace?.moduleName}`
+                : `Add new ${replaceType} content to Module ${moduleToReplace?.moduleNumber}: ${moduleToReplace?.moduleName}`
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -756,6 +871,7 @@ export default function CoursesPage() {
                 setReplaceDialogOpen(false);
                 setModuleToReplace(null);
                 setReplaceType(null);
+                setVideoToReplace(null);
                 setReplaceForm({ file: null, title: '', duration: '' });
               }}
             >
@@ -768,12 +884,12 @@ export default function CoursesPage() {
               {updatingContent === `replace-${moduleToReplace?.uniqueKey}` || uploadingFile ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  {uploadingFile ? 'Uploading...' : 'Replacing...'}
+                  {uploadingFile ? 'Uploading...' : 'Processing...'}
                 </>
               ) : (
                 <>
                   <Replace className="h-4 w-4 mr-2" />
-                  Replace {replaceType === 'video' ? 'Video' : 'Notes'}
+                  {videoToReplace !== null && videoToReplace !== undefined ? 'Replace' : 'Add'} {replaceType === 'video' ? 'Video' : 'Notes'}
                 </>
               )}
             </Button>

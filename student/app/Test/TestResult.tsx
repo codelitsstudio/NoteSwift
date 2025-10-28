@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,29 +8,75 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { demoTests, demoTestResults, demoMCQQuestions } from './testData';
+import { studentTestAPI, TestResult as TestResultType } from '../../api/student/test';
+import Skeleton from '../../components/Container/Skeleton';
 
 export default function TestResult() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const testId = params.testId as string;
+  const attemptId = params.attemptId as string;
 
-  const test = demoTests.find(t => t.id === testId);
-  const result = demoTestResults[testId];
-  const questions = demoMCQQuestions[testId] || [];
-
+  const [result, setResult] = useState<TestResultType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showSolutions, setShowSolutions] = useState(false);
 
-  if (!test || !result) {
+  useEffect(() => {
+    fetchTestResult();
+  }, [testId, attemptId]);
+
+  const fetchTestResult = async () => {
+    try {
+      setLoading(true);
+      console.log('🎯 Fetching test results for testId:', testId, 'attemptId:', attemptId);
+      const response = await studentTestAPI.getTestResults(testId, attemptId);
+      console.log('📥 Results API response:', response);
+      if (response.success && response.data) {
+        console.log('✅ Results data received:', response.data);
+        setResult(response.data);
+      } else {
+        console.log('❌ Results API failed:', response.error);
+        setError('Failed to load test results');
+      }
+    } catch (err) {
+      console.error('❌ Error fetching test result:', err);
+      setError('Failed to load test results');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
-        <View className="flex-1 items-center justify-center">
-          <MaterialIcons name="error-outline" size={64} color="#9CA3AF" />
-          <Text className="text-lg text-gray-600 mt-4">Results not found</Text>
+        <View className="flex-1 px-6 pt-6">
+          <Skeleton width={200} height={24} borderRadius={4} style={{ marginBottom: 16 }} />
+          <Skeleton width="100%" height={120} borderRadius={12} style={{ marginBottom: 16 }} />
+          <Skeleton width="100%" height={80} borderRadius={12} style={{ marginBottom: 16 }} />
+          <Skeleton width="100%" height={100} borderRadius={12} style={{ marginBottom: 16 }} />
         </View>
       </SafeAreaView>
     );
   }
+
+  if (error || !result) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
+        <View className="flex-1 items-center justify-center">
+          <MaterialIcons name="error-outline" size={64} color="#9CA3AF" />
+          <Text className="text-lg text-gray-600 mt-4">
+            {error || 'Results not found'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Calculate stats from answers
+  const correctAnswers = result.attempt.answers?.filter((a: any) => a.isCorrect).length || 0;
+  const wrongAnswers = result.attempt.answers?.filter((a: any) => !a.isCorrect && a.selectedOption !== undefined).length || 0;
+  const skippedQuestions = result.test.totalQuestions - (correctAnswers + wrongAnswers);
 
   const getGrade = (percentage: number) => {
     if (percentage >= 90) return { grade: 'A+', color: '#10B981', bg: '#D1FAE5' };
@@ -41,7 +87,7 @@ export default function TestResult() {
     return { grade: 'F', color: '#EF4444', bg: '#FEE2E2' };
   };
 
-  const gradeInfo = getGrade(result.percentage);
+  const gradeInfo = getGrade(result.attempt.percentage);
 
   const getPerformanceMessage = (percentage: number) => {
     if (percentage >= 90) return 'Outstanding Performance!';
@@ -61,17 +107,17 @@ export default function TestResult() {
             <View className="relative">
               {/* Performance Message */}
               <Text className="text-gray-900 text-lg font-bold mb-4 text-center">
-                {getPerformanceMessage(result.percentage)}
+                {getPerformanceMessage(result.attempt.percentage)}
               </Text>
 
               {/* Score Circle */}
               <View className="items-center mb-4">
                 <View className="w-32 h-32 bg-blue-50 rounded-full items-center justify-center border-4 border-customBlue">
                   <Text className="text-4xl font-bold text-customBlue">
-                    {result.score}
+                    {result.attempt.totalScore}
                   </Text>
                   <Text className="text-sm text-gray-600">
-                    / {result.totalMarks}
+                    / {result.test.totalMarks}
                   </Text>
                 </View>
                 
@@ -92,7 +138,7 @@ export default function TestResult() {
               {/* Percentage */}
               <View className="bg-blue-50 rounded-xl p-3">
                 <Text className="text-customBlue text-center text-base font-semibold">
-                  {result.percentage.toFixed(1)}% Score
+                  {result.attempt.percentage.toFixed(1)}% Score
                 </Text>
               </View>
             </View>
@@ -101,16 +147,13 @@ export default function TestResult() {
           {/* Test Info */}
           <View className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
             <Text className="text-base font-bold text-gray-900 mb-1">
-              {test.title}
-            </Text>
-            <Text className="text-sm text-gray-600 mb-3">
-              {test.courseName}
+              {result.test.title}
             </Text>
 
             <View className="flex-row items-center text-gray-600">
               <MaterialIcons name="calendar-today" size={14} color="#6B7280" />
               <Text className="text-sm text-gray-600 ml-1.5">
-                Attempted on {result.attemptDate}
+                Attempted on {new Date(result.attempt.submittedAt || result.attempt.startedAt).toLocaleDateString()}
               </Text>
             </View>
           </View>
@@ -129,7 +172,7 @@ export default function TestResult() {
                   <Text className="text-sm text-gray-700 ml-2">Correct Answers</Text>
                 </View>
                 <Text className="text-lg font-bold text-green-600">
-                  {result.correctAnswers}
+                  {correctAnswers}
                 </Text>
               </View>
 
@@ -140,7 +183,7 @@ export default function TestResult() {
                   <Text className="text-sm text-gray-700 ml-2">Wrong Answers</Text>
                 </View>
                 <Text className="text-lg font-bold text-red-600">
-                  {result.wrongAnswers}
+                  {wrongAnswers}
                 </Text>
               </View>
 
@@ -151,7 +194,7 @@ export default function TestResult() {
                   <Text className="text-sm text-gray-700 ml-2">Skipped</Text>
                 </View>
                 <Text className="text-lg font-bold text-gray-600">
-                  {result.skippedQuestions}
+                  {skippedQuestions}
                 </Text>
               </View>
 
@@ -162,7 +205,7 @@ export default function TestResult() {
                   <Text className="text-sm text-gray-700 ml-2">Time Taken</Text>
                 </View>
                 <Text className="text-lg font-bold text-customBlue">
-                  {result.timeTaken} min
+                  {Math.floor(result.attempt.timeSpent / 60)} min
                 </Text>
               </View>
             </View>
@@ -181,14 +224,14 @@ export default function TestResult() {
                 <View className="flex-row justify-between mb-1.5">
                   <Text className="text-sm text-gray-600">Correct</Text>
                   <Text className="text-sm font-semibold text-green-600">
-                    {((result.correctAnswers / test.totalQuestions) * 100).toFixed(1)}%
+                    {((correctAnswers / result.test.totalQuestions) * 100).toFixed(1)}%
                   </Text>
                 </View>
                 <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <View
                     className="h-full bg-green-500"
                     style={{
-                      width: `${(result.correctAnswers / test.totalQuestions) * 100}%`,
+                      width: `${(correctAnswers / result.test.totalQuestions) * 100}%`,
                     }}
                   />
                 </View>
@@ -199,14 +242,14 @@ export default function TestResult() {
                 <View className="flex-row justify-between mb-1.5">
                   <Text className="text-sm text-gray-600">Wrong</Text>
                   <Text className="text-sm font-semibold text-red-600">
-                    {((result.wrongAnswers / test.totalQuestions) * 100).toFixed(1)}%
+                    {((wrongAnswers / result.test.totalQuestions) * 100).toFixed(1)}%
                   </Text>
                 </View>
                 <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <View
                     className="h-full bg-red-500"
                     style={{
-                      width: `${(result.wrongAnswers / test.totalQuestions) * 100}%`,
+                      width: `${(wrongAnswers / result.test.totalQuestions) * 100}%`,
                     }}
                   />
                 </View>
@@ -217,14 +260,14 @@ export default function TestResult() {
                 <View className="flex-row justify-between mb-1.5">
                   <Text className="text-sm text-gray-600">Skipped</Text>
                   <Text className="text-sm font-semibold text-gray-600">
-                    {((result.skippedQuestions / test.totalQuestions) * 100).toFixed(1)}%
+                    {((skippedQuestions / result.test.totalQuestions) * 100).toFixed(1)}%
                   </Text>
                 </View>
                 <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <View
                     className="h-full bg-gray-400"
                     style={{
-                      width: `${(result.skippedQuestions / test.totalQuestions) * 100}%`,
+                      width: `${(skippedQuestions / result.test.totalQuestions) * 100}%`,
                     }}
                   />
                 </View>
@@ -233,7 +276,7 @@ export default function TestResult() {
           </View>
 
           {/* Solutions Button */}
-          {questions.length > 0 && (
+          {result.attempt.answers && result.attempt.answers.length > 0 && (
             <TouchableOpacity
               onPress={() => setShowSolutions(!showSolutions)}
               className="bg-customBlue py-3 rounded-xl mb-3"
@@ -253,68 +296,71 @@ export default function TestResult() {
           )}
 
           {/* Solutions Section */}
-          {showSolutions && questions.length > 0 && (
+          {showSolutions && result.attempt.answers && result.attempt.answers.length > 0 && (
             <View className="mb-4">
               <Text className="text-lg font-bold text-gray-900 mb-3">
                 Solutions & Explanations
               </Text>
 
-              {questions.map((question, index) => {
-                const correctOption = question.options.find(opt => opt.isCorrect);
-                
+              {result.attempt.answers.map((answer: any, index: number) => {
                 return (
-                  <View key={question.id} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
+                  <View key={answer.questionNumber} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
                     {/* Question */}
                     <View className="flex-row items-start mb-3">
                       <View className="w-7 h-7 bg-blue-50 rounded-full items-center justify-center mr-2.5">
                         <Text className="text-customBlue font-semibold text-sm">
-                          {index + 1}
+                          {answer.questionNumber}
                         </Text>
                       </View>
                       <Text className="flex-1 text-sm font-semibold text-gray-900">
-                        {question.question}
+                        {answer.question}
                       </Text>
                     </View>
 
-                    {/* Options */}
-                    <View className="ml-9 space-y-3 mb-3">
-                      {question.options.map((option) => {
-                        const isCorrect = option.isCorrect;
-                        
-                        return (
-                          <View
-                            key={option.id}
-                            className={`p-2.5 rounded-lg mb-2 ${
-                              isCorrect
-                                ? 'bg-green-50 border border-green-500'
-                                : 'bg-gray-50 border border-gray-200'
-                            }`}
-                          >
-                            <View className="flex-row items-center">
-                              {isCorrect && (
-                                <MaterialIcons
-                                  name="check-circle"
-                                  size={16}
-                                  color="#10B981"
-                                />
-                              )}
-                              <Text
-                                className={`${isCorrect ? 'ml-1.5' : 'ml-0'} text-sm ${
-                                  isCorrect
-                                    ? 'text-green-900 font-medium'
-                                    : 'text-gray-700'
-                                }`}
-                              >
-                                {option.text}
-                              </Text>
-                            </View>
-                          </View>
-                        );
-                      })}
+                    {/* User's Answer */}
+                    <View className="ml-9 mb-3">
+                      <Text className="text-xs font-semibold text-gray-900 mb-1">
+                        Your Answer:
+                      </Text>
+                      <View className={`p-2.5 rounded-lg ${
+                        answer.isCorrect
+                          ? 'bg-green-50 border border-green-500'
+                          : 'bg-red-50 border border-red-500'
+                      }`}>
+                        <View className="flex-row items-center">
+                          {answer.isCorrect ? (
+                            <MaterialIcons name="check-circle" size={16} color="#10B981" />
+                          ) : (
+                            <MaterialIcons name="cancel" size={16} color="#EF4444" />
+                          )}
+                          <Text className={`ml-1.5 text-sm ${
+                            answer.isCorrect ? 'text-green-900' : 'text-red-900'
+                          }`}>
+                            {answer.selectedOptionText || 'Not answered'}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
 
+                    {/* Correct Answer */}
+                    {!answer.isCorrect && (
+                      <View className="ml-9 mb-3">
+                        <Text className="text-xs font-semibold text-gray-900 mb-1">
+                          Correct Answer:
+                        </Text>
+                        <View className="p-2.5 rounded-lg bg-green-50 border border-green-500">
+                          <View className="flex-row items-center">
+                            <MaterialIcons name="check-circle" size={16} color="#10B981" />
+                            <Text className="ml-1.5 text-sm text-green-900">
+                              {answer.correctOptionText}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
                     {/* Explanation */}
-                    {question.explanation && (
+                    {answer.explanation && (
                       <View className="ml-9 bg-blue-50 p-3 rounded-lg">
                         <View className="flex-row items-start">
                           <MaterialIcons
@@ -327,7 +373,7 @@ export default function TestResult() {
                               Explanation:
                             </Text>
                             <Text className="text-sm text-gray-700">
-                              {question.explanation}
+                              {answer.explanation}
                             </Text>
                           </View>
                         </View>
@@ -342,7 +388,7 @@ export default function TestResult() {
           {/* Action Buttons */}
           <View className="space-y-2 mb-4">
             <TouchableOpacity
-              onPress={() => router.push(`/Test/CourseTestList?courseId=${test.courseId}` as any)}
+              onPress={() => router.push('/Test/TestPage' as any)}
               className="bg-white border border-customBlue py-3 rounded-xl"
               activeOpacity={0.8}
             >

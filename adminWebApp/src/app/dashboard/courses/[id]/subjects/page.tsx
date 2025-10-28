@@ -264,21 +264,7 @@ export default function SubjectEditorPage() {
             if (data.success && data.result?.subjectContent) {
               const subjectContent = data.result.subjectContent;
 
-              // Update the SubjectContent with new modules
-              const updatedModules = subject.modules?.map((module, index) => ({
-                moduleNumber: index + 1,
-                moduleName: module.name,
-                hasVideo: module.hasVideo || false,
-                hasNotes: module.hasNotes || false,
-                hasLiveClass: module.liveClassSchedule && Array.isArray(module.liveClassSchedule) && module.liveClassSchedule.length > 0,
-                hasTest: false, // Default to false since not in Module interface
-                hasQuestions: false, // Default to false since not in Module interface
-                order: index + 1,
-                isActive: true,
-                liveClassSchedule: module.liveClassSchedule
-              })) || [];
-
-              // Update SubjectContent via API call
+              // Only update description, don't touch modules (content is managed separately)
               await fetch(API_ENDPOINTS.SUBJECT_CONTENT.UPDATE(subjectContent._id), {
                 method: 'PUT',
                 headers: {
@@ -286,8 +272,8 @@ export default function SubjectEditorPage() {
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                  modules: updatedModules,
                   description: subject.description
+                  // Don't update modules - content URLs are managed by teachers
                 })
               });
             }
