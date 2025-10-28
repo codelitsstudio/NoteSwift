@@ -1,5 +1,4 @@
 import { EnrollmentService } from '../services/EnrollmentService';
-import { DatabaseSeeder } from '../services/DatabaseSeeder';
 
 /**
  * Middleware to automatically enroll new users in featured courses
@@ -10,13 +9,10 @@ export const autoEnrollMiddleware = async (req: any, res: any, next: any) => {
     if (req.method === 'POST' && req.route?.path?.includes('register') && res.locals.newUserId) {
       const studentId = res.locals.newUserId;
       
-      // Auto-enroll in featured courses
-      await EnrollmentService.autoEnrollInFeaturedCourses(studentId);
+      // DISABLED: Auto-enrollment removed for production safety
+      // await EnrollmentService.autoEnrollInFeaturedCourses(studentId);
       
-      // Create default enrollment if needed
-      await DatabaseSeeder.createDefaultEnrollment(studentId);
-      
-      console.log(`✅ Auto-enrolled new user ${studentId} in featured courses`);
+      console.log(`✅ New user registered: ${studentId}`);
     }
     
     next();
@@ -37,26 +33,30 @@ export class MaintenanceScheduler {
    * Starts periodic maintenance tasks
    */
   static startPeriodicMaintenance() {
-    // Run maintenance every 24 hours
+    // Run health checks every 24 hours (maintenance disabled for safety)
     this.maintenanceInterval = setInterval(async () => {
       try {
-        console.log('🔄 Running scheduled maintenance...');
+        console.log('🔄 Running scheduled health check...');
         
         const healthCheck = await import('../services/DatabaseMaintenanceService')
           .then(module => module.DatabaseMaintenanceService.performHealthCheck());
         
         if (healthCheck.overall !== 'healthy') {
-          await import('../services/DatabaseMaintenanceService')
-            .then(module => module.DatabaseMaintenanceService.performMaintenance());
+          console.warn('⚠️ Database health check failed:', healthCheck);
+          // DISABLED: Automatic maintenance is too dangerous
+          // await import('../services/DatabaseMaintenanceService')
+          //   .then(module => module.DatabaseMaintenanceService.performMaintenance());
+        } else {
+          console.log('✅ Database health check passed');
         }
         
-        console.log('✅ Scheduled maintenance completed');
+        console.log('✅ Scheduled health check completed');
       } catch (error) {
-        console.error('❌ Scheduled maintenance failed:', error);
+        console.error('❌ Scheduled health check failed:', error);
       }
     }, 24 * 60 * 60 * 1000); // 24 hours
     
-    console.log('⏰ Periodic maintenance scheduler started (24h interval)');
+    console.log('⏰ Periodic health check scheduler started (24h interval)');
   }
   
   /**

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, ScrollView, Text, StatusBar, Platform } from "react-native";
+import { View, ScrollView, Text, StatusBar } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import ProHeader from "./Components/ProHeader";

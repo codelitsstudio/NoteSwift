@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -21,11 +21,7 @@ export default function ModuleTestList() {
   const [tests, setTests] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTests();
-  }, []);
-
-  const fetchTests = async () => {
+  const fetchTests = useCallback(async () => {
     try {
       setLoading(true);
       const response = await studentTestAPI.getAvailableTests();
@@ -53,7 +49,11 @@ export default function ModuleTestList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseName, subjectName]);
+
+  useEffect(() => {
+    fetchTests();
+  }, [fetchTests]);
 
   // Filter tests based on selected filter
   const filteredTests = filter === 'all' 

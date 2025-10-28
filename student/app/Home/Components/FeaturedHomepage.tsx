@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Image, ActivityIndicator } from "react-native";
 import CourseMiniCard from "../../../components/Container/CourseMiniCard";
 import { useRouter } from "expo-router";
-import { useCourseStore } from "../../../stores/courseStore";
 import axios from "@/api/axios";
 
 interface Course {
@@ -23,7 +22,6 @@ export default function FeaturedClasses() {
   const router = useRouter();
   const [homepageFeaturedCourses, setHomepageFeaturedCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const { courses } = useCourseStore();
 
   // Fetch homepage featured courses
   const fetchHomepageFeaturedCourses = async () => {

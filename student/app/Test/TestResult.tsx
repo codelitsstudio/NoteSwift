@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,11 +22,7 @@ export default function TestResult() {
   const [error, setError] = useState<string | null>(null);
   const [showSolutions, setShowSolutions] = useState(false);
 
-  useEffect(() => {
-    fetchTestResult();
-  }, [testId, attemptId]);
-
-  const fetchTestResult = async () => {
+  const fetchTestResult = useCallback(async () => {
     try {
       setLoading(true);
       console.log('🎯 Fetching test results for testId:', testId, 'attemptId:', attemptId);
@@ -45,7 +41,11 @@ export default function TestResult() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId, attemptId]);
+
+  useEffect(() => {
+    fetchTestResult();
+  }, [fetchTestResult]);
 
   if (loading) {
     return (

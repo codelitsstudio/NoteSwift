@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 
 interface StudyTip {
   id: string;
@@ -101,7 +100,6 @@ const studyTips: StudyTip[] = [
 ];
 
 export default function StudyTips() {
-  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [expandedTip, setExpandedTip] = useState<string | null>(null);
 

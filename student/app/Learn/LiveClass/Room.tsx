@@ -14,7 +14,7 @@ type ChatMessage = {
 
 export default function LiveClassRoom() {
   const router = useRouter();
-  const { id, title, teacher, subject, audioEnabled: initialAudio } = useLocalSearchParams();
+  const { title, teacher, subject, audioEnabled: initialAudio } = useLocalSearchParams();
   
   const [audioEnabled, setAudioEnabled] = useState(initialAudio === 'true');
   const [showChat, setShowChat] = useState(false);

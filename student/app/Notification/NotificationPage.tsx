@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity, Image, SectionList, RefreshControl } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import api from '../../api/axios';
@@ -39,7 +39,7 @@ const NotificationPage = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Fetch admin notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       // Fetch all sent notifications (don't restrict to push only)
       const response = await api.get('/notifications?status=sent');
@@ -61,10 +61,10 @@ const NotificationPage = () => {
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  };
+  }, []);
 
   // Fetch question updates (questions with new answers)
-  const fetchQuestionUpdates = async () => {
+  const fetchQuestionUpdates = useCallback(async () => {
     try {
       const response = await api.get('/questions');
       if (response.data.success) {
@@ -86,7 +86,7 @@ const NotificationPage = () => {
     } catch (error) {
       console.error('Error fetching question updates:', error);
     }
-  };
+  }, []);
 
   // Combine all notifications into sections
   const getNotificationSections = () => {
@@ -114,13 +114,13 @@ const NotificationPage = () => {
     ].filter(section => section.data.length > 0);
   };
 
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     await Promise.all([fetchNotifications(), fetchQuestionUpdates()]);
-  };
+  }, [fetchNotifications, fetchQuestionUpdates]);
 
   useEffect(() => {
     loadAllData().finally(() => setLoading(false));
-  }, []);
+  }, [loadAllData]);
 
   const onRefresh = async () => {
     setRefreshing(true);

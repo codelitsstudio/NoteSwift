@@ -1,13 +1,12 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useCallback, useEffect } from 'react';
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import PrimaryNav from '@/components/Navigation/PrimaryNav';
 import Skeleton from '../../components/Container/Skeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import QuestionCard from './components/QuestionCard';
-import FeatureCard from './components/FeatureCard';
 import { useAuthStore } from '../../stores/authStore';
 import { useCourseStore } from '../../stores/courseStore';
 import api from '../../api/axios';
@@ -18,7 +17,6 @@ export default function AskPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'answered' | 'pending'>('all');
   const [questions, setQuestions] = useState<any[]>([]);
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
 
   // Get user and course data
   const { user } = useAuthStore();
@@ -27,7 +25,6 @@ export default function AskPage() {
   // Fetch questions from API
   const fetchQuestions = async () => {
     try {
-      setIsLoadingQuestions(true);
       const response = await api.get('/questions');
       console.log('Questions response:', response);
       if (response.data?.success || response.status === 200) {
@@ -38,8 +35,6 @@ export default function AskPage() {
       console.error('Error response:', error.response);
       // Don't show alert for now, just log the error
       // Alert.alert('Error', 'Failed to load questions');
-    } finally {
-      setIsLoadingQuestions(false);
     }
   };
 

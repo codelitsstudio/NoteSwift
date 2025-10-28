@@ -1,20 +1,16 @@
 // app/Chapter/[chapterDetail].tsx - Chapter Detail Page
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import ChapterDetailCard from "./ChapterDetail/ChapterDetailCard";
-import { courses, Module } from "../../utils/courseData";
 import FooterNav from "./ChapterDetail/FooterNav";
-import { updateModuleProgress, getModuleProgress } from "../../api/lessonProgress";
-import { useAuthStore } from "../../stores/authStore";
 import { useCourseStore } from "../../stores/courseStore";
 
 export default function ChapterDetailPage() {
   const router = useRouter();
   const { chapterDetail, courseId, subjectId } = useLocalSearchParams(); // chapterDetail can be moduleId or subjectId
   const lesson = chapterDetail; // For backward compatibility
-  const { user } = useAuthStore();
   const { currentSubjectContent, subjectContentLoading, subjectContentError, fetchSubjectContent } = useCourseStore();
 
   console.log('🔍 [chapterDetail].tsx DEBUG:', {

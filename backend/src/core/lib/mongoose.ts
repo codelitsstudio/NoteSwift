@@ -17,17 +17,13 @@ export const connectDB = async () => {
       await mongoose.disconnect();
       isConnected = false;
     } else {
-      console.log('✅ Already connected to MongoDB');
       return;
     }
   }
 
   try {
-    console.log('🔗 Connecting to:', MONGODB_URI.replace(/:[^:@]+@/, ':****@')); // Hide password in logs
     const conn = await mongoose.connect(MONGODB_URI);
     isConnected = true;
-    console.log('✅ Connected to MongoDB:', conn.connection.host);
-    console.log('✅ Database:', conn.connection.name);
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
     process.exit(1);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,28 +30,7 @@ export default function MCQTest() {
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchTestDetails();
-  }, [testId]);
-
-  useEffect(() => {
-    if (!isTestStarted || timeRemaining <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleAutoSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isTestStarted, timeRemaining]);
-
-  const fetchTestDetails = async () => {
+  const fetchTestDetails = useCallback(async () => {
     try {
       setLoading(true);
       const response = await studentTestAPI.getTestDetails(testId);
@@ -87,7 +66,7 @@ export default function MCQTest() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId]);
 
   const startTestAttempt = async () => {
     try {
@@ -109,6 +88,57 @@ export default function MCQTest() {
       Alert.alert('Error', 'Failed to start test attempt');
     }
   };
+
+  const handleAutoSubmit = useCallback(async () => {
+    if (!attemptId) return;
+    
+    try {
+      const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+      const answers = Object.entries(selectedAnswers)
+        .filter(([_, selectedOption]) => selectedOption !== undefined && selectedOption !== null)
+        .map(([questionNumber, selectedOption]) => ({
+          questionNumber: parseInt(questionNumber),
+          answer: ['A', 'B', 'C', 'D'][selectedOption as number], // Convert index to letter
+        }));
+      console.log('📤 Submitting answers:', answers);
+
+      await studentTestAPI.submitTest(testId, { answers, timeSpent });
+      
+      Alert.alert('Time Up!', 'Your test has been automatically submitted.', [
+        {
+          text: 'View Results',
+          onPress: () => {
+            const resultAttemptId = attemptId;
+            router.push(`/Test/TestResult?testId=${testId}&attemptId=${resultAttemptId}` as any);
+          },
+        },
+      ]);
+    } catch (err) {
+      console.error('Error auto-submitting test:', err);
+      Alert.alert('Error', 'Failed to submit test automatically');
+    }
+  }, [attemptId, startTime, selectedAnswers, testId, router]);
+
+  useEffect(() => {
+    fetchTestDetails();
+  }, [testId, fetchTestDetails]);
+
+  useEffect(() => {
+    if (!isTestStarted || timeRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleAutoSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isTestStarted, timeRemaining, handleAutoSubmit]);
 
   if (loading) {
     return (
@@ -165,36 +195,6 @@ export default function MCQTest() {
 
   const handleQuestionJump = (index: number) => {
     setCurrentQuestionIndex(index);
-  };
-
-  const handleAutoSubmit = async () => {
-    if (!attemptId) return;
-    
-    try {
-      const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
-      const answers = Object.entries(selectedAnswers)
-        .filter(([_, selectedOption]) => selectedOption !== undefined && selectedOption !== null)
-        .map(([questionNumber, selectedOption]) => ({
-          questionNumber: parseInt(questionNumber),
-          answer: ['A', 'B', 'C', 'D'][selectedOption as number], // Convert index to letter
-        }));
-      console.log('📤 Submitting answers:', answers);
-
-      const response = await studentTestAPI.submitTest(testId, { answers, timeSpent });
-      
-      Alert.alert('Time Up!', 'Your test has been automatically submitted.', [
-        {
-          text: 'View Results',
-          onPress: () => {
-            const resultAttemptId = attemptId;
-            router.push(`/Test/TestResult?testId=${testId}&attemptId=${resultAttemptId}` as any);
-          },
-        },
-      ]);
-    } catch (err) {
-      console.error('Error auto-submitting test:', err);
-      Alert.alert('Error', 'Failed to submit test automatically');
-    }
   };
 
   const handleSubmit = () => {

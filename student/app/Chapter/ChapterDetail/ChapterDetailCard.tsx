@@ -1,6 +1,6 @@
 // components/ChapterDetail/ChapterDetailCard.tsx
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, ScrollView, FlatList, TouchableOpacity, TextInput, Image } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 import RecordedVideo from "./RecordedVideo";
@@ -8,8 +8,6 @@ import AttachmentPage from "./AttachmentPage";
 import TagPill from "./TagPill";
 import AskQuestionModal from "./AskQuestionModal";
 import api from "@/api/axios";
-import FileSystem from 'expo-file-system';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -78,8 +76,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
   const hasVideo = chapter.hasVideo && videos.length > 0;
   const hasNotes = chapter.hasNotes && chapter.notesUrl;
   const onlyNotes = hasNotes && !hasVideo;
-  const onlyVideo = hasVideo && !hasNotes;
-  const bothContent = hasVideo && hasNotes;
   const hasMultipleVideos = videos.length > 1;
   
   // Set teacher info from props or fetch if not available
@@ -132,7 +128,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
       setLikeCount(likeCountNumeric);
       const likedByUser = Boolean((chapter as any).likedByUser || (chapter as any).liked);
       setLiked(likedByUser);
-    } catch (e) {
+    } catch {
       // ignore and keep defaults
     }
   }, [chapter]);
@@ -148,20 +144,16 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
   
   // Comments state - will be loaded from API
   const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoadingComments, setIsLoadingComments] = useState(false);
 
   // Fetch comments for this chapter
   const fetchComments = async () => {
     try {
-      setIsLoadingComments(true);
       // TODO: Implement API call to fetch comments for this chapter
       // For now, keep empty array
       setComments([]);
     } catch (error) {
       console.error('Error fetching comments:', error);
       setComments([]);
-    } finally {
-      setIsLoadingComments(false);
     }
   };
 
@@ -202,7 +194,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
       if (!signedResp?.data?.success) {
         throw new Error('Failed to get video URL');
       }
-      const { signedUrl, title, downloadUrl } = signedResp.data.data;
+      const { signedUrl, downloadUrl } = signedResp.data.data;
       const safeSubject = subjectName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       const fileName = `${courseId}_${safeSubject}_module${moduleNumber}_video${selectedVideoIndex}_${Date.now()}.mp4`;
       

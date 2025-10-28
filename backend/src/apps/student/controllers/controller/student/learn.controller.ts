@@ -11,7 +11,6 @@ export const getStudentLearnFeed = async(req: Request, res: Response, next: Next
         }
         jsonResponse.success(response);
     } catch (error) {
-        console.log(error);
         jsonResponse.serverError();
     }
 }

@@ -151,7 +151,7 @@ export default function HomePage() {
       // Small delay to ensure data is loaded
       const timeoutId = setTimeout(autoSelectCourse, 100);
       return () => clearTimeout(timeoutId);
-    }, [selectedCourse, enrolledCourses, courses, userClearedSelection])
+    }, [selectedCourse, enrolledCourses, courses, userClearedSelection, selectCourse])
   );
 
   // Pull-to-refresh handler for the whole Learn page

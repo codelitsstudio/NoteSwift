@@ -44,10 +44,30 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
             console.log('✅ Added Authorization header and cookie');
             console.log('📤 Final Authorization header:', config.headers.Authorization?.substring(0, 50) + '...');
+        } else {
+            // Remove any existing Authorization header if token is not available
+            delete config.headers.Authorization;
+            console.log('🚫 No token available - removed Authorization header');
         }
         return config;
     },
     (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Add response interceptor to handle authentication errors
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        // Handle 401 Unauthorized errors
+        if (error.response?.status === 401) {
+            console.log('🚫 401 Unauthorized - clearing auth state');
+            // Clear auth state on 401 errors
+            useAuthStore.getState().logout();
+        }
         return Promise.reject(error);
     }
 );

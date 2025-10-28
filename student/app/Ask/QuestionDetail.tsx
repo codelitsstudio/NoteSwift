@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -16,7 +16,7 @@ export default function QuestionDetail() {
   const [upvoted, setUpvoted] = useState(false);
 
   // Fetch question details
-  const fetchQuestion = async () => {
+  const fetchQuestion = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await api.get(`/questions/${questionId}`);
@@ -33,10 +33,10 @@ export default function QuestionDetail() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [questionId]);
 
   // Fetch related questions
-  const fetchRelatedQuestions = async () => {
+  const fetchRelatedQuestions = useCallback(async () => {
     try {
       const response = await api.get('/questions');
       console.log('Full related questions response:', response.data);
@@ -51,21 +51,21 @@ export default function QuestionDetail() {
     } catch (error) {
       console.error('Error fetching related questions:', error);
     }
-  };
+  }, [questionId, question?.subjectName]);
 
   // Fetch data on component mount
   useEffect(() => {
     if (questionId) {
       fetchQuestion();
     }
-  }, [questionId]);
+  }, [questionId, fetchQuestion]);
 
   // Fetch related questions when question is loaded
   useEffect(() => {
     if (question) {
       fetchRelatedQuestions();
     }
-  }, [question]);
+  }, [question, fetchRelatedQuestions]);
 
   if (isLoading) {
     return (
@@ -86,7 +86,7 @@ export default function QuestionDetail() {
             Question Not Found
           </Text>
           <Text className="text-base text-gray-500 text-center mt-2">
-            The question you're looking for doesn't exist.
+            The question you&apos;re looking for doesn&apos;t exist.
           </Text>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -314,7 +314,7 @@ export default function QuestionDetail() {
               </Text>
               <View className="bg-white rounded-2xl p-4 border border-gray-100">
                 <Text className="text-base text-gray-700 mb-4">
-                  Your question is being reviewed by our teachers. You'll receive a notification when an answer is posted.
+                  Your question is being reviewed by our teachers. You&apos;ll receive a notification when an answer is posted.
                 </Text>
                 <TouchableOpacity
                   activeOpacity={0.7}

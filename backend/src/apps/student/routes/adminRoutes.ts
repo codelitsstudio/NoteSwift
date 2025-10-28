@@ -183,63 +183,6 @@ router.get('/database/export', async (req, res) => {
 });
 
 /**
- * GET /api/admin/enrollments/analytics
- * Gets enrollment analytics
- */
-router.get('/enrollments/analytics', async (req, res) => {
-  try {
-    const analytics = await EnrollmentService.getEnrollmentAnalytics();
-    res.json({
-      success: true,
-      data: analytics
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get enrollment analytics',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-/**
- * POST /api/admin/enrollments/bulk
- * Bulk enrollment of students
- */
-const bulkEnrollmentHandler = async (req: any, res: any) => {
-  try {
-    const { courseId, studentIds } = req.body;
-    
-    if (!courseId || !Array.isArray(studentIds)) {
-      return res.status(400).json({
-        success: false,
-        message: 'courseId and studentIds array are required'
-      });
-    }
-    
-    const result = await EnrollmentService.bulkEnrollStudents(courseId, studentIds, {
-      id: 'system',
-      type: 'admin',
-      name: 'Admin',
-      email: undefined
-    });
-    res.json({
-      success: true,
-      data: result,
-      message: `Bulk enrollment completed: ${result.successful.length} successful, ${result.failed.length} failed`
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Bulk enrollment failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-router.post('/enrollments/bulk', bulkEnrollmentHandler);
-
-/**
  * GET /api/admin/courses/:courseId/stats
  * Gets course enrollment statistics
  */
@@ -255,27 +198,6 @@ router.get('/courses/:courseId/stats', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get course stats',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-/**
- * POST /api/admin/students/:studentId/auto-enroll
- * Auto-enrolls student in featured courses
- */
-router.post('/students/:studentId/auto-enroll', async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    await EnrollmentService.autoEnrollInFeaturedCourses(studentId);
-    res.json({
-      success: true,
-      message: 'Student auto-enrolled in featured courses successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Auto-enrollment failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

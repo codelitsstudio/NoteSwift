@@ -131,15 +131,6 @@ export class DatabaseMaintenanceService {
     try {
       const totalEnrollments = await CourseEnrollment.countDocuments();
       const activeEnrollments = await CourseEnrollment.countDocuments({ isActive: true });
-      const orphanedEnrollments = await this.findOrphanedEnrollments();
-
-      if (orphanedEnrollments.length > 0) {
-        return {
-          status: 'healthy', // Changed from 'warning' to 'healthy' since we don't auto-delete anymore
-          message: `Found ${orphanedEnrollments.length} potentially orphaned enrollments (not auto-deleting)`,
-          details: { totalEnrollments, activeEnrollments, orphanedCount: orphanedEnrollments.length }
-        };
-      }
 
       return {
         status: 'healthy',
@@ -232,83 +223,21 @@ export class DatabaseMaintenanceService {
   }
 
   /**
-   * Finds enrollments that reference non-existent courses or students
-   */
-  private static async findOrphanedEnrollments(): Promise<any[]> {
-    try {
-      const orphaned = await CourseEnrollment.aggregate([
-        {
-          $lookup: {
-            from: 'courses',
-            localField: 'courseId',
-            foreignField: '_id',
-            as: 'course'
-          }
-        },
-        {
-          $lookup: {
-            from: 'students',
-            localField: 'studentId',
-            foreignField: '_id',
-            as: 'student'
-          }
-        },
-        {
-          $match: {
-            $or: [
-              { course: { $size: 0 } },
-              { student: { $size: 0 } }
-            ]
-          }
-        }
-      ]);
-
-      return orphaned;
-    } catch (error) {
-      console.error('Failed to find orphaned enrollments:', error);
-      return [];
-    }
-  }
-
-  /**
    * Performs automatic database maintenance tasks
    */
   static async performMaintenance(): Promise<void> {
     // console.log('🔧 Starting database maintenance...');
     
     try {
-      await this.cleanOrphanedEnrollments();
-      await this.fixProblematicIndexes();
-      await this.updateDerivedFields();
+      // DISABLED: Automatic index management is too dangerous
+      // await this.fixProblematicIndexes();
+      // DISABLED: Automatic timestamp updates are too dangerous
+      // await this.updateDerivedFields();
       
       // console.log('✅ Database maintenance completed successfully');
     } catch (error) {
       console.error('❌ Database maintenance failed:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Removes orphaned enrollments
-   */
-  private static async cleanOrphanedEnrollments(): Promise<void> {
-    try {
-      const orphaned = await this.findOrphanedEnrollments();
-      
-      if (orphaned.length > 0) {
-        // DISABLED: Do not automatically delete orphaned enrollments
-        // This was causing legitimate enrollments to be lost
-        console.log(`⚠️ Found ${orphaned.length} potentially orphaned enrollments - NOT deleting for safety`);
-        console.log('Orphaned enrollment IDs:', orphaned.map(o => o._id.toString()));
-        
-        // Instead of deleting, just log them for manual review
-        // await CourseEnrollment.deleteMany({ _id: { $in: orphanedIds } });
-        // console.log(`🧹 Cleaned ${orphaned.length} orphaned enrollments`);
-      } else {
-        console.log('🧹 No orphaned enrollments found');
-      }
-    } catch (error) {
-      console.error('❌ Failed to clean orphaned enrollments:', error);
     }
   }
 
@@ -330,30 +259,6 @@ export class DatabaseMaintenanceService {
       }
     } catch (error) {
       console.error('❌ Failed to fix problematic indexes:', error);
-    }
-  }
-
-  /**
-   * Updates any derived fields that might be out of sync
-   */
-  private static async updateDerivedFields(): Promise<void> {
-    try {
-      // Update last accessed dates for active enrollments without one
-      const result = await CourseEnrollment.updateMany(
-        { 
-          isActive: true, 
-          lastAccessedAt: { $exists: false } 
-        },
-        { 
-          $set: { lastAccessedAt: new Date() } 
-        }
-      );
-
-      if (result.modifiedCount > 0) {
-        console.log(`🔄 Updated ${result.modifiedCount} enrollment lastAccessedAt fields`);
-      }
-    } catch (error) {
-      console.error('❌ Failed to update derived fields:', error);
     }
   }
 

@@ -140,11 +140,6 @@ const MoreOptionsModal: React.FC<MoreOptionsModalProps> = ({
     return option?.label || 'Options';
   };
 
-  const getSubsectionColor = (section: SubSection) => {
-    const option = mainOptions.find(opt => opt.id === section);
-    return option?.color || '#6B7280';
-  };
-
   const renderMainSection = () => (
     <>
       {/* Reactions Section */}
@@ -273,8 +268,8 @@ const MoreOptionsModal: React.FC<MoreOptionsModalProps> = ({
                 Pro Tip
               </Text>
               <Text className="text-zinc-400 text-xs leading-5">
-                Use the raise hand feature to get the teacher's attention without interrupting. 
-                They'll be notified and can call on you when ready.
+                Use the raise hand feature to get the teacher&apos;s attention without interrupting. 
+                They&apos;ll be notified and can call on you when ready.
               </Text>
             </View>
           </View>

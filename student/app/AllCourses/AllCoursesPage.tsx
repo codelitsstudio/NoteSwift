@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, ScrollView, Text, TouchableOpacity, Pressable } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
@@ -61,7 +61,6 @@ export default function AllCoursesPage() {
   const [expandedSections, setExpandedSections] = useState<string[]>(['see', 'plus2', 'bachelor', 'ctevt']);
   const [viewMode, setViewMode] = useState<'plans' | 'programs'>('programs');
   const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCourses();
@@ -82,8 +81,6 @@ export default function AllCoursesPage() {
       }
     } catch (error) {
       console.error('Failed to fetch courses:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

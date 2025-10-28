@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Animated, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -15,11 +15,11 @@ interface Message {
 interface CourseData {
   courseId: string;
   courseTitle: string;
-  subjects?: Array<{
+  subjects?: {
     name: string;
     description?: string;
     modules?: any[];
-  }>;
+  }[];
   program?: string;
   description?: string;
 }
@@ -52,21 +52,19 @@ export default function AIChatBot() {
   const [selectedSubject, setSelectedSubject] = useState<SubjectData | null>(null);
   const [selectedModule, setSelectedModule] = useState<ModuleData | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [chatHistory, setChatHistory] = useState<Array<{
+  const [chatHistory, setChatHistory] = useState<{
     id: string;
     title: string;
     lastMessage: string;
     timestamp: string;
     courseTitle?: string;
-  }>>([]);
+  }[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string>(Date.now().toString());
   const [showSubjectSelector, setShowSubjectSelector] = useState(false);
   const [showModuleSelector, setShowModuleSelector] = useState(false);
 
   // Animation
   const sidebarAnimation = useRef(new Animated.Value(-320)).current; // -320 is roughly the width of the sidebar
-  const subjectDropdownAnimation = useRef(new Animated.Value(0)).current;
-  const moduleDropdownAnimation = useRef(new Animated.Value(0)).current;
 
   // Generate context-aware suggested questions
   const getSuggestedQuestions = () => {
@@ -274,26 +272,6 @@ export default function AIChatBot() {
       loadChatHistoryFromBackend();
     } catch (error) {
       console.error('Failed to save chat to backend:', error);
-    }
-  };
-
-  const saveChatToHistory = () => {
-    if (messages.length > 1) { // Only save if there are actual messages
-      const chatTitle = messages[1]?.text.slice(0, 50) + (messages[1]?.text.length > 50 ? '...' : '');
-      const lastMessage = messages[messages.length - 1]?.text.slice(0, 100) + (messages[messages.length - 1]?.text.length > 100 ? '...' : '');
-
-      const chatEntry = {
-        id: currentChatId,
-        title: chatTitle || 'New Chat',
-        lastMessage,
-        timestamp: new Date().toISOString(),
-        courseTitle: courseInfo?.courseTitle
-      };
-
-      setChatHistory(prev => {
-        const filtered = prev.filter(chat => chat.id !== currentChatId);
-        return [chatEntry, ...filtered].slice(0, 50); // Keep only last 50 chats
-      });
     }
   };
 

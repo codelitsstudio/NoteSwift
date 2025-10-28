@@ -32,14 +32,14 @@ interface ChapterTabsProps {
   courseId?: string;
   moduleProgress?: {[key: number]: number};
   onRefreshProgress?: (moduleNumber?: number) => void;
-  courseTeachers?: Array<{
+  courseTeachers?: {
     subjectName: string;
     teacher: {
       id: string;
       name: string;
       email: string;
     } | null;
-  }>;
+  }[];
   courseOfferedBy?: string;
 }
 
@@ -329,7 +329,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                   <Text className="text-sm font-medium text-gray-700 mb-2">Question Details</Text>
                   <TextInput
                     className="border border-gray-300 rounded-xl px-4 py-3 text-sm min-h-[120px]"
-                    placeholder="Describe your question in detail. Include what you don't understand, specific examples, or what you've tried..."
+                    placeholder="Describe your question in detail. Include what you don&apos;t understand, specific examples, or what you&apos;ve tried..."
                     value={questionText}
                     onChangeText={setQuestionText}
                     multiline={true}
@@ -358,7 +358,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
                 <View className="bg-gray-50 rounded-lg p-4 mb-6">
                   <Text className="text-sm font-medium text-gray-900 mb-2">Question Guidelines</Text>
                   <View className="space-y-1">
-                    <Text className="text-xs text-gray-600">• Be specific about what you don't understand</Text>
+                    <Text className="text-xs text-gray-600">• Be specific about what you don&apos;t understand</Text>
                     <Text className="text-xs text-gray-600">• Include relevant context or examples</Text>
                     <Text className="text-xs text-gray-600">• Teachers typically respond within 24-48 hours</Text>
                     <Text className="text-xs text-gray-600">• Check notifications for responses</Text>

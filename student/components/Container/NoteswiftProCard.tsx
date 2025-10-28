@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useCourseStore } from '../../stores/courseStore';

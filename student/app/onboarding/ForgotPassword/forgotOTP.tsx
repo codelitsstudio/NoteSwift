@@ -156,7 +156,7 @@ export default function ForgotOTP() {
         text2: 'Please go back and request a new code',
         visibilityTime: 3000,
       });
-    } catch (error: any) {
+    } catch {
       Toast.show({
         type: 'error',
         text1: 'Error',

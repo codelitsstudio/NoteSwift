@@ -6,10 +6,9 @@ import {
   TouchableOpacity,
   GestureResponderEvent,
   Platform,
-  StatusBar,
   TextInput,
   Keyboard,
-  Dimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,8 +19,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNotificationStore } from '../../../stores/notificationStore';
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { redeemUnlockCode } from '../../../api/student/learn';
-import { Constants } from 'expo-constants';
-import * as Application from 'expo-application';
 
 interface Module {
   name: string;
@@ -34,34 +31,47 @@ interface Subject {
   modules: Module[];
 }
 
-interface Package {
-  id: string;
-  title?: string;
-  name?: string;
-  description: string;
-  type: 'free' | 'pro';
-  isFeatured?: boolean;
-  price?: number;
-  skills: string[];
-  learningPoints: string[];
-  subjects?: Subject[];
-  features: string[];
-  offeredBy?: string;
-  keyFeatures?: string[];
-  faq?: {
-    question: string;
-    answer: string;
-  }[];
-}
-
-interface PackageDetailsProps {
-  package: Package;
-}
-
 const PackageDetails = () => {
   const params = useLocalSearchParams();
   const router = useRouter();
   const pkg = params.packageData ? JSON.parse(params.packageData as string) : null;
+
+  // All hooks must be called at the top level, before any early returns
+  const { isEnrolled, enrollInCourse, selectedCourse } = useCourseStore();
+  const { addNotification } = useNotificationStore();
+  
+  // Bottom sheet states and refs
+  const [selectedTrialType, setSelectedTrialType] = useState<'free' | 'paid'>('free');
+  const [paymentMethod, setPaymentMethod] = useState<string>('khalti');
+  const [unlockCode, setUnlockCode] = useState<string>('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => keyboardVisible ? ['95%'] : ['55%'], [keyboardVisible]);
+
+  const [expandedSubject, setExpandedSubject] = useState<number>(0);
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+
+  // Keyboard handling for bottom sheet
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // Predefined key features options (matching admin interface)
   const availableKeyFeatures = [
@@ -118,42 +128,6 @@ const PackageDetails = () => {
       </SafeAreaView>
     );
   }
-  const { isEnrolled, enrollInCourse, selectedCourse } = useCourseStore();
-  const { addNotification } = useNotificationStore();
-  
-  // Bottom sheet states and refs
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [selectedTrialType, setSelectedTrialType] = useState<'free' | 'paid'>('free');
-  const [paymentMethod, setPaymentMethod] = useState<string>('khalti');
-  const [unlockCode, setUnlockCode] = useState<string>('');
-  const [isRedeeming, setIsRedeeming] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => keyboardVisible ? ['95%'] : ['55%'], [keyboardVisible]);
-
-  const [expandedSubject, setExpandedSubject] = useState<number>(0);
-  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
-
-  // Keyboard handling for bottom sheet
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
-        setKeyboardVisible(true);
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardVisible(false);
-      }
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
 
   // FAQ Data
   const faqsData = [
@@ -180,45 +154,6 @@ const PackageDetails = () => {
   ];
 
   const toggleFaq = (question: string) => setExpandedFaq(expandedFaq === question ? null : question);
-
-  // Generate signed URL for video access
-  const generateDeviceFingerprint = async () => {
-    try {
-      const deviceInfo = {
-        platform: Platform.OS,
-        version: Platform.Version,
-        appId: Application.applicationId,
-        appVersion: Application.nativeApplicationVersion,
-        buildVersion: Application.nativeBuildVersion,
-        installationTime: Application.getInstallationTimeAsync ?
-          (await Application.getInstallationTimeAsync()).getTime() : Date.now(),
-        timestamp: Date.now(),
-      };
-
-      // Create a simple hash from device information
-      const deviceString = JSON.stringify(deviceInfo);
-      let hash = 0;
-      for (let i = 0; i < deviceString.length; i++) {
-        const char = deviceString.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-      }
-
-      // Convert to positive hex string and take first 32 characters
-      return Math.abs(hash).toString(16).padStart(16, '0').substring(0, 32);
-    } catch (error) {
-      console.warn('Failed to generate device fingerprint, using fallback:', error);
-      // Fallback to a simple hash
-      const fallbackString = `${Platform.OS}-${Application.applicationId || 'unknown'}-${Date.now()}`;
-      let hash = 0;
-      for (let i = 0; i < fallbackString.length; i++) {
-        const char = fallbackString.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-      }
-      return Math.abs(hash).toString(16).substring(0, 16);
-    }
-  };
 
   const handleRedeemCode = async () => {
     if (!unlockCode.trim()) {
@@ -259,7 +194,7 @@ const PackageDetails = () => {
     setIsRedeeming(true);
     try {
       // Call redeemUnlockCode without device hash - enrollment is account-based
-      const result = await redeemUnlockCode(unlockCode.trim(), pkg.id);
+      await redeemUnlockCode(unlockCode.trim(), pkg.id);
       
       Toast.show({
         type: 'success',
@@ -611,7 +546,6 @@ const PackageDetails = () => {
                   <TouchableOpacity
                     onPress={() => {
                       setSelectedTrialType('free');
-                      setShowCheckout(true);
                       bottomSheetRef.current?.present();
                     }}
                     className="w-40 py-4 rounded-3xl border border-blue-500 bg-white mr-4"
@@ -623,7 +557,6 @@ const PackageDetails = () => {
                   <TouchableOpacity
                     onPress={() => {
                       setSelectedTrialType('paid');
-                      setShowCheckout(true);
                       bottomSheetRef.current?.present();
                     }}
                     className="w-40 py-4 rounded-3xl bg-blue-500"
@@ -649,7 +582,6 @@ const PackageDetails = () => {
           index={0}
           snapPoints={snapPoints}
           onDismiss={() => {
-            setShowCheckout(false);
             Keyboard.dismiss();
           }}
           backgroundStyle={{ backgroundColor: '#fff' }}
@@ -666,7 +598,6 @@ const PackageDetails = () => {
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-xl font-bold text-gray-800">Checkout</Text>
               <TouchableOpacity onPress={() => {
-                setShowCheckout(false);
                 bottomSheetRef.current?.dismiss();
               }}>
                 <MaterialIcons name="close" size={24} color="#6B7280" />
@@ -778,6 +709,14 @@ const PackageDetails = () => {
                     returnKeyType="done"
                     onSubmitEditing={handleRedeemCode}
                   />
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL('https://noteswift.codelitsstudio.com')}
+                    className="mt-2"
+                  >
+                    <Text className="text-blue-600 text-sm text-center underline">
+                      Don&apos;t have a code? Click here
+                    </Text>
+                  </TouchableOpacity>
                 </View>
                 <TouchableOpacity
                   className={`py-4 rounded-3xl mb-4 ${isRedeeming ? 'bg-gray-400' : 'bg-blue-500'}`}

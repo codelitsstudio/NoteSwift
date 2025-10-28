@@ -14,35 +14,30 @@ interface SubjectTabsProps {
   courseKey?: string;
   enrollment?: {
     progress: number;
-    moduleProgress?: Array<{
+    moduleProgress?: {
       moduleNumber: number;
       videoCompleted: boolean;
       notesCompleted: boolean;
       progress: number;
-    }>;
+    }[];
   };
   courseOfferedBy?: string;
-  courseTeachers?: Array<{
+  courseTeachers?: {
     subjectName: string;
     teacher: {
       id: string;
       name: string;
       email: string;
     } | null;
-  }>;
+  }[];
 }
 
 export default function SubjectTabs({ packageData, courseKey = 'course-1', enrollment, courseOfferedBy, courseTeachers }: SubjectTabsProps) {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedFilter, setSelectedFilter] = React.useState<'all' | 'science' | 'language' | 'other'>('all');
 
-  // Filter subjects based on search and category
+  // Filter subjects based on category
   const filteredSubjects = packageData.subjects.filter((subject) => {
-    const matchesSearch = searchQuery.trim() === '' || 
-      subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      subject.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
     let matchesFilter = true;
     if (selectedFilter === 'science') {
       matchesFilter = ['Physics', 'Chemistry', 'Biology', 'Science'].some(name => 
@@ -58,7 +53,7 @@ export default function SubjectTabs({ packageData, courseKey = 'course-1', enrol
       );
     }
     
-    return matchesSearch && matchesFilter;
+    return matchesFilter;
   });
 
   const SubjectCard = ({ subject, index }: { subject: Subject; index: number }) => {

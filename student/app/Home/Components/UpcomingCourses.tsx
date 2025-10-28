@@ -3,7 +3,6 @@ import { View, Text, ScrollView, Image, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import axios from "@/api/axios";
 import CourseMiniCard from "../../../components/Container/CourseMiniCard";
-import { useCourseStore } from "../../../stores/courseStore";
 
 interface Course {
   _id: string;
@@ -23,7 +22,6 @@ interface Course {
 export default function UpcomingCourses() {
   const [homepageUpcomingCourses, setHomepageUpcomingCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const { courses } = useCourseStore();
 
   // Fetch homepage upcoming courses
   const fetchHomepageUpcomingCourses = async () => {

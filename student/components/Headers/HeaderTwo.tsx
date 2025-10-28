@@ -3,34 +3,13 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Share,
-  Platform,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, usePathname } from "expo-router";
+import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function HeaderTwo({ title }: { title?: string }) {
   const router = useRouter();
-  const pathname = usePathname(); // Get current route path
-
-  const handleShare = async () => {
-    // Construct full URL of the current page
-    const urlToShare = `https://noteswift.in${pathname}`;
-    try {
-      await Share.share(
-        Platform.select({
-          ios: { url: urlToShare },
-          default: { message: urlToShare },
-        }) as any
-      );
-    } catch {
-      Linking.openURL(urlToShare).catch(() =>
-        console.warn("Cannot open URL:", urlToShare)
-      );
-    }
-  };
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} className="bg-white ">

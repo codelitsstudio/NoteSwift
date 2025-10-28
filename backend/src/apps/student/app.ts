@@ -35,17 +35,18 @@ async function initializeDatabase() {
         const healthCheck = await DatabaseMaintenanceService.performHealthCheck();
         // console.log(`📊 Database health: ${healthCheck.overall.toUpperCase()}`);
 
+        // DISABLED: Automatic maintenance on startup is too dangerous
         // Perform maintenance if needed
-        if (healthCheck.overall !== 'healthy') {
-            // console.log('🔧 Performing database maintenance...');
-            await DatabaseMaintenanceService.performMaintenance();
-        }
+        // if (healthCheck.overall !== 'healthy') {
+        //     // console.log('🔧 Performing database maintenance...');
+        //     await DatabaseMaintenanceService.performMaintenance();
+        // }
 
         // Seed database with essential data
         await DatabaseSeeder.seedDatabase();
 
-        // Validate database integrity
-        await DatabaseSeeder.validateDatabase();
+        // DISABLED: Database validation removed for production safety
+        // await DatabaseSeeder.validateDatabase();
 
         // console.log('✅ Database initialization completed successfully');
 

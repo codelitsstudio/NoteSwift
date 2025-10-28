@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
   Alert,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { studentTestAPI, TestDetail } from '../../api/student/test';
-
-const { width, height } = Dimensions.get('window');
 
 export default function PDFTest() {
   const router = useRouter();
@@ -20,8 +17,6 @@ export default function PDFTest() {
   const testId = params.testId as string;
 
   const [testDetail, setTestDetail] = useState<TestDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
 
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -32,93 +27,20 @@ export default function PDFTest() {
   const [startTime, setStartTime] = useState<number | null>(null);
   const totalPages = 10; // Default for PDF viewer, would be determined by actual PDF in real implementation
 
-  useEffect(() => {
-    fetchTestDetails();
-  }, [testId]);
-
-  useEffect(() => {
-    if (!isTestStarted || timeRemaining <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleAutoSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isTestStarted, timeRemaining]);
-
-  const fetchTestDetails = async () => {
+  const fetchTestDetails = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await studentTestAPI.getTestDetails(testId);
       if (response.success && response.data) {
         setTestDetail(response.data);
         // Set timer based on test duration (convert minutes to seconds)
         setTimeRemaining(response.data.duration * 60);
-      } else {
-        setError('Failed to load test details');
       }
     } catch (err) {
       console.error('Error fetching test details:', err);
-      setError('Failed to load test details');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [testId]);
 
-  const startTestAttempt = async () => {
-    try {
-      const response = await studentTestAPI.startTestAttempt(testId);
-      if (response.success && response.data) {
-        setAttemptId(response.data.attemptId);
-        setIsTestStarted(true);
-        setStartTime(Date.now());
-      } else {
-        Alert.alert('Error', 'Failed to start test attempt');
-      }
-    } catch (err) {
-      console.error('Error starting test:', err);
-      Alert.alert('Error', 'Failed to start test attempt');
-    }
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
-        <View className="flex-1 items-center justify-center">
-          <MaterialIcons name="refresh" size={48} color="#9CA3AF" />
-          <Text className="text-lg text-gray-600 mt-4">Loading test...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error || !testDetail) {
-    return (
-      <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
-        <View className="flex-1 items-center justify-center">
-          <MaterialIcons name="error-outline" size={64} color="#9CA3AF" />
-          <Text className="text-lg text-gray-600 mt-4">
-            {error || 'Test not found'}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleAutoSubmit = async () => {
+  const handleAutoSubmit = useCallback(async () => {
     if (!attemptId) return;
     
     try {
@@ -135,6 +57,43 @@ export default function PDFTest() {
     } catch (err) {
       console.error('Error auto-submitting test:', err);
       Alert.alert('Error', 'Failed to submit test automatically');
+    }
+  }, [attemptId, startTime, testId, router]);
+
+  useEffect(() => {
+    fetchTestDetails();
+  }, [fetchTestDetails]);
+
+  useEffect(() => {
+    if (!isTestStarted || timeRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleAutoSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isTestStarted, timeRemaining, handleAutoSubmit]);
+
+  const startTestAttempt = async () => {
+    try {
+      const response = await studentTestAPI.startTestAttempt(testId);
+      if (response.success && response.data) {
+        setAttemptId(response.data.attemptId);
+        setIsTestStarted(true);
+        setStartTime(Date.now());
+      } else {
+        Alert.alert('Error', 'Failed to start test attempt');
+      }
+    } catch (err) {
+      console.error('Error starting test:', err);
+      Alert.alert('Error', 'Failed to start test attempt');
     }
   };
 
@@ -171,6 +130,12 @@ export default function PDFTest() {
     router.back();
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Start Test Screen
   if (!isTestStarted) {
     return (
@@ -185,7 +150,7 @@ export default function PDFTest() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-xl font-bold text-gray-900 mb-0.5">
-                    {testDetail.title}
+                    {testDetail!.title}
                   </Text>
                   <Text className="text-sm text-gray-600">
                     PDF Test
@@ -198,7 +163,7 @@ export default function PDFTest() {
                 <View className="items-center">
                   <Text className="text-sm text-gray-500 mb-1">Questions</Text>
                   <Text className="text-base font-semibold text-gray-900">
-                    {testDetail.totalQuestions}
+                    {testDetail!.totalQuestions}
                   </Text>
                 </View>
                 
@@ -207,7 +172,7 @@ export default function PDFTest() {
                 <View className="items-center">
                   <Text className="text-sm text-gray-500 mb-1">Duration</Text>
                   <Text className="text-base font-semibold text-gray-900">
-                    {testDetail.duration} min
+                    {testDetail!.duration} min
                   </Text>
                 </View>
                 
@@ -216,7 +181,7 @@ export default function PDFTest() {
                 <View className="items-center">
                   <Text className="text-sm text-gray-500 mb-1">Total Marks</Text>
                   <Text className="text-base font-semibold text-gray-900">
-                    {testDetail.totalMarks}
+                    {testDetail!.totalMarks}
                   </Text>
                 </View>
               </View>
@@ -257,7 +222,7 @@ export default function PDFTest() {
                     About this test
                   </Text>
                   <Text className="text-xs text-gray-700">
-                    {testDetail.description}
+                    {testDetail!.description}
                   </Text>
                 </View>
               </View>
@@ -292,7 +257,7 @@ export default function PDFTest() {
           </TouchableOpacity>
 
           <Text className="text-sm font-bold text-gray-900">
-            {testDetail.title}
+            {testDetail!.title}
           </Text>
 
           {/* Timer */}
@@ -389,9 +354,9 @@ export default function PDFTest() {
             className="flex-1 bg-gray-100 py-2.5 rounded-xl flex-row items-center justify-center"
             activeOpacity={0.7}
             onPress={() => {
-              if (testDetail.pdfUrl) {
+              if (testDetail!.pdfUrl) {
                 // In a real implementation, this would open/download the PDF
-                Alert.alert('Download', `PDF would be downloaded: ${testDetail.pdfFileName || 'test.pdf'}`);
+                Alert.alert('Download', `PDF would be downloaded: ${testDetail!.pdfFileName || 'test.pdf'}`);
               } else {
                 Alert.alert('Error', 'PDF not available');
               }

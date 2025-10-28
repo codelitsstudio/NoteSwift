@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Image, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import CourseMiniCard from "../../../components/Container/CourseMiniCard";
-import { useCourseStore } from "../../../stores/courseStore";
 import { useAuthStore } from "../../../stores/authStore";
 import axios from "../../../api/axios";
 
@@ -78,7 +77,7 @@ export default function RecommendationClasses() {
             Recommendations coming soon!
           </Text>
           <Text className="text-sm text-gray-500 mt-1 text-center px-4">
-            We're analyzing courses to find the perfect matches for your grade.
+            We&apos;re analyzing courses to find the perfect matches for your grade.
           </Text>
         </View>
       </View>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, Linking, ActivityIndicator, Modal, Image } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Modal, Image } from 'react-native';
 import api from '../api/axios';
 
 interface AppBlockProps {
@@ -16,7 +15,6 @@ interface AppUpdateStatus {
 const AppBlock: React.FC<AppBlockProps> = ({ children }) => {
   const [updateStatus, setUpdateStatus] = useState<AppUpdateStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
 
   const checkAppUpdateStatus = async () => {
     try {
@@ -36,14 +34,6 @@ const AppBlock: React.FC<AppBlockProps> = ({ children }) => {
   useEffect(() => {
     checkAppUpdateStatus();
   }, []);
-
-
-
-  const handleRetry = () => {
-    setLoading(true);
-    setRetryCount(prev => prev + 1);
-    checkAppUpdateStatus();
-  };
 
   if (loading) {
     return (

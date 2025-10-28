@@ -113,7 +113,6 @@ export default function HomePage() {
     fetchFeaturedCourse, 
     fetchUserEnrollments,
     fetchAllCourses,
-    checkAndShowPopup,
   } = useCourseStore();
 
   // Check if permissions have been requested before
@@ -219,7 +218,7 @@ export default function HomePage() {
         topOffset: 50,
       });
     }
-  }, [user, isInitialized, fetchFeaturedCourse, fetchUserEnrollments, checkAndShowPopup]);
+  }, [user, isInitialized, fetchFeaturedCourse, fetchUserEnrollments, fetchAllCourses]);
 
   // Initialize data when screen focuses or user logs in
   useFocusEffect(

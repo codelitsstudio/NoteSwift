@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,7 +26,7 @@ export default function SubjectPage() {
   });
   
   // Function to fetch and set subject content
-  const fetchSubjectContent = async () => {
+  const fetchSubjectContent = useCallback(async () => {
     try {
       // Use course ID for API call - try selectedCourse first, then courseKey
       const courseId = selectedCourse?._id || selectedCourse?.id || 
@@ -41,12 +41,12 @@ export default function SubjectPage() {
     } catch (error) {
       console.error('❌ Error fetching subject content:', error);
     }
-  };
+  }, [selectedCourse, courseKey, subjectId, fetchSubjectContentFromStore]);
   
   // Fetch subject content when component mounts or when data changes
   useEffect(() => {
     fetchSubjectContent();
-  }, [subjectId, courseKey, selectedCourse]);
+  }, [subjectId, courseKey, selectedCourse, fetchSubjectContent]);
   
   // Fetch course teachers
   useEffect(() => {

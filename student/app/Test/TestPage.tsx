@@ -1,12 +1,11 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import PrimaryNav from '@/components/Navigation/PrimaryNav';
 import Skeleton from '../../components/Container/Skeleton';
 import { useFocusEffect } from '@react-navigation/native';
-import CourseCard from './components/CourseCard';
 import TestCard from './components/TestCard';
 import { studentTestAPI, Test } from '../../api/student/test';
 import { useCourseStore } from '../../stores/courseStore';
@@ -25,7 +24,6 @@ export default function TestPage() {
 
   // Subject content state
   const [subjectContents, setSubjectContents] = useState<any>({});
-  const [loadingSubjectContents, setLoadingSubjectContents] = useState(false);
 
   // Set loading state immediately when page is focused
   useFocusEffect(
@@ -41,7 +39,6 @@ export default function TestPage() {
       if (!selectedCourse?._id && !selectedCourse?.id) return;
       if (!selectedCourse.subjects || selectedCourse.subjects.length === 0) return;
 
-      setLoadingSubjectContents(true);
       const courseId = selectedCourse._id || selectedCourse.id;
       const contents: any = {};
 
@@ -64,8 +61,6 @@ export default function TestPage() {
         console.log('📚 All subject contents loaded:', Object.keys(contents).length);
       } catch (error) {
         console.error('❌ Error fetching subject contents:', error);
-      } finally {
-        setLoadingSubjectContents(false);
       }
     };
 
@@ -96,19 +91,21 @@ export default function TestPage() {
     : tests;
     
   // Transform subjects with enriched content
-  const courseSubjects = selectedCourse?.subjects?.map((subject: any) => {
-    // Get subject content data if available
-    const subjectContent = subjectContents[subject.name];
-    
-    // Use subject content modules if available, otherwise fall back to course subject modules
-    const subjectModules = subjectContent?.modules || subject.modules || [];
-    
-    return {
-      ...subject,
-      modules: subjectModules,
-      description: subjectContent?.description || subject.description || 'Subject description and modules',
-    };
-  }) || [];
+  const courseSubjects = useMemo(() => {
+    return selectedCourse?.subjects?.map((subject: any) => {
+      // Get subject content data if available
+      const subjectContent = subjectContents[subject.name];
+      
+      // Use subject content modules if available, otherwise fall back to course subject modules
+      const subjectModules = subjectContent?.modules || subject.modules || [];
+      
+      return {
+        ...subject,
+        modules: subjectModules,
+        description: subjectContent?.description || subject.description || 'Subject description and modules',
+      };
+    }) || [];
+  }, [selectedCourse, subjectContents]);
 
   // Debug effect to monitor subject data
   useEffect(() => {

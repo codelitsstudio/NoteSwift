@@ -80,13 +80,6 @@ export const signUpStudent: Controller = async (req, res, next) => {
         // Generate a permanent avatar emoji for this user
         const avatarEmoji = getRandomAvatarEmoji();
 
-        console.log('🔐 Signup Debug:');
-        console.log('- Password provided:', !!body.password);
-        console.log('- Password length:', body.password ? body.password.length : 'N/A');
-        console.log('- Encrypted password exists:', !!encrypted_password);
-        console.log('- Encrypted password length:', encrypted_password ? encrypted_password.length : 'N/A');
-        console.log('- Encrypted password starts with $2:', encrypted_password ? encrypted_password.startsWith('$2') : 'N/A');
-
         const studentData = {
             address: body.address,
             full_name: body.full_name,
@@ -96,11 +89,6 @@ export const signUpStudent: Controller = async (req, res, next) => {
             phone_number: body.phone_number,
             avatarEmoji: avatarEmoji,
         };
-
-        console.log('📝 Student data before creating:', {
-            ...studentData,
-            password: studentData.password ? '[HIDDEN]' : 'MISSING'
-        });
 
         const student = new Student({
             address: body.address,
@@ -112,23 +100,7 @@ export const signUpStudent: Controller = async (req, res, next) => {
             avatarEmoji: avatarEmoji,
         });
 
-        console.log('🆕 Student instance created');
-        console.log('- Student password before save:', !!student.password);
-        console.log('- Student password length before save:', student.password ? student.password.length : 'N/A');
-        console.log('- Student password value before save:', student.password ? student.password.substring(0, 10) + '...' : 'N/A');
-
         await student.save();
-        
-        console.log('✅ Student saved successfully');
-        console.log('- Student ID:', student._id);
-        console.log('- Student password after save:', !!student.password);
-        console.log('- Student password length after save:', student.password ? student.password.length : 'N/A');
-
-        // Check if password exists in the saved document
-        const savedStudent = await Student.findById(student._id).select('+password');
-        console.log('🔍 Password in database after save:', !!savedStudent?.password);
-        console.log('🔍 Password length in database:', savedStudent?.password ? savedStudent.password.length : 'N/A');
-        console.log('🔍 Password value in database:', savedStudent?.password ? savedStudent.password.substring(0, 10) + '...' : 'N/A');
         const session: SessionPayload = {
             user_id: student._id.toString(),
             role: "student"
@@ -239,34 +211,22 @@ export const verifyRegistrationOTP: Controller = async (req, res, next) => {
 
 export const loginStudent: Controller = async (req, res, next) => {
     const jsonResponse = new JsonResponse(res);
-    console.log('🔑 LOGIN ATTEMPT:', req.body.email);
-
     try {
         const body: LoginStudent.Req = req.body;
         const secret = process.env.SESSION_SECRET;
-
-        console.log('🔍 Login Debug:');
-        console.log('- Email provided:', !!body.email);
-        console.log('- Password provided:', !!body.password);
-        console.log('- Device fingerprint provided:', !!body.deviceFingerprint);
-        console.log('- Secret available:', !!secret);
 
         if (!secret) throw new Error("No session secret provided");
 
         // Validate input
         if (!body.email || !body.password) {
-            console.log('❌ Missing email or password');
             jsonResponse.clientError("Email or password missing");
             return;
         }
 
         // Find student - explicitly select password field
-        console.log('🔍 Searching for student with email:', body.email);
         const student = await Student.findOne({ email: body.email.toLowerCase() }).select('+password');
         
-        // Alternative method to ensure password is retrieved
         if (!student) {
-            console.log('❌ Student not found for email:', body.email);
             // Log failed login attempt
             await auditLogger.logLogin(
                 'unknown',
@@ -284,95 +244,46 @@ export const loginStudent: Controller = async (req, res, next) => {
             return;
         }
 
-        // Force reload the password field if not present
-        if (!student.password && !student.get('password')) {
-            console.log('🔄 Password field missing, reloading student with password...');
-            const studentWithPassword = await Student.findById(student._id).select('+password');
-            if (studentWithPassword) {
-                student.password = studentWithPassword.password;
-                console.log('✅ Password field reloaded successfully');
-            }
-        }
-
-        console.log('✅ Student found:', student._id);
-        console.log('🔍 Student object keys:', Object.keys(student));
-        console.log('🔍 Student _doc keys:', Object.keys(student._doc || {}));
-        console.log('🔍 Student password in _doc:', !!(student._doc && student._doc.password));
-        console.log('🔍 Student password exists:', !!student.password);
-        console.log('🔍 Student password type:', typeof student.password);
-        console.log('🔍 Student password length:', student.password ? student.password.length : 'N/A');
-
-        // Try accessing password directly from _doc if needed
-        const passwordField = student.password || student.get('password') || (student._doc && student._doc.password);
-
-        console.log('🔍 Password field value exists:', !!passwordField);
-        console.log('🔍 Password field type:', typeof passwordField);
-        console.log('🔍 Password field length:', passwordField ? passwordField.length : 'N/A');
-        console.log('🔍 Password field starts with $2:', passwordField ? passwordField.startsWith('$2') : 'N/A');
-
         // Check if student has a password field
-        if (!passwordField) {
-            console.log('❌ Student has no password field - account may need password reset');
+        if (!student.password) {
             jsonResponse.clientError("Account setup incomplete. Please use 'Forgot Password' to set up your password.");
             return;
         }
 
         // Compare password
-        console.log('🔐 Comparing password...');
-        console.log('🔐 Request password exists:', !!body.password);
-        console.log('🔐 Request password type:', typeof body.password);
-        console.log('🔐 Request password length:', body.password ? body.password.length : 'N/A');
+        const match = await bcrypt.compare(body.password, student.password);
 
-        try {
-            const match = await bcrypt.compare(body.password, passwordField);
-            console.log('🔐 Bcrypt compare result:', match);
-
-            if (!match) {
-                console.log('❌ Password mismatch');
-                // Log failed login attempt
-                await auditLogger.logLogin(
-                    student._id.toString(),
-                    'student',
-                    student.full_name || student.email,
-                    student.email,
-                    false,
-                    {
-                        ipAddress: req.ip || req.connection.remoteAddress,
-                        userAgent: req.get('User-Agent'),
-                        reason: 'Invalid password'
-                    }
-                );
-                jsonResponse.clientError("Invalid password");
-                return;
-            }
-        } catch (bcryptError) {
-            console.log('🚨 Bcrypt compare error:', bcryptError);
-            jsonResponse.serverError("Authentication error");
+        if (!match) {
+            // Log failed login attempt
+            await auditLogger.logLogin(
+                student._id.toString(),
+                'student',
+                student.full_name || student.email,
+                student.email,
+                false,
+                {
+                    ipAddress: req.ip || req.connection.remoteAddress,
+                    userAgent: req.get('User-Agent'),
+                    reason: 'Invalid password'
+                }
+            );
+            jsonResponse.clientError("Invalid password");
             return;
         }
 
-        console.log('✅ Password match successful');
-
         // DEVICE BINDING SECURITY CHECK
-        console.log('🔐 Checking device binding...');
         const currentDeviceFingerprint = body.deviceFingerprint;
 
         if (!currentDeviceFingerprint) {
-            console.log('❌ No device fingerprint provided');
             jsonResponse.clientError("Device verification required. Please update your app.");
             return;
         }
 
         // Check if student already has a device fingerprint (first login)
         if (!student.deviceFingerprint) {
-            console.log('📱 First login - binding device fingerprint');
             // This is the first login, bind this device
             student.deviceFingerprint = currentDeviceFingerprint;
         } else if (student.deviceFingerprint !== currentDeviceFingerprint) {
-            console.log('🚨 Device fingerprint mismatch - potential security breach');
-            console.log('Stored fingerprint:', student.deviceFingerprint.substring(0, 8) + '...');
-            console.log('Provided fingerprint:', currentDeviceFingerprint.substring(0, 8) + '...');
-
             // Log security breach attempt
             await auditLogger.logSystemEvent(
                 'device_binding_violation',
@@ -393,8 +304,6 @@ export const loginStudent: Controller = async (req, res, next) => {
 
             jsonResponse.clientError("Security policy violation: This account is already bound to another device. Please logout from your other device first or contact support.");
             return;
-        } else {
-            console.log('✅ Device fingerprint verified');
         }
 
         // Update last login time
@@ -402,12 +311,9 @@ export const loginStudent: Controller = async (req, res, next) => {
         await student.save();
 
         // Generate token
-        console.log('🎫 Generating JWT token...');
         const token = jwt.sign({ user_id: student._id.toString(), role: "student" }, secret, {
             expiresIn: "10d"
         });
-
-        console.log('✅ Token generated, length:', token.length);
 
         res.cookie("session", token, options);
 
@@ -431,11 +337,10 @@ export const loginStudent: Controller = async (req, res, next) => {
             }
         );
 
-        console.log('✅ Login successful, sending response');
         jsonResponse.success(response);
 
     } catch (error) {
-        console.log('🚨 Login error:', error);
+        console.error('🚨 Login error:', error);
         jsonResponse.serverError();
     }
 };
@@ -445,7 +350,6 @@ export const sendEmailRegistrationOTP: Controller = async (req, res, next) => {
     const jsonResponse = new JsonResponse(res);
     try {
         const { email } = req.body;
-        console.log("🔍 Checking email registration for:", email);
 
         if (!email) {
             jsonResponse.clientError("Email address is required");
@@ -461,14 +365,11 @@ export const sendEmailRegistrationOTP: Controller = async (req, res, next) => {
 
         // Check if email already exists
         const existingStudent = await Student.findOne({ email: email.toLowerCase() });
-        console.log("📊 Existing student found:", !!existingStudent);
         if (existingStudent) {
-            console.log("❌ Email already registered, returning error");
             jsonResponse.clientError("Email address already registered");
             return;
         }
 
-        console.log("✅ Email available, sending OTP");
         // Send OTP
         const result = await emailOTPService.sendEmailOTP(email);
         
@@ -520,7 +421,6 @@ export const getCurrentStudent: Controller = (req, res, next) => {
         }
         jsonResponse.success(student);
     } catch (error) {
-        console.log(error);
         jsonResponse.serverError();
     }
 }
@@ -653,8 +553,6 @@ export const uploadProfileImage: Controller = async (req, res, next) => {
         const student = res.locals.student; // From authentication middleware
         const { imageData } = req.body;
 
-        console.log('📸 Profile image upload request for user:', student._id);
-
         // Validate image data
         if (!imageData) {
             jsonResponse.clientError("Image data is required");
@@ -679,8 +577,6 @@ export const uploadProfileImage: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log(`📏 Image size: ${(sizeInBytes / (1024 * 1024)).toFixed(1)}MB`);
-
         // Extract the old profile image public_id if exists
         let oldPublicId: string | null = null;
         if (student.profileImage) {
@@ -692,7 +588,6 @@ export const uploadProfileImage: Controller = async (req, res, next) => {
         }
 
         // Upload new image to Cloudinary
-        console.log('☁️ Uploading to Cloudinary...');
         const uploadResult = await CloudinaryService.uploadProfileImage(imageData, student._id.toString());
 
         // Update student profile with new image URL
@@ -710,15 +605,12 @@ export const uploadProfileImage: Controller = async (req, res, next) => {
         // Delete old image from Cloudinary (if exists)
         if (oldPublicId) {
             CloudinaryService.deleteProfileImage(oldPublicId).catch(err => {
-                console.error('Failed to delete old profile image:', err);
                 // Don't fail the request if old image deletion fails
             });
         }
 
         // Remove sensitive data before sending response
         const { password, ...studentData } = updatedStudent.toObject();
-
-        console.log('✅ Profile image updated successfully for user:', student._id);
 
         jsonResponse.success({
             message: "Profile image updated successfully",
@@ -727,7 +619,7 @@ export const uploadProfileImage: Controller = async (req, res, next) => {
         });
 
     } catch (error: any) {
-        console.error("❌ Error uploading profile image:", error);
+        console.error("Error uploading profile image:", error);
         
         // Handle specific error types
         if (error.message) {
@@ -761,8 +653,6 @@ export const sendCurrentEmailVerification: Controller = async (req, res, next) =
             jsonResponse.notAuthorized("Authentication required");
             return;
         }
-
-        console.log('📧 Sending verification code to current email:', student.email);
 
         // Send OTP to current email
         const result = await emailOTPService.sendEmailOTP(student.email);
@@ -799,8 +689,6 @@ export const verifyCurrentEmail: Controller = async (req, res, next) => {
             jsonResponse.clientError("Verification code is required");
             return;
         }
-
-        console.log('🔐 Verifying current email OTP for user:', student._id);
 
         // Verify OTP for current email
         const otpResult = await emailOTPService.verifyEmailOTP(student.email, otp_code);
@@ -862,8 +750,6 @@ export const sendNewEmailVerification: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('📧 Sending verification code to new email:', newEmail);
-
         // Send OTP to new email
         const result = await emailOTPService.sendEmailOTP(newEmail);
         
@@ -900,8 +786,6 @@ export const verifyNewEmailAndUpdate: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('🔐 Verifying new email OTP and updating:', newEmail);
-
         // Verify OTP for new email
         const otpResult = await emailOTPService.verifyEmailOTP(newEmail, otp_code);
         
@@ -936,8 +820,6 @@ export const verifyNewEmailAndUpdate: Controller = async (req, res, next) => {
         // Remove sensitive data
         const { password, ...studentData } = updatedStudent.toObject();
 
-        console.log('✅ Email updated successfully for user:', student._id);
-
         jsonResponse.success({
             message: "Email address updated successfully",
             student: studentData,
@@ -970,8 +852,6 @@ export const verifyCurrentPassword: Controller = async (req, res, next) => {
             jsonResponse.clientError("Current password is required");
             return;
         }
-
-        console.log('🔐 Verifying current password for user:', student._id);
 
         // Get full student data with password
         const fullStudent = await Student.findById(student._id).select('+password');
@@ -1026,8 +906,6 @@ export const changePasswordWithCurrent: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('🔒 Changing password with current verification for user:', student._id);
-
         // Get full student data with password
         const fullStudent = await Student.findById(student._id).select('+password');
         if (!fullStudent) {
@@ -1059,8 +937,6 @@ export const changePasswordWithCurrent: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('✅ Password changed successfully for user:', student._id);
-
         jsonResponse.success({
             message: "Password changed successfully"
         });
@@ -1081,8 +957,6 @@ export const sendForgotPasswordOTP: Controller = async (req, res, next) => {
             jsonResponse.notAuthorized("Authentication required");
             return;
         }
-
-        console.log('📧 Sending forgot password OTP to:', student.email);
 
         // Send OTP to current email
         const result = await emailOTPService.sendEmailOTP(student.email);
@@ -1119,8 +993,6 @@ export const verifyForgotPasswordOTP: Controller = async (req, res, next) => {
             jsonResponse.clientError("Verification code is required");
             return;
         }
-
-        console.log('🔐 Verifying forgot password OTP for user:', student._id);
 
         // Verify OTP for current email
         const otpResult = await emailOTPService.verifyEmailOTP(student.email, otp_code);
@@ -1168,8 +1040,6 @@ export const resetPasswordWithOTP: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('🔒 Resetting password with OTP for user:', student._id);
-
         // Verify OTP one more time before password reset
         const otpResult = await emailOTPService.verifyEmailOTP(student.email, otp_code);
         
@@ -1194,8 +1064,6 @@ export const resetPasswordWithOTP: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('✅ Password reset successfully for user:', student._id);
-
         jsonResponse.success({
             message: "Password reset successfully"
         });
@@ -1218,8 +1086,6 @@ export const getNotificationPreferences: Controller = async (req, res, next) => 
             jsonResponse.notAuthorized("Authentication required");
             return;
         }
-
-        console.log('📱 Getting notification preferences for user:', student._id);
 
         // Get full student data with notification preferences
         const fullStudent = await Student.findById(student._id);
@@ -1283,8 +1149,6 @@ export const updateNotificationPreferences: Controller = async (req, res, next) 
             }
         }
 
-        console.log('📱 Updating notification preferences for user:', student._id, preferences);
-
         // Update notification preferences
         const updatedStudent = await Student.findByIdAndUpdate(
             student._id,
@@ -1296,8 +1160,6 @@ export const updateNotificationPreferences: Controller = async (req, res, next) 
             jsonResponse.serverError("Failed to update notification preferences");
             return;
         }
-
-        console.log('✅ Notification preferences updated successfully for user:', student._id);
 
         jsonResponse.success({
             message: "Notification preferences updated successfully",
@@ -1323,8 +1185,6 @@ export const resetDeviceFingerprint: Controller = async (req, res, next) => {
         // Reset device fingerprint to allow login from new device
         student.deviceFingerprint = undefined;
         await student.save();
-
-        console.log('🔐 Device fingerprint reset for user:', student._id);
 
         // Log the device reset
         await auditLogger.logSystemEvent(
@@ -1368,8 +1228,6 @@ export const sendPasswordResetOTP: Controller = async (req, res, next) => {
 
         // Normalize email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
-
-        console.log('📧 Sending password reset OTP to:', normalizedEmail);
 
         // Check if student exists
         const student = await Student.findOne({ email: normalizedEmail });
@@ -1425,8 +1283,6 @@ export const verifyPasswordResetOTP: Controller = async (req, res, next) => {
         // Normalize email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
 
-        console.log('🔐 Verifying password reset OTP for email:', normalizedEmail);
-
         // Verify OTP
         const otpResult = await emailOTPService.verifyEmailOTP(normalizedEmail, otp_code);
 
@@ -1480,8 +1336,6 @@ export const resetPasswordWithResetOTP: Controller = async (req, res, next) => {
         // Normalize email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
 
-        console.log('🔒 Resetting password with OTP for email:', normalizedEmail);
-
         // Verify OTP first
         const otpResult = await emailOTPService.verifyEmailOTP(normalizedEmail, otp_code);
 
@@ -1502,8 +1356,6 @@ export const resetPasswordWithResetOTP: Controller = async (req, res, next) => {
         const hashedNewPassword = await bcrypt.hash(newPassword, salt);
 
         // Update password and reset device fingerprint to logout all other devices
-        student.password = hashedNewPassword;
-        // Reset device fingerprint to logout all other devices
         await Student.updateOne(
             { _id: student._id },
             { 
@@ -1512,9 +1364,7 @@ export const resetPasswordWithResetOTP: Controller = async (req, res, next) => {
             }
         );
 
-        console.log('✅ Password reset successfully for email:', normalizedEmail);
-        console.log('� Device fingerprint reset for security - all other devices logged out');
-
+        // Log the password reset and device reset
         // Log the password reset and device reset
         await auditLogger.logSystemEvent(
             'password_reset_with_device_reset',
@@ -1558,8 +1408,6 @@ export const sendReportEmail: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('📧 Sending report email from user:', student ? student.email : 'Anonymous');
-
         // Send report email
         const result = await reportEmailService.sendReportEmail(
             reportText.trim(),
@@ -1590,8 +1438,6 @@ export const logoutStudent: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('🚪 Student logout initiated for user:', student._id);
-
         // Clear device fingerprint to allow login from other devices
         student.deviceFingerprint = undefined;
         await student.save();
@@ -1608,8 +1454,6 @@ export const logoutStudent: Controller = async (req, res, next) => {
                 reason: 'User initiated logout'
             }
         );
-
-        console.log('✅ Student logout successful, device binding cleared for user:', student._id);
 
         jsonResponse.success({
             message: "Logged out successfully"
@@ -1640,13 +1484,9 @@ export const registerPushToken: Controller = async (req, res, next) => {
             return;
         }
 
-        console.log('📱 Registering push token for user:', student._id);
-
         // Update push token
         student.pushToken = pushToken;
         await student.save();
-
-        console.log('✅ Push token registered successfully for user:', student._id);
 
         jsonResponse.success({
             message: "Push token registered successfully"

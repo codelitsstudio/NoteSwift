@@ -11,7 +11,7 @@ const StatCard = () => {
   const router = useRouter();
   const { avatarEmoji } = useAvatarStore();
   const { user } = useAuthStore();
-  const { courses, enrolledCourses, enrollments, selectedCourse, selectCourse, is_loading, coursesLoading, enrollmentsLoading } = useCourseStore();
+  const { courses, enrolledCourses, selectedCourse, selectCourse, is_loading, coursesLoading, enrollmentsLoading } = useCourseStore();
   
   // Get enrolled courses with full course data
   const enrolledCoursesData = courses.filter(course =>

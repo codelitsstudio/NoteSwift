@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useEffect, useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Platform } from 'react-native';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -180,7 +180,7 @@ export function NotificationSheet({
                   <MaterialIcons name="check" size={16} color="#FFF" />
                 )}
               </View>
-              <Text style={styles.checkboxText}>Don't show this message again</Text>
+              <Text style={styles.checkboxText}>Don&apos;t show this message again</Text>
             </TouchableOpacity>
           )}
 

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 
 // Demo live classes - Set to empty array to show "no classes" state
-const demoClasses: Array<{
+const demoClasses: {
   id: string;
   title: string;
   teacher: string;
@@ -13,7 +13,7 @@ const demoClasses: Array<{
   duration: string;
   isLive: boolean;
   participants: number;
-}> = [];
+}[] = [];
 
 // Export function to check if there are live classes
 export const hasLiveClasses = () => demoClasses.length > 0;

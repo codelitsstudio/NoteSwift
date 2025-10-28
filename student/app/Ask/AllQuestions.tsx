@@ -9,17 +9,14 @@ import api from '../../api/axios';
 export default function AllQuestions() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'answered' | 'pending'>('all');
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [questions, setQuestions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   const subjects = ['All', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
 
   // Fetch questions from API
   const fetchQuestions = async () => {
     try {
-      setIsLoading(true);
       const response = await api.get('/questions');
       // Accept both { success, result: { questions } } and { error, result: { questions } }
       if (
@@ -41,8 +38,6 @@ export default function AllQuestions() {
     } catch (error) {
       console.error('Error fetching questions:', error);
       setQuestions([]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -59,21 +54,12 @@ export default function AllQuestions() {
       (question.subjectName && question.subjectName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (question.questionText && question.questionText.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesStatus =
-      selectedStatus === 'all' ||
-      question.status === selectedStatus;
-
     const matchesSubject =
       selectedSubject === 'All' ||
       question.subjectName === selectedSubject;
 
-    return matchesSearch && matchesStatus && matchesSubject;
+    return matchesSearch && matchesSubject;
   });
-
-  // Statistics
-  const totalQuestions = questions.length;
-  const answeredQuestions = questions.filter((q: any) => q.status === 'answered').length;
-  const pendingQuestions = questions.filter((q: any) => q.status === 'pending' || q.status === 'in-progress').length;
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>

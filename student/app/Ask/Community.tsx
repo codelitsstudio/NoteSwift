@@ -1,48 +1,47 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
+// import { useState } from 'react';
+import { View, Text, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+// import { useRouter } from 'expo-router';
 
 export default function Community() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('All');
+  // const router = useRouter();
+  // const [searchQuery, setSearchQuery] = useState('');
+  // const [selectedSubject, setSelectedSubject] = useState('All');
 
-  const subjects = ['All', 'Mathematics', 'Physics', 'Chemistry', 'Biology'];
+  // const subjects = ['All', 'Mathematics', 'Physics', 'Chemistry', 'Biology'];
 
-  const demoCommunityPosts = [
-    {
-      id: '1',
-      userName: 'Alice Johnson',
-      timestamp: '2 hours ago',
-      question: 'How do I solve quadratic equations?',
-      subject: 'Mathematics',
-      replies: 3,
-      upvotes: 12,
-      hasAnswer: true,
-    },
-    {
-      id: '2',
-      userName: 'Bob Smith',
-      timestamp: '5 hours ago',
-      question: 'What is the difference between speed and velocity?',
-      subject: 'Physics',
-      replies: 1,
-      upvotes: 8,
-      hasAnswer: false,
-    },
-    {
-      id: '3',
-      userName: 'Carol Davis',
-      timestamp: '1 day ago',
-      question: 'How does photosynthesis work?',
-      subject: 'Biology',
-      replies: 5,
-      upvotes: 15,
-      hasAnswer: true,
-    },
-  ];
+  // const demoCommunityPosts = [
+  //   {
+  //     id: '1',
+  //     userName: 'Alice Johnson',
+  //     timestamp: '2 hours ago',
+  //     question: 'How do I solve quadratic equations?',
+  //     subject: 'Mathematics',
+  //     replies: 3,
+  //     upvotes: 12,
+  //     hasAnswer: true,
+  //   },
+  //   {
+  //     id: '2',
+  //     userName: 'Bob Smith',
+  //     timestamp: '5 hours ago',
+  //     question: 'What is the difference between speed and velocity?',
+  //     subject: 'Physics',
+  //     replies: 1,
+  //     upvotes: 8,
+  //     hasAnswer: false,
+  //   },
+  //   {
+  //     id: '3',
+  //     userName: 'Carol Davis',
+  //     timestamp: '1 day ago',
+  //     question: 'How does photosynthesis work?',
+  //     subject: 'Biology',
+  //     replies: 5,
+  //     upvotes: 15,
+  //     hasAnswer: true,
+  //   },
+  // ];
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
@@ -57,7 +56,7 @@ export default function Community() {
           <Text className="text-lg font-semibold text-gray-700">
 Coming Soon          </Text>
           <Text className="text-sm text-gray-400 mt-2 text-center px-4">
-            We're working on AI-powered question generation. Check back soon!
+            We&apos;re working on AI-powered question generation. Check back soon!
           </Text>
         </View>
 

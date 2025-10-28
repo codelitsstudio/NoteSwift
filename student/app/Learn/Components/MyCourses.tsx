@@ -12,7 +12,6 @@ const MyCourses = () => {
   const { selectedCourse, enrollments } = useCourseStore();
   const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
   const [subjectContents, setSubjectContents] = useState<any>({});
-  const [loadingSubjectContents, setLoadingSubjectContents] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -50,7 +49,6 @@ const MyCourses = () => {
       if (!selectedCourse?._id && !selectedCourse?.id) return;
       if (!selectedCourse.subjects || selectedCourse.subjects.length === 0) return;
 
-      setLoadingSubjectContents(true);
       const courseId = selectedCourse._id || selectedCourse.id;
       const contents: any = {};
 
@@ -73,8 +71,6 @@ const MyCourses = () => {
         console.log('📚 All subject contents loaded:', Object.keys(contents).length);
       } catch (error) {
         console.error('❌ Error fetching subject contents:', error);
-      } finally {
-        setLoadingSubjectContents(false);
       }
     };
 
@@ -211,7 +207,7 @@ const MyCourses = () => {
                   No subjects available
                 </Text>
                 <Text className="text-sm text-gray-500 mt-1 text-center px-4">
-                  This course doesn't have subjects configured yet
+                  This course doesn&apos;t have subjects configured yet
                 </Text>
               </View>
             )}

@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,

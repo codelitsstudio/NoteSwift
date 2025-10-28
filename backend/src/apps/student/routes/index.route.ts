@@ -17,31 +17,6 @@ import * as appUpdateController from "../../admin/controllers/appUpdateControlle
 
 const router = Router();
 
-// Temporary route to fix database index issue
-router.get("/fix-db", async (req, res) => {
-    try {
-        const db = mongoose.connection.db;
-        const studentsCollection = db!.collection('students');
-        
-        // Try to drop the phone_number_1 index
-        try {
-            await studentsCollection.dropIndex('phone_number_1');
-            // console.log('✅ Successfully dropped phone_number_1 index');
-        } catch (error: any) {
-            // console.log('Index may not exist:', error.message);
-        }
-        
-        // List remaining indexes
-        const indexes = await studentsCollection.listIndexes().toArray();
-        // console.log('Remaining indexes:');
-        // indexes.forEach(idx => console.log(`  - ${idx.name}`));
-        
-        res.json({ success: true, message: 'Database index fixed', indexes });
-    } catch (error: any) {
-        res.json({ success: false, error: error.message });
-    }
-});
-
 //student
 // console.log('🔧 Registering student routes...');
 

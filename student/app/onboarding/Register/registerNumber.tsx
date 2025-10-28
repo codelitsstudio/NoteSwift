@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import ButtonPrimary from '../../../components/Buttons/ButtonPrimary';
 import ImageHeader from '../../../components/Headers/ImageHeader';
 import { useAuthStore } from '../../../stores/authStore';

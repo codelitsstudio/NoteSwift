@@ -20,12 +20,10 @@ import ModuleTestListHeader from "@/components/Headers/TestHeaders/ModuleTestLis
 import MCQTestHeader from "@/components/Headers/TestHeaders/MCQTestHeader";
 import PDFTestHeader from "@/components/Headers/TestHeaders/PDFTestHeader";
 import TestResultHeader from "@/components/Headers/TestHeaders/TestResultHeader";
-import AIChatBotHeader from "@/components/Headers/AskHeaders/AIChatBotHeader";
 import QuestionGeneratorHeader from "@/components/Headers/AskHeaders/QuestionGeneratorHeader";
 import DoubtSolverHeader from "@/components/Headers/AskHeaders/DoubtSolverHeader";
 import StudyTipsHeader from "@/components/Headers/AskHeaders/StudyTipsHeader";
 import CommunityHeader from "@/components/Headers/AskHeaders/CommunityHeader";
-import SupportHeader from "@/components/Headers/AskHeaders/SupportHeader";
 import QuestionDetailHeader from "@/components/Headers/AskHeaders/QuestionDetailHeader";
 import AllQuestionsHeader from "@/components/Headers/AskHeaders/AllQuestionsHeader";
 import SplashScreen from "../components/Splash/SplashScreen";
@@ -35,7 +33,6 @@ import { useNavStore } from "../stores/navigationStore";
 import { useAuthStore } from "../stores/authStore";
 import { getPushToken, registerPushToken, setupNotificationListener } from '../lib/notificationService';
 
-import HeaderFifth from "@/components/Headers/HeaderFifth";
 import AppBlock from "../components/AppBlock";
 
 cssInterop(AntDesign, { className: { target: "style" } });
