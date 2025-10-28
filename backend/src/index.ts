@@ -1,15 +1,20 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { RequestHandler } from 'express';
 import path from 'path';
+import { config } from "dotenv";
+
+// Load environment variables from .env file in the backend root FIRST
+config({ path: path.join(__dirname, '..', '.env') });
+
 import adminApp from './apps/admin/app';
 import teacherApp from './apps/teacher/app';
 import studentApp from './apps/student/app';
 import { MaintenanceScheduler } from './apps/student/middlewares/maintenanceMiddleware';
 import connectDB from './core/lib/mongoose';
-import "dotenv/config";
+import './apps/student/models/Teacher.model';
+import './apps/teacher/models/Teacher.model';
 
-
-const allowedOrigins = [
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [
   'http://localhost:9001',
   'http://localhost:9002',
   'http://localhost:3000',
