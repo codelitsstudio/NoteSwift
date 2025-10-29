@@ -236,21 +236,40 @@ function DoubtsPageContent() {
   };
 
   const sendChatMessage = async (subjectName: string, studentId: string, message: string) => {
-    if (!teacher?.email || !message.trim()) return;
+    console.log('sendChatMessage called with:', {
+      subjectName,
+      studentId,
+      message,
+      teacher: teacher,
+      teacherEmail: teacher?.email
+    });
+
+    if (!teacher?.email || !message.trim()) {
+      console.error('Missing teacher email or message:', { teacherEmail: teacher?.email, message });
+      return;
+    }
 
     try {
       setChatLoading(true);
-      const response = await teacherAPI.messages.sendTeacherMessage({
+      const requestData = {
         teacherEmail: teacher.email,
         studentId,
         subjectName,
         message: message.trim()
-      });
+      };
+
+      console.log('Sending API request with data:', requestData);
+
+      const response = await teacherAPI.messages.sendTeacherMessage(requestData);
+
+      console.log('API response:', response);
 
       if (response.success) {
         // Refresh chat conversations
         await fetchChatConversations();
         setNewMessage('');
+      } else {
+        console.error('API response error:', response);
       }
     } catch (error) {
       console.error('Error sending chat message:', error);
@@ -907,180 +926,6 @@ function DoubtsPageContent() {
               </div>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Dedicated Student Chat Section - Separate from Questions */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Student Chat Conversations
-          </CardTitle>
-          <CardDescription>
-            Direct messaging with students - separate from Q&A system. Messages are stored in dedicated chat collection.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Chat Conversations List */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Active Chats</CardTitle>
-                  <CardDescription>Direct conversations with students</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="max-h-96 overflow-y-auto">
-                    {chatConversations.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No active chat conversations</p>
-                        <p className="text-xs mt-1">Students can start chats from the mobile app</p>
-                      </div>
-                    ) : (
-                      chatConversations.map((conversation) => (
-                        <div
-                          key={`${conversation.student._id}-${conversation.subjectName}`}
-                          className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                            selectedChat?.student._id === conversation.student._id &&
-                            selectedChat?.subjectName === conversation.subjectName
-                              ? 'bg-blue-50 border-blue-200'
-                              : ''
-                          }`}
-                          onClick={() => setSelectedChat(conversation)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{conversation.student.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{conversation.subjectName}</p>
-                              <p className="text-xs text-muted-foreground truncate mt-1">
-                                {conversation.lastMessage}
-                              </p>
-                            </div>
-                            <div className="text-right ml-2">
-                              {conversation.unreadCount > 0 && (
-                                <Badge variant="destructive" className="text-xs mb-1">
-                                  {conversation.unreadCount}
-                                </Badge>
-                              )}
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(conversation.lastMessageTime).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    {selectedChat ? `Chat with ${selectedChat.student.name}` : 'Select a chat conversation'}
-                  </CardTitle>
-                  {selectedChat && (
-                    <CardDescription>
-                      {selectedChat.subjectName} • {selectedChat.courseName} • {selectedChat.student.email}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {selectedChat ? (
-                    <div className="space-y-4">
-                      {/* Messages Container */}
-                      <div className="max-h-80 overflow-y-auto space-y-3 p-2 border rounded-lg bg-gray-50/30">
-                        {selectedChat.messages.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>No messages in this conversation yet</p>
-                            <p className="text-xs mt-1">Start the conversation by sending a message</p>
-                          </div>
-                        ) : (
-                          selectedChat.messages.map((message) => (
-                            <div
-                              key={message._id}
-                              className={`flex ${message.senderType === 'teacher' ? 'justify-end' : 'justify-start'}`}
-                            >
-                              <div
-                                className={`max-w-[70%] p-3 rounded-lg shadow-sm ${
-                                  message.senderType === 'teacher'
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-white text-gray-900 border'
-                                }`}
-                              >
-                                <p className="text-sm">{message.message}</p>
-                                <p className={`text-xs mt-1 ${
-                                  message.senderType === 'teacher' ? 'text-blue-100' : 'text-gray-500'
-                                }`}>
-                                  {new Date(message.timestamp).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                  {message.senderType === 'teacher' && (
-                                    <span className="ml-1">• You</span>
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      {/* Message Input */}
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Type your message to the student..."
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !chatLoading) {
-                              sendChatMessage(selectedChat.subjectName, selectedChat.student._id, newMessage);
-                            }
-                          }}
-                          className="flex-1"
-                          disabled={chatLoading}
-                        />
-                        <Button
-                          onClick={() => sendChatMessage(selectedChat.subjectName, selectedChat.student._id, newMessage)}
-                          disabled={!newMessage.trim() || chatLoading}
-                          className="px-6"
-                        >
-                          {chatLoading ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          ) : (
-                            'Send'
-                          )}
-                        </Button>
-                      </div>
-
-                      {/* Chat Info */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-center gap-2 text-blue-800">
-                          <MessageSquare className="h-4 w-4" />
-                          <span className="text-sm font-medium">Direct Chat</span>
-                        </div>
-                        <p className="text-xs text-blue-700 mt-1">
-                          This is a separate chat system from the Q&A section above. Messages are stored in a dedicated chat collection and are only visible in this chat interface.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">Select a chat conversation</p>
-                      <p className="text-sm mt-1">Choose a student from the list to start or continue a conversation</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
