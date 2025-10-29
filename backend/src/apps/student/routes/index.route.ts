@@ -12,6 +12,7 @@ import notificationRoutes from "./notificationRoutes";
 import { AIRoutes } from "./student/ai.route";
 import questionsRoutes from "./student/questions.route";
 import downloadsRoutes from "./downloads";
+import messagesRoutes from "./student/messages.route";
 import mongoose from "mongoose";
 import * as appUpdateController from "../../admin/controllers/appUpdateController";
 
@@ -34,6 +35,7 @@ router.use("/student/user", authenticateStudent, StudentUserRoutes);
 router.use("/student/tests", authenticateStudent, testsRoutes);
 router.use("/questions", questionsRoutes);
 router.use("/ai", AIRoutes);
+router.use("/messages", messagesRoutes);
 
 // Course routes
 router.use("/courses", courseRoutes);

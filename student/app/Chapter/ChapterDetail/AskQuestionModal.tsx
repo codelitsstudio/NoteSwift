@@ -42,7 +42,7 @@ const AskQuestionModal: React.FC<AskQuestionModalProps> = ({
 
     setIsLoading(true);
     try {
-      const response = await api.post('/student/questions', {
+      const response = await api.post('/questions', {
         title: title.trim(),
         questionText: questionText.trim(),
         courseId,

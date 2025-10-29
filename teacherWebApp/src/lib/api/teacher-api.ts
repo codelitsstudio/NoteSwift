@@ -517,6 +517,37 @@ export const studentAPI = {
   },
 };
 
+// ==================== MESSAGES APIs ====================
+export const messageAPI = {
+  getTeacherChats: (teacherEmail: string) => {
+    return fetchAPI(`/teacher/messages/chats?teacherEmail=${teacherEmail}`);
+  },
+
+  getChatMessages: (teacherEmail: string, studentId: string, subjectName: string) => {
+    const params = new URLSearchParams({ teacherEmail, studentId, subjectName });
+    return fetchAPI(`/teacher/messages/chat?${params}`);
+  },
+
+  sendTeacherMessage: (data: {
+    teacherEmail: string;
+    studentId: string;
+    subjectName: string;
+    message: string;
+  }) => {
+    return fetchAPI('/teacher/messages/send', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  markAsRead: (teacherEmail: string, studentId: string, subjectName: string) => {
+    return fetchAPI('/teacher/messages/mark-read', {
+      method: 'PATCH',
+      body: JSON.stringify({ teacherEmail, studentId, subjectName }),
+    });
+  },
+};
+
 // ==================== EXPORT ALL ====================
 export const teacherAPI = {
   announcements: announcementAPI,
@@ -529,6 +560,7 @@ export const teacherAPI = {
   courses: courseAPI,
   analytics: analyticsAPI,
   students: studentAPI,
+  messages: messageAPI,
 };
 
 export default teacherAPI;

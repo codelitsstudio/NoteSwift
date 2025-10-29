@@ -240,6 +240,15 @@ export default function RootLayout() {
                     name="AllCourses/AllCoursesPage"
                     options={{ header: () => <HeaderThree title="All Courses" /> }}
                   />
+                  <Stack.Screen
+                    name="Search/SearchPage"
+                    options={{ 
+                      headerShown: false,
+                      animation: "slide_from_right",
+                      animationDuration: 250,
+                      presentation: "card"
+                    }}
+                  />
 
 
                   {/* Dynamic Routes */}
@@ -282,6 +291,10 @@ export default function RootLayout() {
 
                   <Stack.Screen name="Chapter/ChapterDetail/NotesAndReadable" options={{ headerShown: false }} />
                   <Stack.Screen name="Settings/ReportIssue" options={{ headerShown: false }} />
+
+
+                  <Stack.Screen name="Ask/TeacherChat" options={{ headerShown: false }} />
+
 
                   {/* Test Module Screens */}
                   <Stack.Screen name="Test/ModuleTestList" options={{ header: () => <ModuleTestListHeader /> }} />

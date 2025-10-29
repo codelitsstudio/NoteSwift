@@ -17,7 +17,6 @@ export default function TestPage() {
   const [tests, setTests] = useState<Test[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'completed' | 'pending'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'mcq' | 'pdf' | 'mixed'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
   
   // Get selected course from store
   const { selectedCourse } = useCourseStore();
@@ -118,14 +117,6 @@ export default function TestPage() {
     });
   }, [selectedCourse, courseSubjects, subjectContents, courseTests]);
 
-  // Calculate statistics based on course tests
-  const totalTests = courseTests.length;
-  const completedTests = courseTests.filter(t => t.attemptInfo?.status === 'submitted' || t.attemptInfo?.status === 'evaluated').length;
-  const pendingTests = totalTests - completedTests;
-  const averageScore = courseTests
-    .filter(t => t.attemptInfo?.percentage !== undefined)
-    .reduce((acc, t) => acc + (t.attemptInfo?.percentage || 0), 0) / completedTests || 0;
-
   // Filter tests by status and type
   const getFilteredTests = () => {
     let filteredTests = courseTests;
@@ -149,6 +140,14 @@ export default function TestPage() {
   };
 
   const filteredTests = getFilteredTests();
+
+  // Calculate statistics
+  const totalTests = courseTests.length;
+  const completedTests = courseTests.filter(t => t.attemptInfo?.status === 'submitted' || t.attemptInfo?.status === 'evaluated').length;
+  const pendingTests = totalTests - completedTests;
+  const averageScore = courseTests
+    .filter(t => t.attemptInfo?.percentage !== undefined)
+    .reduce((acc, t) => acc + (t.attemptInfo?.percentage || 0), 0) / completedTests || 0;
 
   // If no course is selected, show message
   if (!selectedCourse) {
@@ -174,16 +173,12 @@ export default function TestPage() {
               <MaterialIcons name="search" size={22} color="#9CA3AF" />
               <TextInput
                 placeholder="Search tests..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+                value=""
+                onChangeText={() => {}}
                 className="flex-1 ml-2 text-base text-gray-900"
                 placeholderTextColor="#9CA3AF"
+                editable={false}
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <MaterialIcons name="close" size={22} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
             </View>
           </View>
 
@@ -250,21 +245,27 @@ export default function TestPage() {
 
           {/* Search Bar */}
           <View className="px-6 pb-4">
-            <View className="flex-row items-center bg-white rounded-3xl px-4 py-3 border border-gray-100">
-              <MaterialIcons name="search" size={22} color="#9CA3AF" />
-              <TextInput
-                placeholder="Search tests..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                className="flex-1 ml-2 text-base text-gray-900"
-                placeholderTextColor="#9CA3AF"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <MaterialIcons name="close" size={22} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: '/Search/SearchPage',
+                  params: {
+                    searchType: 'tests',
+                    placeholder: 'Search tests...',
+                    title: 'Search Tests',
+                    initialData: JSON.stringify(courseTests)
+                  }
+                } as any);
+              }}
+              activeOpacity={0.8}
+            >
+              <View className="flex-row items-center bg-white rounded-3xl px-4 py-3 border border-gray-100">
+                <MaterialIcons name="search" size={22} color="#9CA3AF" />
+                <Text className="flex-1 ml-2 text-base text-gray-400">
+                  Search tests...
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Statistics Card */}

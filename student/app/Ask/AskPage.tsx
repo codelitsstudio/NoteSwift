@@ -14,7 +14,6 @@ import api from '../../api/axios';
 export default function AskPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'answered' | 'pending'>('all');
   const [questions, setQuestions] = useState<any[]>([]);
 
@@ -102,6 +101,18 @@ export default function AskPage() {
     ? questions.filter((q: any) => q.status === 'answered')
     : questions.filter((q: any) => q.status === 'pending' || q.status === 'in-progress');
 
+  // Handle search bar press - navigate to SearchPage
+  const handleSearchPress = useCallback(() => {
+    router.push({
+      pathname: '/Search/SearchPage',
+      params: {
+        searchType: 'questions',
+        placeholder: 'Search questions...',
+        title: 'Search Questions'
+      }
+    } as any);
+  }, [router]);
+
   const handleFeaturePress = (featureId: string) => {
     if (!hasProEnrollment) {
       // Show premium upgrade prompt
@@ -182,6 +193,41 @@ export default function AskPage() {
     router.push('/More/MorePage' as any);
   };
 
+  const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
+
+  // Fetch teachers for the selected course
+  useEffect(() => {
+    const fetchCourseTeachers = async () => {
+      if (!selectedCourse?._id && !selectedCourse?.id) return;
+
+      try {
+        const courseId = selectedCourse._id || selectedCourse.id;
+        console.log('👨‍🏫 Fetching teachers for course:', courseId);
+        
+        const response = await api.get(`/courses/${courseId}/teachers`);
+        
+        if (response.data.success) {
+          setCourseTeachers(response.data.data.subjects || []);
+          console.log('👨‍🏫 Course teachers loaded:', response.data.data.subjects?.length || 0);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching course teachers:', error);
+        setCourseTeachers([]);
+      }
+    };
+
+    if (selectedCourse) {
+      fetchCourseTeachers();
+    }
+  }, [selectedCourse]);
+
+  const handleTeacherPress = () => {
+    router.push({
+      pathname: '/Ask/TeacherChat',
+      params: { courseTeachers: JSON.stringify(courseTeachers) }
+    } as any);
+  };
+
   // If no course is selected, show message
   if (!selectedCourse) {
     return (
@@ -202,21 +248,17 @@ export default function AskPage() {
 
           {/* Search Bar */}
           <View className="px-6 pb-4">
-            <View className="flex-row items-center bg-white rounded-3xl px-4 py-3 border border-gray-100">
-              <MaterialIcons name="search" size={22} color="#9CA3AF" />
-              <TextInput
-                placeholder="Ask anything..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                className="flex-1 ml-2 text-base text-gray-900"
-                placeholderTextColor="#9CA3AF"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <MaterialIcons name="close" size={22} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <TouchableOpacity
+              onPress={handleSearchPress}
+              activeOpacity={0.8}
+            >
+              <View className="flex-row items-center bg-white rounded-3xl px-4 py-3 border border-gray-100">
+                <MaterialIcons name="search" size={22} color="#9CA3AF" />
+                <Text className="flex-1 ml-2 text-base text-gray-400">
+                  Search questions...
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           <View className="mt-8">
@@ -240,18 +282,34 @@ export default function AskPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={["bottom"]}>
       {isLoading ? (
         <View className="flex-1 px-6 pt-6">
-          <Skeleton width={150} height={24} borderRadius={4} style={{ marginBottom: 16 }} />
-          <Skeleton width="100%" height={48} borderRadius={12} style={{ marginBottom: 16 }} />
+          <Skeleton
+            width={150}
+            height={24}
+            borderRadius={4}
+            style={{ marginBottom: 16 }}
+          />
+          <Skeleton
+            width="100%"
+            height={48}
+            borderRadius={12}
+            style={{ marginBottom: 16 }}
+          />
           <View className="flex-row gap-3 mb-4">
             <Skeleton width={110} height={140} borderRadius={12} />
             <Skeleton width={110} height={140} borderRadius={12} />
             <Skeleton width={110} height={140} borderRadius={12} />
           </View>
           {[1, 2].map((i) => (
-            <Skeleton key={i} width="100%" height={80} borderRadius={12} style={{ marginBottom: 12 }} />
+            <Skeleton
+              key={i}
+              width="100%"
+              height={80}
+              borderRadius={12}
+              style={{ marginBottom: 12 }}
+            />
           ))}
         </View>
       ) : (
@@ -268,21 +326,17 @@ export default function AskPage() {
 
           {/* Search Bar */}
           <View className="px-6 pb-4">
-            <View className="flex-row items-center bg-white rounded-3xl px-4 py-3 border border-gray-100">
-              <MaterialIcons name="search" size={22} color="#9CA3AF" />
-              <TextInput
-                placeholder="Ask anything..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                className="flex-1 ml-2 text-base text-gray-900"
-                placeholderTextColor="#9CA3AF"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <MaterialIcons name="close" size={22} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <TouchableOpacity
+              onPress={handleSearchPress}
+              activeOpacity={0.8}
+            >
+              <View className="flex-row items-center bg-white rounded-3xl px-4 py-3 border border-gray-100">
+                <MaterialIcons name="search" size={22} color="#9CA3AF" />
+                <Text className="flex-1 ml-2 text-base text-gray-400">
+                  Search questions...
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Statistics Card */}
@@ -291,17 +345,25 @@ export default function AskPage() {
               <View className="flex-row justify-between items-center">
                 <View className="flex-1">
                   <Text className="text-sm text-gray-500 mb-1">Total Qns</Text>
-                  <Text className="text-2xl font-bold text-gray-900">{totalQuestions}</Text>
+                  <Text className="text-2xl font-bold text-gray-900">
+                    {totalQuestions}
+                  </Text>
                 </View>
                 <View className="w-px h-10 bg-gray-200" />
                 <View className="flex-1 items-center">
                   <Text className="text-sm text-gray-500 mb-1">Answered</Text>
-                  <Text className="text-2xl font-bold text-blue-600">{answeredQuestions}</Text>
+                  <Text className="text-2xl font-bold text-blue-600">
+                    {answeredQuestions}
+                  </Text>
                 </View>
                 <View className="w-px h-10 bg-gray-200" />
                 <View className="flex-1 items-end">
-                  <Text className="text-sm text-gray-500 mb-1">Pending Qns</Text>
-                  <Text className="text-2xl font-bold text-red-600">{pendingQuestions}</Text>
+                  <Text className="text-sm text-gray-500 mb-1">
+                    Pending Qns
+                  </Text>
+                  <Text className="text-2xl font-bold text-red-600">
+                    {pendingQuestions}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -317,17 +379,17 @@ export default function AskPage() {
                 <Text className="text-xs font-bold text-blue-700">PRO</Text>
               </View>
             </View>
-            
+
             <View className="bg-white rounded-2xl p-4 border border-gray-100">
               {hasProEnrollment && (
                 <View className="bg-gradient-to-r from-green-50 to-emerald-50 border border-blue-200 rounded-xl p-3 mb-4">
-                
                   <Text className="text-sm font-medium text-gray-700 mt-1">
-                    AI features are available for your selected course with {selectedCourse.subjects?.length || 0} subjects
+                    AI features are available for your selected course with{" "}
+                    {selectedCourse.subjects?.length || 0} subjects
                   </Text>
                 </View>
               )}
-              
+
               {!hasProEnrollment && (
                 <View className="bg-gradient-to-r from-gray-50 to-gray-50 border border-gray-200 rounded-xl p-3 mb-4">
                   <View className="flex-row items-center">
@@ -341,74 +403,127 @@ export default function AskPage() {
                   </Text>
                 </View>
               )}
-              
+
               <View className="space-y-2">
                 {/* AI Feature Items */}
                 {[
                   {
-                    id: 'f1',
-                    title: 'AI Chat Bot',
+                    id: "f1",
+                    title: "AI Chat Bot",
                     description: `Chat with AI about ${selectedCourse.title} topics, subjects, and modules`,
-                    icon: 'smart-toy'
+                    icon: "smart-toy",
                   },
                   {
-                    id: 'f2', 
-                    title: 'Question Generator',
+                    id: "f2",
+                    title: "Question Generator",
                     description: `Generate practice questions for ${selectedCourse.title} subjects`,
-                    icon: 'psychology'
+                    icon: "psychology",
                   },
                   {
-                    id: 'f3',
-                    title: 'Doubt Solver', 
+                    id: "f3",
+                    title: "Doubt Solver",
                     description: `Get detailed solutions for ${selectedCourse.title} doubts and problems`,
-                    icon: 'lightbulb'
-                  }
+                    icon: "lightbulb",
+                  },
                 ].map((feature, index) => {
                   return (
                     <View
                       key={feature.id}
                       // ensure the watermark is clipped to this box only
-                      style={{ position: 'relative', overflow: 'hidden' }}
-                      className={`${index !== 2 ? 'border-b border-gray-100' : ''} ${!hasProEnrollment ? 'opacity-60' : ''}`}
+                      style={{ position: "relative", overflow: "hidden" }}
+                      className={`${
+                        index !== 2 ? "border-b border-gray-100" : ""
+                      } ${!hasProEnrollment ? "opacity-60" : ""}`}
                     >
                       <TouchableOpacity
                         activeOpacity={hasProEnrollment ? 0.7 : 1}
                         className="flex-row items-center py-3"
-                        onPress={hasProEnrollment ? () => handleFeaturePress(feature.id) : undefined}
+                        onPress={
+                          hasProEnrollment
+                            ? () => handleFeaturePress(feature.id)
+                            : undefined
+                        }
                         disabled={!hasProEnrollment}
                       >
                         <View>
-                          <MaterialIcons 
-                            name={feature.icon as any} 
-                            size={22} 
-                            color={hasProEnrollment ? "#3B82F6" : "#9CA3AF"} 
+                          <MaterialIcons
+                            name={feature.icon as any}
+                            size={22}
+                            color={hasProEnrollment ? "#3B82F6" : "#9CA3AF"}
                           />
                         </View>
                         <View className="flex-1 ml-3">
                           <View className="flex-row items-center">
-                            <Text className={`text-base font-semibold ${
-                              hasProEnrollment ? 'text-gray-900' : 'text-gray-500'
-                            }`}>
+                            <Text
+                              className={`text-base font-semibold ${
+                                hasProEnrollment
+                                  ? "text-gray-900"
+                                  : "text-gray-500"
+                              }`}
+                            >
                               {feature.title}
                             </Text>
                           </View>
-                          <Text className={`text-sm mt-0.5 ${
-                            hasProEnrollment ? 'text-gray-500' : 'text-gray-400'
-                          }`}>
+                          <Text
+                            className={`text-sm mt-0.5 ${
+                              hasProEnrollment
+                                ? "text-gray-500"
+                                : "text-gray-400"
+                            }`}
+                          >
                             {feature.description}
                           </Text>
                         </View>
                         {hasProEnrollment ? (
-                          <MaterialIcons name="chevron-right" size={22} color="#9CA3AF" />
+                          <MaterialIcons
+                            name="chevron-right"
+                            size={22}
+                            color="#9CA3AF"
+                          />
                         ) : (
-                          <MaterialIcons name="lock" size={22} color="#9CA3AF" />
+                          <MaterialIcons
+                            name="lock"
+                            size={22}
+                            color="#9CA3AF"
+                          />
                         )}
                       </TouchableOpacity>
-
-                      
                     </View>
                   );
                 })}
+              </View>
+            </View>
+          </View>
+
+          {/* Ask Teacher Section */}
+          <View className="px-6 pb-4">
+            <Text className="text-lg font-bold text-gray-900 mb-3">
+              Ask Teachers
+            </Text>
+
+            <View className="bg-white rounded-2xl p-4 border border-gray-100">
+              <View className="space-y-2">
+                {/* Teacher */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  className="flex-row items-center py-3"
+                  onPress={handleTeacherPress}
+                >
+                  <MaterialIcons name="groups" size={22} color="#3B82F6" />
+                  <View className="flex-1 ml-3">
+                    <Text className="text-base font-semibold text-gray-900">
+                      Teachers{" "}
+                    </Text>
+                    <Text className="text-sm text-gray-500 mt-0.5">
+                      Ask teachers and instructors
+                    </Text>
+                  </View>
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={22}
+                    color="#9CA3AF"
+                  />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -418,7 +533,7 @@ export default function AskPage() {
             <Text className="text-lg font-bold text-gray-900 mb-3">
               Quick Access
             </Text>
-            
+
             <View className="bg-white rounded-2xl p-4 border border-gray-100">
               <View className="space-y-2">
                 {/* Community */}
@@ -436,7 +551,11 @@ export default function AskPage() {
                       Ask friends and peers
                     </Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={22} color="#9CA3AF" />
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={22}
+                    color="#9CA3AF"
+                  />
                 </TouchableOpacity>
 
                 {/* Support */}
@@ -445,7 +564,11 @@ export default function AskPage() {
                   className="flex-row items-center py-3"
                   onPress={handleSupportPress}
                 >
-                  <MaterialIcons name="support-agent" size={22} color="#3B82F6" />
+                  <MaterialIcons
+                    name="support-agent"
+                    size={22}
+                    color="#3B82F6"
+                  />
                   <View className="flex-1 ml-3">
                     <Text className="text-base font-bold text-gray-900">
                       Support
@@ -454,7 +577,11 @@ export default function AskPage() {
                       Contact customer support
                     </Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={22} color="#9CA3AF" />
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={22}
+                    color="#9CA3AF"
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -464,15 +591,15 @@ export default function AskPage() {
           <View className="px-6 pb-4">
             <View className="flex-row bg-gray-100 rounded-xl p-1">
               <TouchableOpacity
-                onPress={() => setActiveFilter('all')}
+                onPress={() => setActiveFilter("all")}
                 className={`flex-1 py-2 rounded-lg ${
-                  activeFilter === 'all' ? 'bg-white' : ''
+                  activeFilter === "all" ? "bg-white" : ""
                 }`}
                 activeOpacity={0.7}
               >
                 <Text
                   className={`text-center text-base font-semibold ${
-                    activeFilter === 'all' ? 'text-customBlue' : 'text-gray-600'
+                    activeFilter === "all" ? "text-customBlue" : "text-gray-600"
                   }`}
                 >
                   All ({totalQuestions})
@@ -480,15 +607,17 @@ export default function AskPage() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setActiveFilter('answered')}
+                onPress={() => setActiveFilter("answered")}
                 className={`flex-1 py-2 rounded-lg ${
-                  activeFilter === 'answered' ? 'bg-white' : ''
+                  activeFilter === "answered" ? "bg-white" : ""
                 }`}
                 activeOpacity={0.7}
               >
                 <Text
                   className={`text-center text-base font-semibold ${
-                    activeFilter === 'answered' ? 'text-customBlue' : 'text-gray-600'
+                    activeFilter === "answered"
+                      ? "text-customBlue"
+                      : "text-gray-600"
                   }`}
                 >
                   Answered ({answeredQuestions})
@@ -496,15 +625,17 @@ export default function AskPage() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setActiveFilter('pending')}
+                onPress={() => setActiveFilter("pending")}
                 className={`flex-1 py-2 rounded-lg ${
-                  activeFilter === 'pending' ? 'bg-white' : ''
+                  activeFilter === "pending" ? "bg-white" : ""
                 }`}
                 activeOpacity={0.7}
               >
                 <Text
                   className={`text-center text-base font-semibold ${
-                    activeFilter === 'pending' ? 'text-customBlue' : 'text-gray-600'
+                    activeFilter === "pending"
+                      ? "text-customBlue"
+                      : "text-gray-600"
                   }`}
                 >
                   Pending ({pendingQuestions})
@@ -519,9 +650,9 @@ export default function AskPage() {
               <Text className="text-lg font-bold text-gray-900">
                 Your Questions
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => router.push('/Ask/AllQuestions' as any)}
+                onPress={() => router.push("/Ask/AllQuestions" as any)}
               >
                 <Text className="text-base text-customBlue font-medium">
                   View All
@@ -544,9 +675,9 @@ export default function AskPage() {
                   No questions found
                 </Text>
                 <Text className="text-sm text-gray-500 mt-2 text-center px-10">
-                  {activeFilter === 'answered'
-                    ? 'You haven\'t received any answers yet.'
-                    : 'No pending questions available.'}
+                  {activeFilter === "answered"
+                    ? "You haven't received any answers yet."
+                    : "No pending questions available."}
                 </Text>
               </View>
             )}

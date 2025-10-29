@@ -83,7 +83,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
     setIsSubmittingQuestion(true);
     try {
       const mongoCourseId = (data._id) ? data._id : courseId;
-      const response = await api.post('/student/questions', {
+      const response = await api.post('/questions', {
         title: questionTitle.trim(),
         questionText: questionText.trim(),
         courseId: mongoCourseId,
@@ -295,7 +295,7 @@ const ChapterTabs: React.FC<ChapterTabsProps> = ({ data, progress, completedLess
 
       {/* Ask */}
       {active === "Ask" && (
-        <ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
           <View className="p-6 mb-2">
             {/* Context Info */}
             <View className="bg-blue-50 rounded-lg p-4 mb-6">

@@ -105,7 +105,6 @@ export default function HomePage() {
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Add loading state
-  const [searchQuery, setSearchQuery] = useState("");
   const [activeNotification, setActiveNotification] = useState<NotificationData | null>(null);
 
   const { user, isLoggedIn } = useAuthStore();
@@ -292,7 +291,7 @@ export default function HomePage() {
           <HomePageSkeleton />
         ) : (
           <View className="px-6 pt-6 flex-1 bg-[#FAFAFA]">
-            <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+            <SearchBar />
 
             <TopicsSection />
             <NoteswiftProCard />

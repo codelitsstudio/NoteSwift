@@ -957,7 +957,7 @@ export default function CourseEditorPage() {
                         <div className="space-y-2">
                           <Label>Modules</Label>
                           {subject.modules?.map((module, moduleIndex) => (
-                            <div key={moduleIndex} className="pl-4 border-l-2 border-gray-200 space-y-2 p-3 bg-gray-50 rounded">
+                            <div key={moduleIndex} className="pl-4 border-gray-200 space-y-2 p-3 bg-gray-50 rounded">
                               <div className="flex items-center gap-2">
                                 <Input
                                   value={module.name}
@@ -1264,7 +1264,7 @@ export default function CourseEditorPage() {
                                 {subject.modules && subject.modules.length > 0 && (
                                   <div className="space-y-2">
                                     {subject.modules.map((module, moduleIndex) => (
-                                      <div key={moduleIndex} className={`pl-4 border-l-2 ${formData.status === 'Published' ? 'border-orange-200 bg-orange-25' : 'border-gray-200'}`}>
+                                      <div key={moduleIndex} className={`pl-4 ${formData.status === 'Published' ? 'border-orange-200 bg-orange-25' : 'border-gray-200'}`}>
                                         <div className="flex items-center justify-between">
                                           <span className="text-sm font-medium text-gray-700">
                                             Module {moduleIndex + 1}

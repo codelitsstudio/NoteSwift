@@ -7,11 +7,12 @@ import SubjectTabs from '../SubjectTabs';
 import axios from '../../../api/axios';
 import { getSubjectContent } from '../../../api/lessonProgress';
 
-const MyCourses = () => {
+const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
   const { user } = useAuthStore();
   const { selectedCourse, enrollments } = useCourseStore();
   const [courseTeachers, setCourseTeachers] = useState<any[]>([]);
   const [subjectContents, setSubjectContents] = useState<any>({});
+  const [searchedSubjects, setSearchedSubjects] = useState<any[]>([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -124,6 +125,30 @@ const MyCourses = () => {
 
   const subjects = selectedCourse.subjects || [];
 
+  // Filter subjects based on search query with debounce
+  useEffect(() => {
+    const performSearch = () => {
+      if (!searchQuery.trim()) {
+        setSearchedSubjects(subjects);
+        return;
+      }
+
+      const filtered = subjects.filter((subject: any) => {
+        const searchTerm = searchQuery.toLowerCase();
+        const subjectName = (subject.name || '').toLowerCase();
+        const subjectDescription = (subject.description || '').toLowerCase();
+        
+        return subjectName.includes(searchTerm) || subjectDescription.includes(searchTerm);
+      });
+
+      setSearchedSubjects(filtered);
+    };
+
+    // Small delay for better UX
+    const timeoutId = setTimeout(performSearch, 150);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, subjects]);
+
   // Find enrollment for the selected course
   const selectedCourseEnrollment = enrollments.find(enrollment => {
     const courseId = typeof enrollment.courseId === 'string' 
@@ -138,7 +163,7 @@ const MyCourses = () => {
     _id: selectedCourse._id || selectedCourse.id,
     title: selectedCourse.title,
     description: selectedCourse.description || 'Course description',
-    subjects: subjects.map((subject: any, index: number) => {
+    subjects: searchedSubjects.map((subject: any, index: number) => {
       // Get subject content data if available
       const subjectContent = subjectContents[subject.name];
       
@@ -189,7 +214,7 @@ const MyCourses = () => {
           </View>
           
           {/* Cards - Slightly indented and centered */}
-          {subjects && subjects.length > 0 ? (
+          {searchedSubjects && searchedSubjects.length > 0 ? (
             <SubjectTabs 
               packageData={transformedPackageData} 
               courseKey={selectedCourse._id || selectedCourse.id}
@@ -197,6 +222,19 @@ const MyCourses = () => {
               courseOfferedBy={selectedCourse.offeredBy}
               courseTeachers={courseTeachers}
             />
+          ) : searchQuery.trim() ? (
+            <View className="flex-1 justify-center items-center mb-4 mt-6">
+              <Image
+                source={require('../../../assets/images/ongoing-courses.gif')}
+                style={{ width: 180, height: 180, marginBottom: 16 }}
+              />
+              <Text className="text-lg font-semibold text-gray-800">
+                No subjects found
+              </Text>
+              <Text className="text-sm text-gray-500 mt-1 text-center px-4">
+                No subjects match your search "{searchQuery}"
+              </Text>
+            </View>
           ) : (
               <View className="flex-1 justify-center items-center mb-4 mt-6">
                 <Image

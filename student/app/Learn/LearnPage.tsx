@@ -193,7 +193,11 @@ export default function HomePage() {
               <Text className="text-customBlue font-semibold"> Learn !</Text>
             </Text>
 
-            <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+            <SearchBar 
+              value={searchQuery} 
+              onChangeText={setSearchQuery} 
+              placeholder="Search subjects..."
+            />
               
             {/* Conditional rendering: Live Today first if there are classes, otherwise Subjects first */}
             {hasLiveClasses() ? (
@@ -201,14 +205,14 @@ export default function HomePage() {
                 <LiveClasses onJoinPress={handleJoinPress} />
                 <View className="mb-4">
                  
-                  <MyCourses />
+                  <MyCourses searchQuery={searchQuery} />
                 </View>
               </>
             ) : (
               <>
                 <View className="mb-4">
                  
-                  <MyCourses />
+                  <MyCourses searchQuery={searchQuery} />
                 </View>
                 <LiveClasses onJoinPress={handleJoinPress} />
               </>

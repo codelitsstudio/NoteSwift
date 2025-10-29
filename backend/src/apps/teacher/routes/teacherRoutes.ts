@@ -11,6 +11,7 @@ import * as analyticsController from '../controllers/analyticsController';
 import * as authController from '../controllers/authController';
 import * as uploadController from '../controllers/uploadController';
 import * as userController from '../controllers/userController';
+import * as messageController from '../controllers/messageController';
 import { authenticateTeacher } from '../middlewares/auth';
 import multer from 'multer';
 
@@ -144,5 +145,10 @@ router.get('/analytics/weekly-activity', analyticsController.getWeeklyActivity a
 
 // ==================== STUDENT ROUTES ====================
 router.get('/students', userController.getTeacherStudents as any);
+
+// ==================== MESSAGE ROUTES ====================
+router.get('/messages/chats', messageController.getTeacherChats as any);
+router.get('/messages/chat', messageController.getChatConversation as any);
+router.post('/messages/send', messageController.sendTeacherMessage as any);
 
 export default router;

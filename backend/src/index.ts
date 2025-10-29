@@ -13,6 +13,7 @@ import { MaintenanceScheduler } from './apps/student/middlewares/maintenanceMidd
 import connectDB from './core/lib/mongoose';
 import './apps/student/models/Teacher.model';
 import './apps/teacher/models/Teacher.model';
+import './core/models/Message';
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [
   'http://localhost:9001',
@@ -21,7 +22,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS
   'http://localhost:19006',
   'http://172.20.10.4:9001',
   'http://172.20.10.4:9002',
-  'http://172.20.10.4:3000'
+  'http://172.20.10.4:3000',
+  'https://admin-noteswift.codelitsstudio.com'
 ];
 
 const app = express();
