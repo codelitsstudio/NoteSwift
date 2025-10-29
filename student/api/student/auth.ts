@@ -2,36 +2,36 @@ import { LoginStudent, SignupStudent } from "@core/api/student/auth";
 import api from "../axios";
 
 export const createStudent = async(data: SignupStudent.Req) => {
-    const res = await api.post("/auth/signup", data);
+    const res = await api.post("/student/auth/signup", data);
     const response = res.data as SignupStudent.ApiRes;
-    
+
     // Check if the response contains an error
     if (response.error) {
         throw new Error(response.message || 'Failed to create student');
     }
-    
+
     return response;
 }
 
 export const signInStudent = async(data: LoginStudent.Req) => {
-    const res = await api.post("/auth/login", data);
+    const res = await api.post("/student/auth/login", data);
     const response = res.data as LoginStudent.ApiRes;
-    
+
     // Check if the response contains an error
     if (response.error) {
         throw new Error(response.message || 'Failed to sign in');
     }
-    
+
     return response;
 }
 
 export const sendRegistrationOTP = async(phone_number: string) => {
-    const res = await api.post("/auth/send-registration-otp", { phone_number });
+    const res = await api.post("/student/auth/send-registration-otp", { phone_number });
     return res.data;
 }
 
 export const verifyRegistrationOTP = async(phone_number: string, otp_code: string) => {
-    const res = await api.post("/auth/verify-registration-otp", { phone_number, otp_code });
+    const res = await api.post("/student/auth/verify-registration-otp", { phone_number, otp_code });
     return res.data;
 }
 

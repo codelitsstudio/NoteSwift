@@ -59,6 +59,8 @@ export default function RootLayout() {
   // Prevent screenshots and screen recording
   usePreventScreenCapture();
 
+ 
+
   // Strict authentication middleware
   useEffect(() => {
     if (!loaded || showSplash) return;

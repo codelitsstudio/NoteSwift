@@ -282,10 +282,7 @@ export const loginStudent: Controller = async (req, res, next) => {
         // Check if student already has a device fingerprint (first login)
         if (!student.deviceFingerprint) {
             // This is the first login, bind this device
-            await Student.updateOne(
-                { _id: student._id },
-                { $set: { deviceFingerprint: currentDeviceFingerprint } }
-            );
+            student.deviceFingerprint = currentDeviceFingerprint;
         } else if (student.deviceFingerprint !== currentDeviceFingerprint) {
             // Log security breach attempt
             await auditLogger.logSystemEvent(
@@ -310,10 +307,8 @@ export const loginStudent: Controller = async (req, res, next) => {
         }
 
         // Update last login time
-        await Student.updateOne(
-            { _id: student._id },
-            { $set: { lastLoginAt: new Date() } }
-        );
+        student.lastLoginAt = new Date();
+        await student.save();
 
         // Generate token
         const token = jwt.sign({ user_id: student._id.toString(), role: "student" }, secret, {
