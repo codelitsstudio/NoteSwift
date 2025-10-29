@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 // import { useRouter } from 'next/navigation';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,11 +81,12 @@ const VALID_MATERIAL_ICONS = [
 export default function CoursesManagementPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  const [activeTab, setActiveTab] = useState('pro');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'pro');
   
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

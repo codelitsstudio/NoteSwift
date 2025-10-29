@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { MoreHorizontal, Search, Filter, ChevronDown, ChevronRight, Eye, Mail, Calendar, MapPin, BookOpen, TrendingUp, Users } from "lucide-react";
 import {
   Table,
@@ -195,6 +196,8 @@ export default function UsersPage() {
   const [expandedGrades, setExpandedGrades] = useState<Set<number>>(new Set([10, 11, 12]));
   const [selectedUser, setSelectedUser] = useState<UserDetails | TeacherDetails | null>(null);
   const [userDetailsLoading, setUserDetailsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'students';
 
   // Fetch users data
   useEffect(() => {
@@ -377,7 +380,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="students" className="w-full">
+      <Tabs defaultValue={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="students">
             Students ({filteredStudents.length})

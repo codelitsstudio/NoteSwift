@@ -7,9 +7,12 @@ import { InviteAdmin } from "@/components/admin/invite-admin";
 import { AdminHierarchy } from "@/components/admin/admin-hierarchy";
 import { useAdmin } from "@/context/admin-context";
 import { Shield } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 export default function AdminManagementPage() {
   const { admin, canInviteAdmins } = useAdmin();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'hierarchy';
   return (
     <div className="flex flex-col gap-8">
      
@@ -20,7 +23,7 @@ export default function AdminManagementPage() {
                   </div>
           <p className="text-gray-600 mt-2">Manage administrators and their permissions</p>
         </div>
-      <Tabs defaultValue="hierarchy" className="w-full">
+      <Tabs defaultValue={activeTab} className="w-full">
         <TabsList className={`grid w-full ${canInviteAdmins ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <TabsTrigger value="hierarchy">Admin Hierarchy</TabsTrigger>
           <TabsTrigger value="list">All Admins</TabsTrigger>

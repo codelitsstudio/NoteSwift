@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   LineChart,
@@ -22,6 +22,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -30,15 +33,49 @@ import { useAdmin } from "@/context/admin-context";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/admin-management", label: "Admin Management", icon: ShieldCheck },
-  { href: "/dashboard/teacher-management", label: "Teacher Management", icon: Users },
-  { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
+  {
+    href: "/dashboard/admin-management",
+    label: "Admin Management",
+    icon: ShieldCheck,
+    children: [
+      { href: "/dashboard/admin-management?tab=list", label: "All Admins" },
+    ]
+  },
+  {
+    href: "/dashboard/teacher-management",
+    label: "Teacher Management",
+    icon: Users,
+    children: [
+      { href: "/dashboard/teacher-management?tab=pending", label: "Pending Teachers" },
+    ]
+  },
+  {
+    href: "/dashboard/courses",
+    label: "Courses",
+    icon: BookOpen,
+    children: [
+      { href: "/dashboard/courses?tab=pro", label: "Pro Courses" },
+    ]
+  },
   { href: "/dashboard/recommendations", label: "Course Recommendations", icon: BotMessageSquare },
   { href: "/dashboard/app-block", label: "App Block", icon: Smartphone },
-
-  { href: "/dashboard/users", label: "Users", icon: Users },
+  {
+    href: "/dashboard/users",
+    label: "Users",
+    icon: Users,
+    children: [
+      { href: "/dashboard/users?tab=students", label: "Students" },
+    ]
+  },
   { href: "/dashboard/reports", label: "Reports", icon: LineChart },
-  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
+  {
+    href: "/dashboard/notifications",
+    label: "Notifications",
+    icon: Bell,
+    children: [
+      { href: "/dashboard/notifications", label: "Notification History" },
+    ]
+  },
   { href: "/dashboard/revenue", label: "Revenue", icon: CreditCard },
   { href: "/dashboard/orders-payments", label: "Orders & Payments", icon: Receipt },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: ShieldCheck },
@@ -48,6 +85,7 @@ const links = [
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { startLoading } = useLoading();
   const { admin } = useAdmin();
 
@@ -62,6 +100,11 @@ export function DashboardNav() {
       default:
         return { text: "Admin", variant: "secondary" as const, className: "bg-blue-500 text-white" };
     }
+  };
+
+  const isLinkActive = (href: string) => {
+    const url = new URL(href, window.location.origin);
+    return pathname === url.pathname && searchParams.get('tab') === url.searchParams.get('tab');
   };
 
   const roleDisplay = admin ? getRoleDisplay(admin.role) : { text: "Loading...", variant: "secondary" as const, className: "" };
@@ -91,7 +134,7 @@ export function DashboardNav() {
                 }}
                className={cn(
   "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-  pathname === link.href
+  ((link as any).children && pathname.startsWith(`${link.href}/`)) || pathname === link.href
     ? "bg-primary text-primary-foreground"
     : "hover:bg-blue-100 text-gray-700 hover:text-blue-600"
 )}
@@ -101,6 +144,17 @@ export function DashboardNav() {
                 <span className="font-medium">{link.label}</span>
               </Link>
             </SidebarMenuButton>
+            {link.children && (
+              <SidebarMenuSub>
+                {link.children.map((child) => (
+                  <SidebarMenuSubItem key={child.href}>
+                    <SidebarMenuSubButton asChild isActive={isLinkActive(child.href)}>
+                      <Link href={child.href}>{child.label}</Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                ))}
+              </SidebarMenuSub>
+            )}
           </SidebarMenuItem>
         ))}
       </SidebarMenu>

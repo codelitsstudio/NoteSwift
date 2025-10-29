@@ -3,6 +3,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { fetchPendingTeachers, fetchApprovedTeachers, fetchRejectedTeachers, approveTeacher, rejectTeacher, removeTeacher, TeacherSummary } from "@/lib/api/adminTeachers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -40,6 +41,8 @@ interface Course {
 
 export default function TeachersManagementPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'overview';
   const [loading, setLoading] = useState(false);
   const [pendingTeachers, setPendingTeachers] = useState<TeacherSummary[]>([]);
   const [approvedTeachers, setApprovedTeachers] = useState<TeacherSummary[]>([]);
@@ -316,7 +319,7 @@ export default function TeachersManagementPage() {
                   <p className="text-gray-600 mt-2">Manage and oversee teacher assignments and approvals</p>
                 </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">
             Overview ({pendingTeachers.length + approvedTeachers.length + rejectedTeachers.length})
