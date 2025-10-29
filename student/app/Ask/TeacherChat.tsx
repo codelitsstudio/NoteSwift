@@ -1,35 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, FlatList } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Keyboard, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import { useCourseStore } from '../../stores/courseStore';
-import api from '../../api/axios';
-import { sendMessageToTeacher, getChatMessages } from '../../api/student/messages';
-
-/**
- * Teacher Chat Component
- *
- * BACKEND IMPLEMENTATION REQUIRED:
- * This component expects the following backend API endpoints:
- *
- * Student-side endpoints (under /api/student):
- * - POST /messages/teacher - Send message from student to teacher
- *   Body: { message, subjectName, studentId, teacherId, senderType: 'student' }
- *
- * - GET /messages/student/chat/:teacherId/:subjectName - Get chat messages
- *   Returns: { success: true, result: { messages: [...] } }
- *
- * Teacher-side endpoints (under /api/teacher):
- * - GET /messages/chats?teacherEmail=... - Get all teacher chats
- * - GET /messages/chat?teacherEmail=...&studentId=...&subjectName=... - Get specific chat
- * - POST /messages/send - Send message from teacher to student
- *
- * Database Model Required:
- * - Message collection with fields: studentId, teacherId, subjectName, courseName,
- *   message, senderType ('student'|'teacher'), timestamp, isRead, etc.
- */
+import { sendMessageToTeacher, getChatMessages, deleteMessage } from '../../api/student/messages';
 
 interface Message {
   _id?: string;
@@ -76,6 +52,9 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
   const [showSubjectSelection, setShowSubjectSelection] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [courseTeachers, setCourseTeachers] = useState<any[]>(initialCourseTeachers || []);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const keyboardListenersRef = useRef<any[]>([]);
 
   // Get params from navigation
   const params = useLocalSearchParams();
@@ -93,6 +72,65 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
     }
   }, [courseTeachersParam]);
 
+  // Keyboard visibility tracking - FIXED
+  useEffect(() => {
+    const showListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+        // Scroll to bottom when keyboard appears
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+    
+    const hideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    // Store listeners in ref for cleanup
+    keyboardListenersRef.current = [showListener, hideListener];
+
+    return () => {
+      // Proper cleanup
+      keyboardListenersRef.current.forEach(listener => {
+        listener?.remove?.();
+      });
+      keyboardListenersRef.current = [];
+    };
+  }, []);
+
+  // Load messages when subject changes
+  useEffect(() => {
+    if (selectedSubject?.teacher) {
+      loadMessages(selectedSubject.name);
+    }
+  }, [selectedSubject]);
+
+  // Periodic refresh for real-time updates
+  useEffect(() => {
+    if (!selectedSubject?.teacher) return;
+
+    const interval = setInterval(() => {
+      if (!isLoadingMessages) {
+        refreshMessages();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isLoadingMessages, selectedSubject]);
+
+  // Manual refresh function
+  const refreshMessages = useCallback(() => {
+    if (selectedSubject?.teacher) {
+      loadMessages(selectedSubject.name);
+    }
+  }, [selectedSubject]);
+
   // Get available subjects with real teachers
   const availableSubjects = selectedCourse?.subjects?.map(subject => ({
     name: subject.name,
@@ -107,7 +145,6 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
         return subjectTeacher.teacher;
       }
     }
-    // Fallback to course offered by if no specific teacher assigned
     return {
       id: 'default-teacher',
       name: 'Course Instructor',
@@ -119,7 +156,6 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
   const handleSubjectSelect = useCallback((subject: Subject) => {
     setSelectedSubject(subject);
     setShowSubjectSelection(false);
-    // Load existing messages for this subject
     loadMessages(subject.name);
   }, []);
 
@@ -129,11 +165,9 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
 
     setIsLoadingMessages(true);
     try {
-      // Use the new API method
       const response = await getChatMessages(selectedSubject.teacher.id, subjectName);
       if (response.result) {
         const fetchedMessages = response.result.messages || [];
-        // Transform messages to match our interface
         const transformedMessages: Message[] = fetchedMessages.map((msg: any) => ({
           id: msg._id || msg.id,
           text: msg.message || msg.text,
@@ -146,10 +180,12 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
           isRead: msg.isRead,
         }));
         setMessages(transformedMessages);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
       }
     } catch (error: any) {
       console.error('Error loading messages:', error);
-      // For now, show empty chat until backend is implemented
       setMessages([]);
     } finally {
       setIsLoadingMessages(false);
@@ -157,7 +193,7 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
   };
 
   // Send message
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !selectedSubject || !user || isLoading) return;
 
     const message: Message = {
@@ -170,13 +206,14 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
       timestamp: new Date(),
     };
 
-    // Add message to local state immediately for better UX
     setMessages(prev => [...prev, message]);
     setNewMessage('');
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
     setIsLoading(true);
 
     try {
-      // Use the new API method
       const response = await sendMessageToTeacher({
         message: message.text,
         subjectName: message.subjectName!,
@@ -184,67 +221,143 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
       });
 
       if (response.result) {
-        // Message sent successfully - update with server response
         console.log('Message sent successfully');
       } else {
-        // Remove message from local state if failed
         setMessages(prev => prev.filter(m => m.id !== message.id));
         Alert.alert('Error', 'Failed to send message. Please try again.');
       }
     } catch (error: any) {
-      // Remove message from local state if failed
       setMessages(prev => prev.filter(m => m.id !== message.id));
       console.error('Error sending message:', error);
       Alert.alert('Error', error.response?.data?.message || 'Failed to send message. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [newMessage, selectedSubject, user, isLoading]);
+
+  // Delete message
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    try {
+      const response = await deleteMessage(messageId);
+      if (!response.error) {
+        setMessages(prev => prev.filter(msg => msg.id !== messageId && msg._id !== messageId));
+        Alert.alert('Success', 'Message deleted successfully');
+      } else {
+        Alert.alert('Error', 'Failed to delete message');
+      }
+    } catch (error: any) {
+      console.error('Error deleting message:', error);
+      Alert.alert('Error', error.message || 'Failed to delete message');
+    }
+  }, []);
+
+  // Handle long press on message
+  const handleMessageLongPress = useCallback((message: Message) => {
+    // Only allow deleting own messages
+    if (message.sender === 'user' && (message.senderId === user?.id || message.senderId === (user as any)?._id)) {
+      Alert.alert(
+        'Delete Message',
+        'Are you sure you want to delete this message?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: () => handleDeleteMessage(message._id || message.id)
+          }
+        ]
+      );
+    }
+  }, [user, handleDeleteMessage]);
 
   // Render message item
-  const renderMessage = ({ item }: { item: Message }) => {
+  const renderMessage = useCallback((item: Message) => {
     const timestamp = typeof item.timestamp === 'string' ? new Date(item.timestamp) : item.timestamp;
     const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     return (
-      <View className={`flex-row mb-3 ${item.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-        <View className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-          item.sender === 'user'
-            ? 'bg-blue-500 rounded-br-sm'
-            : 'bg-gray-200 rounded-bl-sm'
-        }`}>
-          <Text className={`text-sm ${
-            item.sender === 'user' ? 'text-white' : 'text-gray-900'
-          }`}>
+      <TouchableOpacity 
+        key={item.id}
+        onLongPress={() => handleMessageLongPress(item)}
+        style={{
+          flexDirection: 'row',
+          marginBottom: 16,
+          justifyContent: item.sender === 'user' ? 'flex-end' : 'flex-start'
+        }}
+        activeOpacity={0.8}
+      >
+        <View 
+          style={{
+            maxWidth: '75%',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderRadius: 16,
+            backgroundColor: item.sender === 'user' ? '#3B82F6' : '#FFFFFF',
+            borderWidth: item.sender === 'teacher' ? 1 : 0,
+            borderColor: '#F3F4F6',
+            borderBottomRightRadius: item.sender === 'user' ? 4 : 16,
+            borderBottomLeftRadius: item.sender === 'teacher' ? 4 : 16,
+          }}
+        >
+          <Text 
+            style={{
+              fontSize: 12,
+              lineHeight: 20,
+              color: item.sender === 'user' ? '#FFFFFF' : '#111827'
+            }}
+          >
             {item.text}
           </Text>
-          <Text className={`text-xs mt-1 ${
-            item.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
-          }`}>
+          <Text 
+            style={{
+              fontSize: 12,
+              marginTop: 8,
+              color: item.sender === 'user' ? '#DBEAFE' : '#6B7280'
+            }}
+          >
             {timeString}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
-  };
+  }, [handleMessageLongPress]);
+
+  // Handle back navigation safely
+  const handleBack = useCallback(() => {
+    try {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/Ask/AskPage');
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
+  }, [router]);
 
   // If no course selected
   if (!selectedCourse) {
     return (
-      <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['top', 'bottom']}>
-        <View className="flex-1 items-center justify-center px-6">
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFAFA' }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
           <MaterialIcons name="school" size={64} color="#9CA3AF" />
-          <Text className="text-lg font-semibold text-gray-800 mt-4">
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#1F2937', marginTop: 16 }}>
             No Course Selected
           </Text>
-          <Text className="text-sm text-gray-500 mt-2 text-center">
+          <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
             Please select a course to chat with teachers
           </Text>
           <TouchableOpacity
-            onPress={() => router.back()}
-            className="mt-6 bg-blue-500 px-6 py-3 rounded-lg"
+            onPress={handleBack}
+            style={{
+              marginTop: 24,
+              backgroundColor: '#3B82F6',
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              borderRadius: 8
+            }}
           >
-            <Text className="text-white font-semibold">Go Back</Text>
+            <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -252,131 +365,251 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FAFAFA]" edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFAFA' }} edges={['top', 'bottom']}>
+      {/* Background Decorative Elements */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', top: -80, right: -80, width: 160, height: 160, backgroundColor: '#DBEAFE', borderRadius: 80, opacity: 0.2 }} />
+        <View style={{ position: 'absolute', bottom: -128, left: -128, width: 256, height: 256, backgroundColor: '#EFF6FF', borderRadius: 128, opacity: 0.3 }} />
+        <View style={{ position: 'absolute', top: '33%', right: -64, width: 128, height: 128, backgroundColor: '#E0E7FF', borderRadius: 64, opacity: 0.25 }} />
+      </View>
+
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200 bg-white">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        zIndex: 10
+      }}>
+        <TouchableOpacity onPress={handleBack} style={{ padding: 8, borderRadius: 9999, backgroundColor: '#F9FAFB' }}>
           <MaterialIcons name="chevron-left" size={24} color="#374151" />
         </TouchableOpacity>
-        <View className="flex-1 ml-4">
-          <Text className="text-lg font-semibold text-gray-900">
+        <View style={{ flex: 1, marginLeft: 16 }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
             {selectedSubject ? `Chat - ${selectedSubject.name}` : 'Select Subject'}
           </Text>
           {selectedSubject?.teacher && (
-            <Text className="text-sm text-gray-500">
+            <Text style={{ fontSize: 12, color: '#6B7280' }}>
               with {selectedSubject.teacher.name}
             </Text>
           )}
         </View>
         {selectedSubject && (
-          <TouchableOpacity
-            onPress={() => setShowSubjectSelection(true)}
-            className="p-2"
-          >
-            <MaterialIcons name="edit" size={20} color="#6B7280" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity
+              onPress={refreshMessages}
+              disabled={isLoadingMessages}
+              style={{ padding: 8, marginRight: 8, borderRadius: 9999, backgroundColor: '#F9FAFB' }}
+            >
+              <MaterialIcons
+                name="refresh"
+                size={20}
+                color={isLoadingMessages ? "#9CA3AF" : "#6B7280"}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowSubjectSelection(true)}
+              style={{ padding: 8, borderRadius: 9999, backgroundColor: '#F9FAFB' }}
+            >
+              <MaterialIcons name="edit" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
-      {showSubjectSelection ? (
-        /* Subject Selection */
-        <View className="flex-1 px-4 py-6">
-          <Text className="text-xl font-bold text-gray-900 mb-6">
-            Select a Subject to Chat
-          </Text>
+      {/* Main Content */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoadingMessages}
+              onRefresh={refreshMessages}
+              colors={['#3B82F6']}
+              tintColor="#3B82F6"
+            />
+          }
+        >
+          {showSubjectSelection ? (
+            /* Subject Selection */
+            <View style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 24 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+                Select a Subject to Chat
+              </Text>
+              <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 4, marginBottom: 16 }}>
+                Choose a subject below to start a conversation with the respective teacher.
+              </Text>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {availableSubjects.map((subject, index) => (
-              <TouchableOpacity
-                key={subject.name}
-                onPress={() => handleSubjectSelect(subject)}
-                className="bg-white rounded-xl p-4 mb-3 border border-gray-100"
-                activeOpacity={0.7}
-              >
-                <View className="flex-row items-center">
-                  <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4">
-                    <MaterialIcons name="subject" size={24} color="#3B82F6" />
+              {availableSubjects.map((subject) => (
+                <TouchableOpacity
+                  key={subject.name}
+                  onPress={() => handleSubjectSelect(subject)}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 16,
+                    padding: 20,
+                    marginBottom: 16,
+                    borderWidth: 1,
+                    borderColor: '#F3F4F6'
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 56,
+                      height: 56,
+                      backgroundColor: '#DBEAFE',
+                      borderRadius: 16,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 16
+                    }}>
+                      <MaterialIcons name="subject" size={26} color="#3B82F6" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 4 }}>
+                        {subject.name}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#6B7280' }}>
+                        Teacher: {subject.teacher?.name || 'Not assigned'}
+                      </Text>
+                    </View>
+                    <View style={{
+                      width: 32,
+                      height: 32,
+                      backgroundColor: '#EFF6FF',
+                      borderRadius: 16,
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <MaterialIcons name="chevron-right" size={20} color="#3B82F6" />
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-gray-900">
-                      {subject.name}
-                    </Text>
-                    <Text className="text-sm text-gray-500">
-                      Teacher: {subject.teacher?.name || 'Not assigned'}
-                    </Text>
-                  </View>
-                  <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+                </TouchableOpacity>
+              ))}
+
+              {availableSubjects.length === 0 && (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 48 }}>
+                  <MaterialIcons name="school" size={48} color="#9CA3AF" />
+                  <Text style={{ fontSize: 16, color: '#6B7280', marginTop: 16 }}>
+                    No subjects available
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8, textAlign: 'center' }}>
+                    Subjects will appear here once they're added to your course
+                  </Text>
                 </View>
-              </TouchableOpacity>
-            ))}
-
-            {availableSubjects.length === 0 && (
-              <View className="items-center justify-center py-12">
-                <MaterialIcons name="school" size={48} color="#9CA3AF" />
-                <Text className="text-lg text-gray-600 mt-4">
-                  No subjects available
-                </Text>
-                <Text className="text-sm text-gray-500 mt-2 text-center">
-                  Subjects will appear here once they're added to your course
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-      ) : (
-        /* Chat Interface */
-        <View className="flex-1">
-          {/* Messages */}
-          <FlatList
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            inverted={false}
-            ListEmptyComponent={
-              <View className="items-center justify-center py-12">
-                <MaterialIcons name="chat" size={48} color="#9CA3AF" />
-                <Text className="text-lg text-gray-600 mt-4">
-                  No messages yet
-                </Text>
-                <Text className="text-sm text-gray-500 mt-2 text-center">
-                  Start a conversation with your teacher
-                </Text>
-              </View>
-            }
-          />
-
-          {/* Message Input */}
-          <View className="bg-white border-t border-gray-200 px-4 py-3">
-            <View className="flex-row items-center">
-              <TextInput
-                className="flex-1 bg-gray-100 rounded-full px-4 py-3 mr-3 text-sm"
-                placeholder="Type your message..."
-                value={newMessage}
-                onChangeText={setNewMessage}
-                multiline={false}
-                maxLength={500}
-              />
-              <TouchableOpacity
-                onPress={handleSendMessage}
-                disabled={!newMessage.trim() || isLoading}
-                className={`w-12 h-12 rounded-full items-center justify-center ${
-                  newMessage.trim() && !isLoading
-                    ? 'bg-blue-500'
-                    : 'bg-gray-300'
-                }`}
-              >
-                <MaterialIcons
-                  name="send"
-                  size={20}
-                  color={newMessage.trim() && !isLoading ? 'white' : '#9CA3AF'}
-                />
-              </TouchableOpacity>
+              )}
             </View>
-          </View>
-        </View>
-      )}
+          ) : (
+            /* Chat Interface */
+            <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+              {/* Messages */}
+              <View style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 16 }}>
+                {messages.map(renderMessage)}
+                {messages.length === 0 && (
+                  <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 64 }}>
+                    <View style={{
+                      width: 80,
+                      height: 80,
+                      backgroundColor: '#DBEAFE',
+                      borderRadius: 24,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 16
+                    }}>
+                      <MaterialIcons name="chat" size={32} color="#3B82F6" />
+                    </View>
+                    <Text style={{ fontSize: 18, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+                      No messages yet
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', maxWidth: 300 }}>
+                      Start a conversation with your teacher by sending your first message
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Message Input */}
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderTopWidth: 1,
+                borderTopColor: '#E5E7EB',
+                paddingHorizontal: 16,
+                paddingTop: 16,
+                paddingBottom: keyboardVisible ? 24 : 16
+              }}>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12
+                }}>
+                  <View style={{
+                    flex: 1,
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 16,
+                    paddingHorizontal: 16,
+                    paddingVertical: 0,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB'
+                  }}>
+                    <TextInput
+                      style={{
+                        fontSize: 12,
+                        color: '#111827',
+                        lineHeight: 20,
+                        maxHeight: 80,
+                        minHeight: 20,
+                        paddingVertical: 12,
+                        textAlignVertical: 'center'
+                      }}
+                      placeholder="Type your message..."
+                      placeholderTextColor="#9CA3AF"
+                      value={newMessage}
+                      onChangeText={setNewMessage}
+                      multiline={true}
+                      maxLength={500}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleSendMessage}
+                    disabled={!newMessage.trim() || isLoading}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: newMessage.trim() && !isLoading ? '#3B82F6' : '#D1D5DB'
+                    }}
+                  >
+                    <MaterialIcons
+                      name="send"
+                      size={18}
+                      color={newMessage.trim() && !isLoading ? '#FFFFFF' : '#9CA3AF'}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {newMessage.length > 400 && (
+                  <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 8, textAlign: 'right' }}>
+                    {newMessage.length}/500
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

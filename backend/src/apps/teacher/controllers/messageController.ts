@@ -75,6 +75,11 @@ export const getTeacherChats = async (req: Request, res: Response) => {
     // Sort conversations by last message time (most recent first)
     conversations.sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
 
+    // Sort messages within each conversation (oldest first for chat flow)
+    conversations.forEach(conversation => {
+      conversation.messages.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    });
+
     return res.status(200).json({
       success: true,
       data: {

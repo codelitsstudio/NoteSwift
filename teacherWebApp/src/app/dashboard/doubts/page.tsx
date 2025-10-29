@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import teacherAPI from "@/lib/api/teacher-api";
 import { useTeacherAuth } from "@/context/teacher-auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 /**
  * Teacher Doubts & Chat Page
@@ -109,13 +109,28 @@ function DoubtsPageContent() {
   const [selectedChat, setSelectedChat] = useState<ChatConversation | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (teacher?.email) {
       fetchData();
       fetchChatConversations();
+      
+      // Set up polling for real-time chat updates every 5 seconds
+      const interval = setInterval(() => {
+        fetchChatConversations();
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
   }, [teacher?.email, selectedModule]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [selectedChat?.messages]);
 
   const fetchData = async () => {
     if (!teacher?.email) return;
@@ -217,9 +232,9 @@ function DoubtsPageContent() {
           subjectName: conv.subjectName,
           courseName: conv.courseName,
           student: {
-            _id: conv.studentId,
-            name: conv.studentName,
-            email: conv.studentEmail
+            _id: conv.student._id,
+            name: conv.student.name,
+            email: conv.student.email
           },
           lastMessage: conv.lastMessage,
           lastMessageTime: conv.lastMessageTime,
@@ -232,6 +247,37 @@ function DoubtsPageContent() {
     } catch (error) {
       console.error('Error fetching chat conversations:', error);
       setChatConversations([]);
+    }
+  };
+
+  const refreshSelectedChat = async () => {
+    if (!teacher?.email || !selectedChat) return;
+
+    try {
+      // Fetch the specific chat conversation with latest messages
+      const response = await teacherAPI.messages.getChatMessages(teacher.email, selectedChat.student._id, selectedChat.subjectName);
+      
+      if (response.success && response.data) {
+        const conversation = response.data.conversation;
+        if (conversation) {
+          // Update the selected chat with fresh messages
+          setSelectedChat({
+            subjectName: conversation.subjectName,
+            courseName: conversation.courseName,
+            student: {
+              _id: conversation.student._id,
+              name: conversation.student.name,
+              email: conversation.student.email
+            },
+            lastMessage: conversation.lastMessage,
+            lastMessageTime: conversation.lastMessageTime,
+            unreadCount: conversation.unreadCount || 0,
+            messages: conversation.messages || []
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing selected chat:', error);
     }
   };
 
@@ -265,8 +311,14 @@ function DoubtsPageContent() {
       console.log('API response:', response);
 
       if (response.success) {
-        // Refresh chat conversations
+        // Refresh chat conversations and select the current chat again
         await fetchChatConversations();
+        
+        // Refresh the selected chat immediately to show the new message
+        if (selectedChat) {
+          await refreshSelectedChat();
+        }
+        
         setNewMessage('');
       } else {
         console.error('API response error:', response);
@@ -887,6 +939,7 @@ function DoubtsPageContent() {
                                 </div>
                               </div>
                             ))}
+                            <div ref={messagesEndRef} />
                           </div>
 
                           {/* Message Input */}

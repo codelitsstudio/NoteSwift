@@ -65,3 +65,15 @@ export const getChatMessages = async (teacherId: string, subjectName: string): P
 
   return response;
 };
+
+export const deleteMessage = async (messageId: string): Promise<{ error: boolean; message: string }> => {
+  const res = await api.delete(`/messages/student/${messageId}`);
+  const response = res.data;
+
+  // Check if the response contains an error
+  if (response.error) {
+    throw new Error(response.message || 'Failed to delete message');
+  }
+
+  return response;
+};
