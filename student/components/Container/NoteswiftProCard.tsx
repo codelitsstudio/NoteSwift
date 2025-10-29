@@ -53,13 +53,13 @@ export default function NoteswiftProCard() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 24,
+          marginBottom: 18,
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <MaterialIcons name="verified" size={24} color="#ffffff" />
             <Text style={{
               color: '#ffffff',
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: 'bold',
               marginLeft: 8,
             }}>
@@ -74,7 +74,7 @@ export default function NoteswiftProCard() {
           }}>
             <Text style={{
               color: '#1e40af',
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: '600',
             }}>
               ACTIVE
@@ -83,9 +83,9 @@ export default function NoteswiftProCard() {
         </View>
         <Text style={{
           color: '#bfdbfe',
-          fontSize: 16,
+          fontSize: 14,
           marginBottom: 16,
-          lineHeight: 24,
+          lineHeight: 20,
         }}>
           Enjoy unlimited access to premium courses, live classes, and exclusive resources.
         </Text>
@@ -107,8 +107,8 @@ export default function NoteswiftProCard() {
             <Text style={{
               color: '#1e40af',
               fontWeight: '600',
-              fontSize: 14,
-              marginLeft: 8,
+              fontSize: 13,
+              marginLeft: 6,
             }}>
               Explore {availableProCourses.length} More Course{availableProCourses.length !== 1 ? 's' : ''}
             </Text>

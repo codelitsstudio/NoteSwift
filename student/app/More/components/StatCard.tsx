@@ -81,7 +81,6 @@ const StatCard = () => {
               </View>
             </View>
             <View className="items-center py-8">
-              <MaterialIcons name="hourglass-empty" size={48} color="#9CA3AF" />
               <Text className="text-gray-500 text-sm mt-2">Loading courses...</Text>
             </View>
           </View>

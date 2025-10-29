@@ -44,7 +44,7 @@ interface TeacherChatPageProps {
 export default function TeacherChatPage({ courseTeachers: initialCourseTeachers }: TeacherChatPageProps = {}) {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { selectedCourse, courses } = useCourseStore();
+  const { selectedCourse } = useCourseStore();
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -104,63 +104,8 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
     };
   }, []);
 
-  // Load messages when subject changes
-  useEffect(() => {
-    if (selectedSubject?.teacher) {
-      loadMessages(selectedSubject.name);
-    }
-  }, [selectedSubject]);
-
-  // Periodic refresh for real-time updates
-  useEffect(() => {
-    if (!selectedSubject?.teacher) return;
-
-    const interval = setInterval(() => {
-      if (!isLoadingMessages) {
-        refreshMessages();
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [isLoadingMessages, selectedSubject]);
-
-  // Manual refresh function
-  const refreshMessages = useCallback(() => {
-    if (selectedSubject?.teacher) {
-      loadMessages(selectedSubject.name);
-    }
-  }, [selectedSubject]);
-
-  // Get available subjects with real teachers
-  const availableSubjects = selectedCourse?.subjects?.map(subject => ({
-    name: subject.name,
-    teacher: getSubjectTeacher(subject.name)
-  })) || [];
-
-  // Get real teacher for a specific subject
-  function getSubjectTeacher(subjectName: string) {
-    if (courseTeachers) {
-      const subjectTeacher = courseTeachers.find(ct => ct.subjectName === subjectName);
-      if (subjectTeacher?.teacher) {
-        return subjectTeacher.teacher;
-      }
-    }
-    return {
-      id: 'default-teacher',
-      name: 'Course Instructor',
-      email: 'instructor@school.com'
-    };
-  }
-
-  // Handle subject selection
-  const handleSubjectSelect = useCallback((subject: Subject) => {
-    setSelectedSubject(subject);
-    setShowSubjectSelection(false);
-    loadMessages(subject.name);
-  }, []);
-
   // Load messages for a subject
-  const loadMessages = async (subjectName: string) => {
+  const loadMessages = useCallback(async (subjectName: string) => {
     if (!user || !selectedSubject?.teacher) return;
 
     setIsLoadingMessages(true);
@@ -190,7 +135,62 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
     } finally {
       setIsLoadingMessages(false);
     }
-  };
+  }, [user, selectedSubject]);
+
+  // Load messages when subject changes
+  useEffect(() => {
+    if (selectedSubject?.teacher) {
+      loadMessages(selectedSubject.name);
+    }
+  }, [selectedSubject, loadMessages]);
+
+  // Manual refresh function
+  const refreshMessages = useCallback(() => {
+    if (selectedSubject?.teacher) {
+      loadMessages(selectedSubject.name);
+    }
+  }, [selectedSubject, loadMessages]);
+
+  // Periodic refresh for real-time updates
+  useEffect(() => {
+    if (!selectedSubject?.teacher) return;
+
+    const interval = setInterval(() => {
+      if (!isLoadingMessages) {
+        refreshMessages();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isLoadingMessages, selectedSubject, refreshMessages]);
+
+  // Get available subjects with real teachers
+  const availableSubjects = selectedCourse?.subjects?.map(subject => ({
+    name: subject.name,
+    teacher: getSubjectTeacher(subject.name)
+  })) || [];
+
+  // Get real teacher for a specific subject
+  function getSubjectTeacher(subjectName: string) {
+    if (courseTeachers) {
+      const subjectTeacher = courseTeachers.find(ct => ct.subjectName === subjectName);
+      if (subjectTeacher?.teacher) {
+        return subjectTeacher.teacher;
+      }
+    }
+    return {
+      id: 'default-teacher',
+      name: 'Course Instructor',
+      email: 'instructor@school.com'
+    };
+  }
+
+  // Handle subject selection
+  const handleSubjectSelect = useCallback((subject: Subject) => {
+    setSelectedSubject(subject);
+    setShowSubjectSelection(false);
+    loadMessages(subject.name);
+  }, [loadMessages]);
 
   // Send message
   const handleSendMessage = useCallback(async () => {
@@ -506,7 +506,7 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
                     No subjects available
                   </Text>
                   <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8, textAlign: 'center' }}>
-                    Subjects will appear here once they're added to your course
+                    Subjects will appear here once they&apos;re added to your course
                   </Text>
                 </View>
               )}

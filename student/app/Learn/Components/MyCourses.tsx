@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, Image, SafeAreaView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../../../stores/authStore';
@@ -95,6 +95,32 @@ const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
     });
   }, [user?.id, selectedCourse]);
 
+  const subjects = useMemo(() => selectedCourse?.subjects || [], [selectedCourse?.subjects]);
+
+  // Filter subjects based on search query with debounce
+  useEffect(() => {
+    const performSearch = () => {
+      if (!searchQuery.trim()) {
+        setSearchedSubjects(subjects);
+        return;
+      }
+
+      const filtered = subjects.filter((subject: any) => {
+        const searchTerm = searchQuery.toLowerCase();
+        const subjectName = (subject.name || '').toLowerCase();
+        const subjectDescription = (subject.description || '').toLowerCase();
+        
+        return subjectName.includes(searchTerm) || subjectDescription.includes(searchTerm);
+      });
+
+      setSearchedSubjects(filtered);
+    };
+
+    // Small delay for better UX
+    const timeoutId = setTimeout(performSearch, 150);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, subjects]);
+
   // If no course is selected, show message
   if (!selectedCourse) {
     return (
@@ -122,32 +148,6 @@ const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
       </SafeAreaView>
     );
   }
-
-  const subjects = selectedCourse.subjects || [];
-
-  // Filter subjects based on search query with debounce
-  useEffect(() => {
-    const performSearch = () => {
-      if (!searchQuery.trim()) {
-        setSearchedSubjects(subjects);
-        return;
-      }
-
-      const filtered = subjects.filter((subject: any) => {
-        const searchTerm = searchQuery.toLowerCase();
-        const subjectName = (subject.name || '').toLowerCase();
-        const subjectDescription = (subject.description || '').toLowerCase();
-        
-        return subjectName.includes(searchTerm) || subjectDescription.includes(searchTerm);
-      });
-
-      setSearchedSubjects(filtered);
-    };
-
-    // Small delay for better UX
-    const timeoutId = setTimeout(performSearch, 150);
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, subjects]);
 
   // Find enrollment for the selected course
   const selectedCourseEnrollment = enrollments.find(enrollment => {
@@ -232,7 +232,7 @@ const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
                 No subjects found
               </Text>
               <Text className="text-sm text-gray-500 mt-1 text-center px-4">
-                No subjects match your search "{searchQuery}"
+                No subjects match your search &quot;{searchQuery}&quot;
               </Text>
             </View>
           ) : (

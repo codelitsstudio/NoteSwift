@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
-  ActivityIndicator,
-  FlatList,
   KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +15,6 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCourseStore, Course } from "../../stores/courseStore";
-import { useAuthStore } from "../../stores/authStore";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import { OfflineScreen } from "../../components/Container/OfflineScreen";
 import Skeleton from "../../components/Container/Skeleton";
@@ -270,12 +267,10 @@ const SearchPage = React.memo(function SearchPage() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const isOnline = useNetworkStatus();
-  const { user } = useAuthStore();
   const { courses, fetchAllCourses } = useCourseStore();
 
   const searchType = (params.searchType as 'courses' | 'questions' | 'tests') || 'courses';
   const placeholder = params.placeholder as string || (searchType === 'courses' ? 'Search for courses, subjects...' : searchType === 'questions' ? 'Search questions...' : 'Search tests...');
-  const title = params.title as string || (searchType === 'courses' ? 'Search Courses' : searchType === 'questions' ? 'Search Questions' : 'Search Tests');
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
@@ -343,7 +338,7 @@ const SearchPage = React.memo(function SearchPage() {
     };
 
     loadData();
-  }, [courses, fetchAllCourses, searchType]);
+  }, [courses, fetchAllCourses, searchType, params.initialData]);
 
   // Filter items based on search query
   const performSearch = useCallback((query: string) => {

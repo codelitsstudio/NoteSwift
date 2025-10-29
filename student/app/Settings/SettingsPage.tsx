@@ -13,6 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import Toast from 'react-native-toast-message';
+import Constants from 'expo-constants';
 
 // --- Helper Types ---
 type ListItemProps = {
@@ -120,6 +121,34 @@ const SettingsPage = () => {
     );
   };
 
+  const handleSwitchAccount = () => {
+    Alert.alert(
+      "Switch Account",
+      "Are you sure you want to switch to a different account? You'll be logged out and taken to the login screen.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Switch Account", 
+          style: "default",
+          onPress: () => {
+            logout();
+            Toast.show({
+              type: 'info',
+              position: 'top',
+              text1: 'Switching Account',
+              text2: 'Please log in with a different account.',
+              visibilityTime: 3000,
+              autoHide: true,
+              topOffset: 50,
+            });
+            router.replace('/onboarding/Login/login');
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
   const handleContactUs = () => {
     const phoneNumber = '9779767464242'; // WhatsApp business number without +
     const whatsappUrl = `whatsapp://send?phone=${phoneNumber}`;
@@ -207,7 +236,7 @@ const SettingsPage = () => {
               icon="switch-account"
               label="Switch Account"
               type="navigate"
-              onPress={() => Alert.alert('Coming Soon', 'Feature will be available soon')}
+              onPress={handleSwitchAccount}
             />
             <Divider />
        <SettingsListItem
@@ -220,7 +249,8 @@ const SettingsPage = () => {
             />
           </View>
 
-          <Text className="text-center text-gray-400 text-xs my-8">Version 1.0.0 (1234)</Text>
+          <Text className="text-center text-gray-400 text-xs my-4">Version {Constants.expoConfig?.version || '1.0.0'}</Text>
+          <Text className="text-center text-gray-400 text-xs mb-8">Developed by CodeLits Studio®</Text>
         </ScrollView>
       </View>
     </SafeAreaView>

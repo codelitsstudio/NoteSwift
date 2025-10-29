@@ -12,6 +12,7 @@ import Toast from "react-native-toast-message";
 import { toastConfig } from './ToastConfig';
 import "react-native-reanimated";
 import "../global.css";
+import { usePreventScreenCapture } from 'expo-screen-capture';
 
 import Header from "../components/Headers/Header";
 import HeaderTwo from "../components/Headers/HeaderTwo";
@@ -54,6 +55,9 @@ export default function RootLayout() {
   // Authentication protection
   const { isLoggedIn, user } = useAuthStore();
   const segments = useSegments();
+
+  // Prevent screenshots and screen recording
+  usePreventScreenCapture();
 
   // Strict authentication middleware
   useEffect(() => {
@@ -114,7 +118,6 @@ export default function RootLayout() {
       }
     };
   }, [isLoggedIn, user, showSplash]);
-
 
   useEffect(() => {
     const prepare = async () => {

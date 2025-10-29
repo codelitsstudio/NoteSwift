@@ -615,6 +615,8 @@ const ProfilePage = () => {
         </View>
       </ScrollView>
 
+      <Text className="text-center text-gray-400 text-xs py-4">Engineered by Codelits Studio.</Text>
+
       {/* Edit Bottom Sheets */}
       <EditBottomSheet
         isVisible={showEditSheet}

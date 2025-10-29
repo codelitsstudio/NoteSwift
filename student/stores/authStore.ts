@@ -298,7 +298,7 @@ export const useAuthStore = create<AuthState>()(
             // Call backend logout endpoint to clear device binding
             const token = get().token;
             if (token) {
-                await api.post('/auth/logout');
+                await api.post('/student/auth/logout');
             }
         } catch (error) {
             console.error('Logout API call failed:', error);

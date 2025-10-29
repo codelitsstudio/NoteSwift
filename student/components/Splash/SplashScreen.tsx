@@ -53,13 +53,13 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
         />
       </Animated.View>
 
-      <View style={styles.poweredContainer}>
+      {/* <View style={styles.poweredContainer}>
         <Text style={styles.powered}>Powered by</Text>
         <Image
           source={require("../../assets/images/cls-logo.png")}
           style={styles.poweredLogo}
         />
-      </View>
+      </View> */}
     </View>
   );
 };
@@ -81,21 +81,21 @@ const styles = StyleSheet.create({
     color: "#000",
     textAlign: "center",
   },
-  poweredContainer: {
-    position: "absolute",
-    bottom: 60,
-    alignItems: "center",
-  },
-  powered: {
-    fontSize: 14, // increased from 12
-    color: "#333",
-  },
-  poweredLogo: {
-    marginTop: 4, // slightly more spacing
-    width: 50, // increased from 40
-    height: 50, // increased from 40
-    borderRadius: 25, // updated to maintain circle
-  },
+  // poweredContainer: {
+  //   position: "absolute",
+  //   bottom: 60,
+  //   alignItems: "center",
+  // },
+  // powered: {
+  //   fontSize: 14, // increased from 12
+  //   color: "#333",
+  // },
+  // poweredLogo: {
+  //   marginTop: 4, // slightly more spacing
+  //   width: 50, // increased from 40
+  //   height: 50, // increased from 40
+  //   borderRadius: 25, // updated to maintain circle
+  // },
 });
 
 
