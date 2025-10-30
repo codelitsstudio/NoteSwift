@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Image, StyleSheet, Animated, Dimensions } from "react-native";
 import noteswiftLogo from '@assets/images/noteswift-logo.png';
-import clsLogo from '@assets/images/cls-logo.png';
 
 const { width, height } = Dimensions.get("window");
 

@@ -1,5 +1,5 @@
 // components/ChapterDetail/ChapterDetailCard.tsx
-import React, { useRef, useState, useEffect, memo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
@@ -54,16 +54,7 @@ type TabType = 'video' | 'attachments';
 const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjectName, moduleNumber, onPrevious, onBack, onNext }) => {
   console.log('🎯 ChapterDetailCard called with props:', { chapter, courseId, subjectName, moduleNumber });
 
-  // Validate required props
-  if (!chapter || !courseId || !subjectName || typeof moduleNumber !== 'number') {
-    console.error('ChapterDetailCard: Missing required props', { chapter, courseId, subjectName, moduleNumber });
-    return (
-      <View className="flex-1 items-center justify-center py-12">
-        <Text className="text-gray-500 text-base">Invalid chapter data</Text>
-      </View>
-    );
-  }
-
+  // All hooks must be called at the top level, before any early returns
   const [activeTab, setActiveTab] = useState<TabType>('video');
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
   const videoRef = useRef(null);
@@ -75,32 +66,34 @@ const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjec
   const [teacherInfo, setTeacherInfo] = useState<{ name: string; avatar: string } | null>(null);
   const [showAskModal, setShowAskModal] = useState(false);
   const [componentMounted, setComponentMounted] = useState(false);
-  
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // Mark component as mounted after initial render
   useEffect(() => {
     setComponentMounted(true);
   }, []);
 
   // Get videos array, supporting both new format and backward compatibility
-  const videos = React.useMemo(() => 
-    chapter.videos || (chapter.videoUrl ? [{
+  const videos = React.useMemo(() => {
+    if (!chapter) return [];
+    return chapter.videos || (chapter.videoUrl ? [{
       url: chapter.videoUrl,
       title: chapter.videoTitle || 'Video',
       duration: undefined,
       uploadedAt: undefined
-    }] : []),
-    [chapter.videos, chapter.videoUrl, chapter.videoTitle]
-  );
+    }] : []);
+  }, [chapter]);
   
   // Determine available content types
-  const hasVideo = chapter.hasVideo && videos.length > 0;
-  const hasNotes = chapter.hasNotes && chapter.notesUrl;
+  const hasVideo = chapter?.hasVideo && videos.length > 0;
+  const hasNotes = chapter?.hasNotes && chapter?.notesUrl;
   const onlyNotes = hasNotes && !hasVideo;
   const hasMultipleVideos = videos.length > 1;
   
   // Set teacher info from props or fetch if not available
   useEffect(() => {
-    if (hasVideo) {
+    if (hasVideo && chapter) {
       if (chapter.teacher) {
         setTeacherInfo({
           name: chapter.teacher,
@@ -133,10 +126,11 @@ const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjec
         });
       }
     }
-  }, [hasVideo, chapter.teacher, chapter.teacherId]);
+  }, [hasVideo, chapter]);
 
   // Initialize like state from chapter data when available
   useEffect(() => {
+    if (!chapter) return;
     try {
       const likes = (chapter as any).likes ?? (chapter as any).likeCount ?? 0;
       const likeCountNumeric = Array.isArray(likes) ? likes.length : Number(likes) || 0;
@@ -156,8 +150,6 @@ const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjec
       setActiveTab('attachments');
     }
   }, [hasVideo, hasNotes]);
-  
-  const [comments, setComments] = useState<Comment[]>([]);
 
   const fetchComments = async () => {
     try {
@@ -171,6 +163,16 @@ const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjec
   useEffect(() => {
     fetchComments();
   }, []);
+
+  // Validate required props - moved after hooks
+  if (!chapter || !courseId || !subjectName || typeof moduleNumber !== 'number') {
+    console.error('ChapterDetailCard: Missing required props', { chapter, courseId, subjectName, moduleNumber });
+    return (
+      <View className="flex-1 items-center justify-center py-12">
+        <Text className="text-gray-500 text-base">Invalid chapter data</Text>
+      </View>
+    );
+  }
 
   const handleToggleLike = async () => {
     setLiked(prev => !prev);
@@ -187,8 +189,6 @@ const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjec
       setLiked(prev => !prev);
     }
   };
-
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadVideo = async () => {
     if (!hasVideo) {
@@ -310,7 +310,6 @@ const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjec
             videoUrl={videos[selectedVideoIndex]?.url}
             videoIndex={selectedVideoIndex}
             thumbnailUri={chapter.imageUri}
-            onPressPlay={() => {}}
             onPlayPauseChange={(playing) => {}}
             onTimeUpdate={(ms: number) => {}}
           />

@@ -15,7 +15,6 @@ type RecordedVideoProps = {
   videoUrl?: string;
   videoIndex?: number;
   thumbnailUri?: string;
-  onPressPlay?: () => void;
   onTimeUpdate?: (ms: number) => void;
   onPlayPauseChange?: (isPlaying: boolean) => void;
   onDurationUpdate?: (ms: number) => void;
@@ -33,7 +32,6 @@ const RecordedVideoComponent = forwardRef<any, RecordedVideoProps>((props, ref) 
     videoUrl,
     videoIndex = 0,
     thumbnailUri,
-    onPressPlay,
     onTimeUpdate,
     onPlayPauseChange,
     onDurationUpdate,
