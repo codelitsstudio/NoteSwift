@@ -10,8 +10,9 @@ import QuestionCard from './components/QuestionCard';
 import { useAuthStore } from '../../stores/authStore';
 import { useCourseStore } from '../../stores/courseStore';
 import api from '../../api/axios';
+import loadingGif from '@assets/images/Loading.gif';
 
-export default function AskPage() {
+function AskPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'answered' | 'pending'>('all');
@@ -41,7 +42,7 @@ export default function AskPage() {
   useEffect(() => {
     const loadData = async () => {
       if (user) {
-        const userId = user.id || (user as any)._id;
+        const userId = user?.id || (user as any)?._id;
         if (userId) {
           console.log('🔄 AskPage: Loading courses and enrollments for user:', userId);
           await Promise.all([
@@ -147,7 +148,7 @@ export default function AskPage() {
 
     // Prepare course data for AI features
     const courseData = {
-      courseId: selectedCourse.id,
+      courseId: selectedCourse?.id,
       courseTitle: selectedCourse.title,
       subjects: selectedCourse.subjects || [],
       program: selectedCourse.program,
@@ -264,7 +265,7 @@ export default function AskPage() {
           <View className="mt-8">
             <View className="flex-1 justify-center items-center mb-4 mt-6">
               <Image
-                source={require('../../assets/images/Loading.gif')}
+                source={loadingGif}
                 style={{ width: 180, height: 180, marginBottom: 16 }}
               />
               <Text className="text-lg font-semibold text-gray-800">
@@ -688,3 +689,6 @@ export default function AskPage() {
     </SafeAreaView>
   );
 }
+
+AskPage.displayName = 'AskPage';
+export default AskPage;

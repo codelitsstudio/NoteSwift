@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import QuestionCard from './components/QuestionCard';
 import api from '../../api/axios';
 
-export default function AllQuestions() {
+function AllQuestions() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('All');
@@ -212,3 +212,6 @@ export default function AllQuestions() {
     </SafeAreaView>
   );
 }
+
+AllQuestions.displayName = 'AllQuestions';
+export default AllQuestions;

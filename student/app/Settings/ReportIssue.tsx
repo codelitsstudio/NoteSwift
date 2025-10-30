@@ -19,7 +19,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/authStore';
 import Toast from 'react-native-toast-message';
 
-export default function ReportIssuePage() {
+function ReportIssuePage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
@@ -412,3 +412,6 @@ export default function ReportIssuePage() {
     </SafeAreaViewContext>
   );
 }
+
+ReportIssuePage.displayName = 'ReportIssuePage';
+export default ReportIssuePage;

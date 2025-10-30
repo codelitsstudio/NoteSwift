@@ -120,7 +120,7 @@ const MorePage = () => {
           // Fetch user enrollments and courses data
           if (user?._id) {
             await Promise.all([
-              fetchUserEnrollments(user._id),
+              fetchUserEnrollments(user?._id),
               fetchAllCourses()
             ]);
           }

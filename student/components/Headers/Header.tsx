@@ -27,10 +27,10 @@ export default function Header() {
   const getAvatarSource = () => {
     if (user?.profileImage) {
       // User has uploaded a custom image
-      return { uri: user.profileImage };
+      return { uri: user?.profileImage };
     } else if (user?.avatarEmoji && user.avatarEmoji.startsWith('http')) {
       // User has a Dicebear avatar URL
-      return { uri: user.avatarEmoji };
+      return { uri: user?.avatarEmoji };
     } else if (avatarEmoji && avatarEmoji.startsWith('http')) {
       // Fallback to store avatar URL
       return { uri: avatarEmoji };

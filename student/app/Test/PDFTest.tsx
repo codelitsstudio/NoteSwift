@@ -11,7 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { studentTestAPI, TestDetail } from '../../api/student/test';
 
-export default function PDFTest() {
+function PDFTest() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const testId = params.testId as string;
@@ -482,3 +482,6 @@ export default function PDFTest() {
     </SafeAreaView>
   );
 }
+
+PDFTest.displayName = 'PDFTest';
+export default PDFTest;

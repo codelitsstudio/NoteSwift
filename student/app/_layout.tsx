@@ -41,7 +41,7 @@ cssInterop(MaterialIcons, { className: { target: "style" } });
 
 enableScreens();
 
-export default function RootLayout() {
+function RootLayout() {
   // Network status monitoring
   const isOnline = useNetworkStatus();
   
@@ -335,3 +335,6 @@ export default function RootLayout() {
     </View>
   );
 }
+
+RootLayout.displayName = 'RootLayout';
+export default RootLayout;

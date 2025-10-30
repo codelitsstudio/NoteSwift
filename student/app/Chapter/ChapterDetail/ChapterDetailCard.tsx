@@ -1,6 +1,6 @@
 // components/ChapterDetail/ChapterDetailCard.tsx
-import React, { useRef, useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image } from "react-native";
+import React, { useRef, useState, useEffect, memo } from "react";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 import RecordedVideo from "./RecordedVideo";
@@ -10,7 +10,6 @@ import AskQuestionModal from "./AskQuestionModal";
 import api from "@/api/axios";
 import Toast from 'react-native-toast-message';
 import * as WebBrowser from 'expo-web-browser';
-
 
 type Comment = {
   id: string;
@@ -26,14 +25,14 @@ type ChapterData = {
   title: string;
   subtitle?: string;
   description?: string;
-  imageUri?: string;        // used as video thumbnail
+  imageUri?: string;
   tags?: { type: "video" | "notes" | "live"; label: string; count?: number }[];
   teacher?: string;
   uploadDate?: string;
   hasVideo?: boolean;
   hasNotes?: boolean;
-  videos?: { url: string; title: string; duration?: string; uploadedAt?: Date }[]; // Support multiple videos
-  videoUrl?: string; // Backward compatibility
+  videos?: { url: string; title: string; duration?: string; uploadedAt?: Date }[];
+  videoUrl?: string;
   notesUrl?: string;
   notesTitle?: string;
   videoTitle?: string;
@@ -52,9 +51,21 @@ type Props = {
 
 type TabType = 'video' | 'attachments';
 
-const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, moduleNumber, onPrevious, onBack, onNext }) => {
+const ChapterDetailCardComponent: React.FC<Props> = ({ chapter, courseId, subjectName, moduleNumber, onPrevious, onBack, onNext }) => {
+  console.log('🎯 ChapterDetailCard called with props:', { chapter, courseId, subjectName, moduleNumber });
+
+  // Validate required props
+  if (!chapter || !courseId || !subjectName || typeof moduleNumber !== 'number') {
+    console.error('ChapterDetailCard: Missing required props', { chapter, courseId, subjectName, moduleNumber });
+    return (
+      <View className="flex-1 items-center justify-center py-12">
+        <Text className="text-gray-500 text-base">Invalid chapter data</Text>
+      </View>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<TabType>('video');
-  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0); // Track selected video
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
   const videoRef = useRef(null);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState<number>(0);
@@ -63,14 +74,23 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [teacherInfo, setTeacherInfo] = useState<{ name: string; avatar: string } | null>(null);
   const [showAskModal, setShowAskModal] = useState(false);
+  const [componentMounted, setComponentMounted] = useState(false);
   
+  // Mark component as mounted after initial render
+  useEffect(() => {
+    setComponentMounted(true);
+  }, []);
+
   // Get videos array, supporting both new format and backward compatibility
-  const videos = chapter.videos || (chapter.videoUrl ? [{
-    url: chapter.videoUrl,
-    title: chapter.videoTitle || 'Video',
-    duration: undefined,
-    uploadedAt: undefined
-  }] : []);
+  const videos = React.useMemo(() => 
+    chapter.videos || (chapter.videoUrl ? [{
+      url: chapter.videoUrl,
+      title: chapter.videoTitle || 'Video',
+      duration: undefined,
+      uploadedAt: undefined
+    }] : []),
+    [chapter.videos, chapter.videoUrl, chapter.videoTitle]
+  );
   
   // Determine available content types
   const hasVideo = chapter.hasVideo && videos.length > 0;
@@ -82,13 +102,11 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
   useEffect(() => {
     if (hasVideo) {
       if (chapter.teacher) {
-        // Use teacher name from props with default avatar
         setTeacherInfo({
           name: chapter.teacher,
           avatar: 'https://placehold.co/56x56.png'
         });
       } else if (chapter.teacherId) {
-        // Fallback: fetch teacher info via API
         const fetchTeacherInfo = async () => {
           try {
             const response = await api.get(`/courses/teacher/${chapter.teacherId}/profile`);
@@ -101,7 +119,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
             }
           } catch (error) {
             console.error('Error fetching teacher info:', error);
-            // Fallback to default teacher info
             setTeacherInfo({
               name: chapter.teacher || 'Instructor',
               avatar: 'https://placehold.co/56x56.png'
@@ -110,7 +127,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
         };
         fetchTeacherInfo();
       } else {
-        // No teacher info available
         setTeacherInfo({
           name: 'Instructor',
           avatar: 'https://placehold.co/56x56.png'
@@ -122,7 +138,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
   // Initialize like state from chapter data when available
   useEffect(() => {
     try {
-      // Backend may return likes as a number or an array of ids
       const likes = (chapter as any).likes ?? (chapter as any).likeCount ?? 0;
       const likeCountNumeric = Array.isArray(likes) ? likes.length : Number(likes) || 0;
       setLikeCount(likeCountNumeric);
@@ -134,7 +149,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
   }, [chapter]);
   
   // Set default active tab based on available content
-  React.useEffect(() => {
+  useEffect(() => {
     if (hasVideo) {
       setActiveTab('video');
     } else if (hasNotes) {
@@ -142,14 +157,10 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
     }
   }, [hasVideo, hasNotes]);
   
-  // Comments state - will be loaded from API
   const [comments, setComments] = useState<Comment[]>([]);
 
-  // Fetch comments for this chapter
   const fetchComments = async () => {
     try {
-      // TODO: Implement API call to fetch comments for this chapter
-      // For now, keep empty array
       setComments([]);
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -157,14 +168,11 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
     }
   };
 
-  // Fetch comments when component mounts
   useEffect(() => {
     fetchComments();
   }, []);
 
-  // Toggle like (call backend)
   const handleToggleLike = async () => {
-    // optimistic UI
     setLiked(prev => !prev);
     try {
       const resp = await api.post(`/courses/${courseId}/subject/${encodeURIComponent(subjectName)}/module/${moduleNumber}/like`);
@@ -176,7 +184,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
       }
     } catch (error) {
       console.error('Error toggling like:', error);
-      // rollback optimistic
       setLiked(prev => !prev);
     }
   };
@@ -198,7 +205,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
       const safeSubject = subjectName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       const fileName = `${courseId}_${safeSubject}_module${moduleNumber}_video${selectedVideoIndex}_${Date.now()}.mp4`;
       
-      // Use signed URL and open in browser for download (similar to notes/PDFs viewing)
       try {
         await WebBrowser.openBrowserAsync(signedUrl, { showInRecents: true, enableBarCollapsing: true });
       } catch (browserErr) {
@@ -208,13 +214,12 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
         return;
       }
       
-      // Register download with remote URL (same pattern as PDF)
       try {
         await api.post('/downloads', {
           fileName,
-          fileUri: downloadUrl, // Use downloadUrl like PDF uses fileUri
-          size: undefined, // Size not available for browser downloads
-          pages: undefined // Videos don't have pages
+          fileUri: downloadUrl,
+          size: undefined,
+          pages: undefined
         });
       } catch (apiErr) {
         console.error('api.post(/downloads) error:', apiErr);
@@ -247,7 +252,14 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
     }
   };
 
-
+  // Don't render video until component is fully mounted
+  if (!componentMounted) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -262,7 +274,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {videos.map((video, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={`video-${index}`}
                     onPress={() => setSelectedVideoIndex(index)}
                     className={`mr-3 px-4 py-2 rounded-full border ${
                       selectedVideoIndex === index
@@ -290,6 +302,7 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
           )}
 
           <RecordedVideo
+            key={`video-player-${selectedVideoIndex}`}
             ref={videoRef}
             courseId={courseId}
             subjectName={subjectName}
@@ -324,7 +337,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
             />
           </View>
 
-          {/* Expanded Description */}
           {descriptionExpanded && chapter.description && (
             <Text className="text-sm text-gray-700 mt-3 leading-5">
               {chapter.description}
@@ -332,28 +344,18 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
           )}
         </TouchableOpacity>
 
-        {/* Date - Only show for video content */}
         {hasVideo && (
           <Text className="text-sm text-gray-500 mb-3">
             {chapter.uploadDate || 'Jan 15, 2025'}
           </Text>
         )}
 
-        {/* Teacher Info - Only show for video content */}
         {hasVideo && teacherInfo && (
           <View className="flex-row items-center mt-2 mb-4">
             <Image
-              source={{ 
-                uri: teacherInfo.avatar
-              }}
+              source={{ uri: teacherInfo.avatar }}
               className="w-14 h-14 rounded-full mr-3"
               resizeMode="cover"
-              onError={(error) => {
-                console.log('Avatar load error:', error.nativeEvent, 'URL:', teacherInfo.avatar);
-              }}
-              onLoad={() => {
-                console.log('Avatar loaded successfully:', teacherInfo.avatar);
-              }}
             />
             <View className="flex-1">
               <Text className="text-base font-semibold text-gray-900">
@@ -364,7 +366,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
           </View>
         )}
 
-        {/* Action Tag Pills - Only show for video content */}
         {hasVideo && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 mt-2">
             <TagPill
@@ -373,83 +374,33 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
               active={liked}
               onPress={handleToggleLike}
             />
-
-            <TagPill
-              label="Ask"
-              type="ask"
-              onPress={() => setShowAskModal(true)}
-            />
-
-            <TagPill
-              label="Download"
-              type="download"
-              onPress={handleDownloadVideo}
-              disabled={isDownloading}
-            />
-
-            {/* Comments pill - only shows when in attachments tab and has content */}
+            <TagPill label="Ask" type="ask" onPress={() => setShowAskModal(true)} />
+            <TagPill label="Download" type="download" onPress={handleDownloadVideo} disabled={isDownloading} />
             {(activeTab === 'attachments' || activeTab === 'video') && (hasVideo || hasNotes) && (
-              <TagPill
-                label="Comments"
-                type="comment"
-                onPress={() => setActiveTab(activeTab === 'video' ? 'attachments' : 'video')}
-              />
+              <TagPill label="Comments" type="comment" onPress={() => setActiveTab(activeTab === 'video' ? 'attachments' : 'video')} />
             )}
-
-            {/* Attachments tab - only show if notes are available */}
             {hasNotes && (
-              <TagPill
-                label="Attachments"
-                type="attachments"
-                active={activeTab === 'attachments'}
-                onPress={() => setActiveTab('attachments')}
-              />
+              <TagPill label="Attachments" type="attachments" active={activeTab === 'attachments'} onPress={() => setActiveTab('attachments')} />
             )}
-
-            {/* Video tab - only show if video is available */}
             {hasVideo && (
-              <TagPill
-                label="Video"
-                type="comment"
-                active={activeTab === 'video'}
-                onPress={() => setActiveTab('video')}
-              />
+              <TagPill label="Video" type="comment" active={activeTab === 'video'} onPress={() => setActiveTab('video')} />
             )}
           </ScrollView>
         )}
 
-       
-        {/* Content based on available content */}
         {onlyNotes ? (
-          /* Only notes - show AttachmentPage directly */
           <AttachmentPage courseId={courseId} subjectName={subjectName} moduleNumber={moduleNumber} notesTitle={chapter.notesTitle} notesUrl={chapter.notesUrl} />
         ) : hasVideo ? (
-          /* Video content (with or without notes) */
           activeTab === 'video' ? (
             <View className="mb-6">
-              {/* Comments Header - Clickable to expand/collapse */}
-              <TouchableOpacity
-                onPress={() => setCommentsExpanded(!commentsExpanded)}
-                activeOpacity={0.7}
-                className="bg-gray-50 rounded-lg p-4 mb-4"
-              >
+              <TouchableOpacity onPress={() => setCommentsExpanded(!commentsExpanded)} activeOpacity={0.7} className="bg-gray-50 rounded-lg p-4 mb-4">
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center flex-1">
-                    <Text className="text-base font-bold text-gray-900 mr-2">
-                      Comments
-                    </Text>
-                    <Text className="text-sm text-gray-500">
-                      {comments.length}
-                    </Text>
+                    <Text className="text-base font-bold text-gray-900 mr-2">Comments</Text>
+                    <Text className="text-sm text-gray-500">{comments.length}</Text>
                   </View>
-                  <MaterialIcons
-                    name={commentsExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
-                    size={24}
-                    color="#6B7280"
-                  />
+                  <MaterialIcons name={commentsExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#6B7280" />
                 </View>
-
-                {/* Preview first comment when collapsed */}
                 {!commentsExpanded && comments.length > 0 && (
                   <View className="mt-3 flex-row">
                     <View className="w-6 h-6 bg-blue-500 rounded-full items-center justify-center mr-2">
@@ -461,11 +412,8 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
                   </View>
                 )}
               </TouchableOpacity>
-
-              {/* Expanded Comments Section */}
               {commentsExpanded && (
                 <View>
-                  {/* Add Comment Input */}
                   <View className="flex-row items-center mb-6">
                     <View className="w-8 h-8 bg-gray-300 rounded-full items-center justify-center mr-3">
                       <Text className="text-white text-sm font-bold">Y</Text>
@@ -486,8 +434,6 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
                       )}
                     </View>
                   </View>
-
-                  {/* Comments List */}
                   {comments.map((comment) => (
                     <View key={comment.id} className="mb-5">
                       <View className="flex-row">
@@ -496,14 +442,10 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
                         </View>
                         <View className="flex-1">
                           <View className="flex-row items-center mb-1">
-                            <Text className="text-sm font-semibold text-gray-900 mr-2">
-                              {comment.user}
-                            </Text>
+                            <Text className="text-sm font-semibold text-gray-900 mr-2">{comment.user}</Text>
                             <Text className="text-xs text-gray-500">{comment.time}</Text>
                           </View>
-                          <Text className="text-sm text-gray-700 leading-5 mb-2">
-                            {comment.text}
-                          </Text>
+                          <Text className="text-sm text-gray-700 leading-5 mb-2">{comment.text}</Text>
                           <View className="flex-row items-center">
                             <TouchableOpacity className="flex-row items-center mr-4" activeOpacity={0.7}>
                               <MaterialIcons name="thumb-up-off-alt" size={14} color="#6B7280" />
@@ -523,14 +465,12 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
           ) : activeTab === 'attachments' && hasNotes ? (
             <AttachmentPage courseId={courseId} subjectName={subjectName} moduleNumber={moduleNumber} notesTitle={chapter.notesTitle} notesUrl={chapter.notesUrl} />
           ) : (
-            /* No content available */
             <View className="mb-6 items-center justify-center py-12">
               <MaterialIcons name="info-outline" size={40} color="#cbd5e1" />
               <Text className="text-gray-500 text-base mt-4">No content available for this module</Text>
             </View>
           )
         ) : (
-          /* No content available */
           <View className="mb-6 items-center justify-center py-12">
             <MaterialIcons name="info-outline" size={40} color="#cbd5e1" />
             <Text className="text-gray-500 text-base mt-4">No content available for this module</Text>
@@ -551,5 +491,9 @@ const ChapterDetailCard: React.FC<Props> = ({ chapter, courseId, subjectName, mo
     </>
   );
 };
+
+ChapterDetailCardComponent.displayName = 'ChapterDetailCard';
+
+const ChapterDetailCard = ChapterDetailCardComponent;
 
 export default ChapterDetailCard;

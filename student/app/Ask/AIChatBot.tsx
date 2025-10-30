@@ -35,7 +35,7 @@ interface ModuleData {
   description?: string;
 }
 
-export default function AIChatBot() {
+function AIChatBot() {
   const { courseData } = useLocalSearchParams();
   const scrollViewRef = useRef<ScrollView>(null);
   const [message, setMessage] = useState('');
@@ -786,3 +786,6 @@ export default function AIChatBot() {
     </SafeAreaView>
   );
 }
+
+AIChatBot.displayName = 'AIChatBot';
+export default AIChatBot;

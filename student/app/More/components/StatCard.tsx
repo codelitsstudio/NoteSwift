@@ -128,9 +128,9 @@ const StatCard = () => {
               <Image
                 source={
                   user?.profileImage
-                    ? { uri: user.profileImage }
+                    ? { uri: user?.profileImage }
                     : user?.avatarEmoji && user.avatarEmoji.startsWith('http')
-                    ? { uri: user.avatarEmoji }
+                    ? { uri: user?.avatarEmoji }
                     : avatarEmoji && avatarEmoji.startsWith('http')
                     ? { uri: avatarEmoji }
                     : { uri: 'https://api.dicebear.com/9.x/open-peeps/png?seed=default' }
@@ -148,7 +148,7 @@ const StatCard = () => {
                 {user?.full_name || selectedCourse?.title || 'Select a Course'}
               </Text>
               <Text className="text-gray-500 text-sm mt-1">
-                {user?.grade ? `Grade ${user.grade}` : `${selectedCourse?.subjects?.length || 0} Subjects`}
+                {user?.grade ? `Grade ${user?.grade}` : `${selectedCourse?.subjects?.length || 0} Subjects`}
               </Text>
             </View>
          

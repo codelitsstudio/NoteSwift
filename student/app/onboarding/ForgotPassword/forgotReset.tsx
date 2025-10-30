@@ -20,7 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { resetPasswordWithResetOTP } from '../../../api/student/user';
 
-export default function ForgotReset() {
+function ForgotReset() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const email = params.email as string;
@@ -270,3 +270,6 @@ export default function ForgotReset() {
     </SafeAreaView>
   );
 }
+
+ForgotReset.displayName = 'ForgotReset';
+export default ForgotReset;

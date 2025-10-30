@@ -8,12 +8,12 @@ import { updateModuleProgress } from "../../../api/lessonProgress";
 import * as ScreenOrientation from 'expo-screen-orientation';
 import api from "@/api/axios";
 
-type LiveVideoProps = {
+type RecordedVideoProps = {
   courseId: string;
   subjectName: string;
   moduleNumber: number;
   videoUrl?: string;
-  videoIndex?: number; // Add videoIndex prop
+  videoIndex?: number;
   thumbnailUri?: string;
   onPressPlay?: () => void;
   onTimeUpdate?: (ms: number) => void;
@@ -25,41 +25,53 @@ type LiveVideoProps = {
 
 const BLUE = "#3b82f6";
 
-const LiveVideo = forwardRef<any, LiveVideoProps>(
-  ({ courseId, subjectName, moduleNumber, videoUrl, videoIndex = 0, thumbnailUri, onPressPlay, onTimeUpdate, onPlayPauseChange, onDurationUpdate, onVideoCompletionStatusChange, videoCompleted: initialVideoCompleted = false }, ref) => {
-    const videoRef = useRef<Video | null>(null);
-    const [videoState, setVideoState] = useState({
-      status: {} as any,
-      isLoading: true,
-      showControls: true,
-      isSliding: false,
-      localPosition: 0,
-      sliderWidth: 0,
-    });
-    const videoStateRef = useRef(videoState);
+const RecordedVideoComponent = forwardRef<any, RecordedVideoProps>((props, ref) => {
+  const {
+    courseId,
+    subjectName,
+    moduleNumber,
+    videoUrl,
+    videoIndex = 0,
+    thumbnailUri,
+    onPressPlay,
+    onTimeUpdate,
+    onPlayPauseChange,
+    onDurationUpdate,
+    onVideoCompletionStatusChange,
+    videoCompleted: initialVideoCompleted = false
+  } = props;
 
-    // Keep ref in sync with state
-    useEffect(() => {
-      videoStateRef.current = videoState;
-    }, [videoState]);
-    const [videoCompleted, setVideoCompleted] = useState(initialVideoCompleted);
+  console.log('🎬 RecordedVideo component called with props:', { courseId, subjectName, moduleNumber, videoUrl, videoIndex });
 
-    // State for signed URL
-    const [signedUrl, setSignedUrl] = useState<string | null>(null);
-    const [urlLoading, setUrlLoading] = useState(true);
-    const [urlError, setUrlError] = useState<string | null>(null);
+  const videoRef = useRef<Video | null>(null);
+  const [videoState, setVideoState] = useState({
+    status: {} as any,
+    isLoading: true,
+    showControls: true,
+    isSliding: false,
+    localPosition: 0,
+    sliderWidth: 0,
+  });
+  const videoStateRef = useRef(videoState);
 
-    // Fetch signed URL on component mount
-    useEffect(() => {
-      const fetchSignedUrl = async () => {
-        // If we have a videoUrl that looks like a full URL, use it directly
+  useEffect(() => {
+    videoStateRef.current = videoState;
+  }, [videoState]);
+  
+  const [videoCompleted, setVideoCompleted] = useState(initialVideoCompleted);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [urlLoading, setUrlLoading] = useState(true);
+  const [urlError, setUrlError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      try {
         if (videoUrl && (videoUrl.startsWith('http://') || videoUrl.startsWith('https://'))) {
           setSignedUrl(videoUrl);
           setUrlLoading(false);
           return;
         }
 
-        // If videoUrl is a Firebase storage path, construct Firebase Storage URL
         if (videoUrl && (videoUrl.startsWith('videos/') || videoUrl.startsWith('notes/'))) {
           const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${videoUrl}`;
           setSignedUrl(firebaseUrl);
@@ -68,7 +80,6 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
           return;
         }
 
-        // If videoUrl is a storage path but not Firebase format, try backend API as last resort
         if (videoUrl && !videoUrl.startsWith('http')) {
           try {
             setUrlLoading(true);
@@ -87,438 +98,369 @@ const LiveVideo = forwardRef<any, LiveVideoProps>(
           }
           return;
         }
-      };
+      } catch (error) {
+        console.error('Error in fetchSignedUrl:', error);
+        setUrlError('Unable to load video. Please try again or contact support if the problem persists.');
+        setUrlLoading(false);
+      }
+    };
 
+    if (courseId && subjectName && typeof moduleNumber === 'number') {
       fetchSignedUrl();
-    }, [courseId, subjectName, moduleNumber, videoUrl, videoIndex]);
+    }
+  }, [courseId, subjectName, moduleNumber, videoUrl, videoIndex]);
 
-    // Track if we've already marked video as completed
-    const hasMarkedCompletedRef = useRef(false);
+  const hasMarkedCompletedRef = useRef(false);
 
-    // Listen for video completion
-    useEffect(() => {
-      if (videoState.status?.didJustFinish && !videoCompleted && courseId && !hasMarkedCompletedRef.current) {
-        setVideoCompleted(true);
-        hasMarkedCompletedRef.current = true;
-        // Call backend to mark VIDEO as completed (separate from notes completion)
-        updateModuleProgress(courseId, moduleNumber, true);
-        // Notify parent that video has been completed
-        if (onVideoCompletionStatusChange) {
-          onVideoCompletionStatusChange(true);
+  useEffect(() => {
+    if (videoState.status?.didJustFinish && !videoCompleted && courseId && !hasMarkedCompletedRef.current) {
+      setVideoCompleted(true);
+      hasMarkedCompletedRef.current = true;
+      updateModuleProgress(courseId, moduleNumber, true);
+      if (onVideoCompletionStatusChange) {
+        onVideoCompletionStatusChange(true);
+      }
+    }
+  }, [videoState.status?.didJustFinish, videoCompleted, courseId, moduleNumber, onVideoCompletionStatusChange]);
+
+  const [controlsOpacity] = useState(new Animated.Value(1));
+  const prevIsLoadingRef = useRef(videoState.isLoading);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
+  const statusRef = useRef<any>({});
+  const [updateCounter, setUpdateCounter] = useState(0);
+
+  const { thumbSize, thinLineHeight } = useMemo(() => ({
+    thumbSize: 10,
+    thinLineHeight: 3,
+  }), []);
+
+  useEffect(() => {
+    if (Platform.OS === "ios") {
+      (async () => {
+        try {
+          await Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+          });
+        } catch (error) {
+          console.error('Error setting audio mode:', error);
         }
-      }
-    }, [videoState.status?.didJustFinish, videoCompleted, courseId, moduleNumber, onVideoCompletionStatusChange]);
- 
-    const [controlsOpacity] = useState(new Animated.Value(1));
-    const prevIsLoadingRef = useRef(videoState.isLoading);
-    const controlsTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
-    const statusRef = useRef<any>({});
-    const [updateCounter, setUpdateCounter] = useState(0);
+      })();
+    }
+  }, []);
 
-    // Memoized constants
-    const { thumbSize, thinLineHeight } = useMemo(() => ({
-      thumbSize: 10,
-      thinLineHeight: 3,
-    }), []);
+  useEffect(() => {
+    if (prevIsLoadingRef.current && !videoState.isLoading && videoRef.current) {
+      videoRef.current.playAsync?.();
+    }
+    prevIsLoadingRef.current = videoState.isLoading;
+  }, [videoState.isLoading]);
 
-    // Ensure audio plays in silent mode on iOS only
-    useEffect(() => {
-      if (Platform.OS === "ios") {
-        (async () => {
-          try {
-            await Audio.setAudioModeAsync({
-              playsInSilentModeIOS: true,
-            });
-          } catch {
-            // Optionally log error
-          }
-        })();
-      }
-    }, []);
+  useImperativeHandle(ref, () => ({
+    getCurrentTime: () => videoState.status?.positionMillis || 0,
+  }), [videoState.status?.positionMillis]);
 
-    // Auto-play when loading finishes (optimized)
-    useEffect(() => {
-      if (prevIsLoadingRef.current && !videoState.isLoading && videoRef.current) {
-        videoRef.current.playAsync?.();
-      }
-      prevIsLoadingRef.current = videoState.isLoading;
-    }, [videoState.isLoading]);
+  const timeUpdateRef = useRef(onTimeUpdate);
+  timeUpdateRef.current = onTimeUpdate;
+  const lastTimeUpdateRef = useRef(0);
 
-    // Expose current time to parent
-    useImperativeHandle(ref, () => ({
-      getCurrentTime: () => videoState.status?.positionMillis || 0,
-    }), [videoState.status?.positionMillis]);
+  const fadeControls = useCallback((visible: boolean) => {
+    Animated.timing(controlsOpacity, {
+      toValue: visible ? 1 : 0,
+      duration: 250,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.ease),
+    }).start();
+  }, [controlsOpacity]);
 
-    const timeUpdateRef = useRef(onTimeUpdate);
-    timeUpdateRef.current = onTimeUpdate;
-    const lastTimeUpdateRef = useRef(0);
+  const showControlsTemporarily = useCallback(() => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    
+    setVideoState(prev => ({ ...prev, showControls: true }));
+    fadeControls(true);
+    
+    controlsTimeoutRef.current = setTimeout(() => {
+      setVideoState(prev => ({ ...prev, showControls: false }));
+      fadeControls(false);
+    }, 2500);
+  }, [fadeControls]);
 
-    // Memoized fade controls function
-    const fadeControls = useCallback((visible: boolean) => {
-      Animated.timing(controlsOpacity, {
-        toValue: visible ? 1 : 0,
-        duration: 250,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.ease),
-      }).start();
-    }, [controlsOpacity]);
-
-    // Optimized show controls with cleanup
-    const showControlsTemporarily = useCallback(() => {
+  useEffect(() => {
+    return () => {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
-      
-      setVideoState(prev => ({ ...prev, showControls: true }));
-      fadeControls(true);
-      
-      controlsTimeoutRef.current = setTimeout(() => {
-        setVideoState(prev => ({ ...prev, showControls: false }));
-        fadeControls(false);
-      }, 2500);
-    }, [fadeControls]);
+    };
+  }, []);
 
-    // Cleanup timeout on unmount
-    useEffect(() => {
-      return () => {
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
-      };
-    }, []);
+  const togglePlayPause = useCallback(() => {
+    if (videoState.status?.isPlaying) {
+      videoRef.current?.pauseAsync();
+    } else {
+      videoRef.current?.playAsync();
+    }
+    showControlsTemporarily();
+  }, [videoState.status?.isPlaying, showControlsTemporarily]);
 
+  const formatTime = useCallback((millis: number | undefined) => {
+    if (!millis) return "0:00";
+    const totalSeconds = Math.floor(millis / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  }, []);
 
+  const onSliderLayout = useCallback((e: LayoutChangeEvent) => {
+    const width = e?.nativeEvent?.layout?.width || 0;
+    setVideoState(prev => ({ ...prev, sliderWidth: width }));
+  }, []);
 
-    const togglePlayPause = useCallback(() => {
-      if (videoState.status?.isPlaying) {
-        videoRef.current?.pauseAsync();
-      } else {
-        videoRef.current?.playAsync();
-      }
-      showControlsTemporarily();
-    }, [videoState.status?.isPlaying, showControlsTemporarily]);
-
-    const formatTime = useCallback((millis: number | undefined) => {
-      if (!millis) return "0:00";
-      const totalSeconds = Math.floor(millis / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-    }, []);
-
-    const onSliderLayout = useCallback((e: LayoutChangeEvent) => {
-      const width = e.nativeEvent.layout.width;
-      setVideoState(prev => ({ ...prev, sliderWidth: width }));
-    }, []);
-
-    const { playedPercent, thumbLeft } = useMemo(() => {
-      const position = videoState.isSliding ? videoState.localPosition : videoState.status?.positionMillis || 0;
-      const percent = videoState.status?.durationMillis && videoState.status.durationMillis > 0
-        ? position / videoState.status.durationMillis
-        : 0;
-      
-      const left = videoState.sliderWidth && videoState.status?.durationMillis
-        ? Math.max(
-            0,
-            Math.min(
-              videoState.sliderWidth - thumbSize,
-              percent * (videoState.sliderWidth - thumbSize)
-            )
+  const { playedPercent, thumbLeft } = useMemo(() => {
+    const position = videoState.isSliding ? videoState.localPosition : videoState.status?.positionMillis || 0;
+    const percent = videoState.status?.durationMillis && videoState.status?.durationMillis > 0
+      ? position / videoState.status.durationMillis
+      : 0;
+    
+    const left = videoState.sliderWidth && videoState.status?.durationMillis
+      ? Math.max(
+          0,
+          Math.min(
+            videoState.sliderWidth - thumbSize,
+            percent * (videoState.sliderWidth - thumbSize)
           )
-        : 0;
+        )
+      : 0;
 
-      return {
-        playedPercent: percent,
-        thumbLeft: left,
-      };
-    }, [videoState.isSliding, videoState.localPosition, videoState.status?.positionMillis, videoState.status?.durationMillis, videoState.sliderWidth, thumbSize]);
+    return {
+      playedPercent: percent,
+      thumbLeft: left,
+    };
+  }, [videoState.isSliding, videoState.localPosition, videoState.status?.positionMillis, videoState.status?.durationMillis, videoState.sliderWidth, thumbSize]);
 
-    // **FIXED**: Fullscreen handler - Use native fullscreen for both platforms
-    const handleFullscreen = useCallback(async () => {
-        try {
-            if (Platform.OS === "web") {
-                Alert.alert("Not supported", "Fullscreen is not supported on web.");
-                return;
-            }
-            
-            // Use Expo's native fullscreen for both iOS and Android
-            if (videoRef.current) {
-                await videoRef.current.presentFullscreenPlayer();
-            }
-        } catch (e) {
-            Alert.alert("Fullscreen error", String(e));
-        }
-    }, []);
-
-
-
-
-    const handleVideoPress = useCallback(() => {
-      if (!videoState.isLoading) {
-        const newShowControls = !videoState.showControls;
-        setVideoState(prev => ({ ...prev, showControls: newShowControls }));
-        fadeControls(newShowControls);
+  const handleFullscreen = useCallback(async () => {
+    try {
+      if (Platform.OS === "web") {
+        Alert.alert("Not supported", "Fullscreen is not supported on web.");
+        return;
       }
-    }, [videoState.isLoading, videoState.showControls, fadeControls]);
+      
+      if (videoRef.current) {
+        await videoRef.current.presentFullscreenPlayer();
+      }
+    } catch (e) {
+      Alert.alert("Fullscreen error", String(e));
+    }
+  }, []);
 
-    const prevIsPlayingRef = useRef<boolean | undefined>(undefined);
-    const prevDurationRef = useRef<number | undefined>(undefined);
+  const handleVideoPress = useCallback(() => {
+    if (!videoState.isLoading) {
+      const newShowControls = !videoState.showControls;
+      setVideoState(prev => ({ ...prev, showControls: newShowControls }));
+      fadeControls(newShowControls);
+    }
+  }, [videoState.isLoading, videoState.showControls, fadeControls]);
 
-    const handlePlaybackStatusUpdate = useCallback((s: any) => {
+  const prevIsPlayingRef = useRef<boolean | undefined>(undefined);
+  const prevDurationRef = useRef<number | undefined>(undefined);
+
+  const handlePlaybackStatusUpdate = useCallback((s: any) => {
+    if (s) {
       statusRef.current = s;
       setUpdateCounter(prev => prev + 1);
-    }, []);
+    }
+  }, []);
 
-    useEffect(() => {
-      const s = statusRef.current;
-      if (s) {
-        setVideoState(prev => {
-          const newState: Partial<typeof videoState> = {
-            status: s,
-            isLoading: !s.isLoaded,
-          };
-          if (s.isLoaded && !prev.isSliding) {
-            newState.localPosition = s.positionMillis || 0;
-          }
-          return { ...prev, ...newState };
-        });
-
-        if (typeof onPlayPauseChange === 'function' && s.isLoaded && typeof s.isPlaying === 'boolean') {
-          if (prevIsPlayingRef.current !== s.isPlaying) {
-            onPlayPauseChange(s.isPlaying);
-            prevIsPlayingRef.current = s.isPlaying;
-          }
+  useEffect(() => {
+    const s = statusRef.current;
+    if (s) {
+      setVideoState(prev => {
+        const newState: Partial<typeof videoState> = {
+          status: s,
+          isLoading: !s.isLoaded,
+        };
+        if (s.isLoaded && !prev.isSliding) {
+          newState.localPosition = s.positionMillis || 0;
         }
+        return { ...prev, ...newState };
+      });
 
-        if (s.isLoaded && s.durationMillis && typeof onDurationUpdate === 'function') {
-          if (prevDurationRef.current !== s.durationMillis) {
-            onDurationUpdate(s.durationMillis);
-            prevDurationRef.current = s.durationMillis;
-          }
-        }
-
-        if (s.isLoaded && s.positionMillis != null && typeof timeUpdateRef.current === 'function') {
-          const now = Date.now();
-          if (now - lastTimeUpdateRef.current > 1000) {
-            timeUpdateRef.current(s.positionMillis);
-            lastTimeUpdateRef.current = now;
-          }
+      if (typeof onPlayPauseChange === 'function' && s.isLoaded && typeof s.isPlaying === 'boolean') {
+        if (prevIsPlayingRef.current !== s.isPlaying) {
+          onPlayPauseChange(s.isPlaying);
+          prevIsPlayingRef.current = s.isPlaying;
         }
       }
-    }, [updateCounter, onPlayPauseChange, onDurationUpdate]);
 
-    const handleSliderValueChange = useCallback((val: number) => {
-      setVideoState(prev => ({ ...prev, localPosition: val }));
-    }, []);
+      if (s.isLoaded && s.durationMillis && typeof onDurationUpdate === 'function') {
+        if (prevDurationRef.current !== s.durationMillis) {
+          onDurationUpdate(s.durationMillis);
+          prevDurationRef.current = s.durationMillis;
+        }
+      }
 
-    const handleSlidingStart = useCallback(() => {
-      setVideoState(prev => ({ ...prev, isSliding: true }));
-    }, []);
+      if (s.isLoaded && s.positionMillis != null && typeof timeUpdateRef.current === 'function') {
+        const now = Date.now();
+        if (now - lastTimeUpdateRef.current > 1000) {
+          timeUpdateRef.current(s.positionMillis);
+          lastTimeUpdateRef.current = now;
+        }
+      }
+    }
+  }, [updateCounter, onPlayPauseChange, onDurationUpdate]);
 
-    const handleSlidingComplete = useCallback(async (val: number) => {
-      await videoRef.current?.setPositionAsync(val);
-      setVideoState(prev => ({ 
-        ...prev, 
-        localPosition: val, 
-        isSliding: false 
-      }));
-    }, []);
+  const handleSliderValueChange = useCallback((val: number) => {
+    setVideoState(prev => ({ ...prev, localPosition: val }));
+  }, []);
 
-    const controlsVisible = videoState.showControls && !videoState.isLoading && !urlLoading && !urlError;
+  const handleSlidingStart = useCallback(() => {
+    setVideoState(prev => ({ ...prev, isSliding: true }));
+  }, []);
 
-    const timeDisplay = useMemo(() => 
-      `${formatTime(videoState.isSliding ? videoState.localPosition : videoState.status?.positionMillis)} / ${formatTime(videoState.status?.durationMillis)}`,
-      [formatTime, videoState.isSliding, videoState.localPosition, videoState.status?.positionMillis, videoState.status?.durationMillis]
-    );
+  const handleSlidingComplete = useCallback(async (val: number) => {
+    await videoRef.current?.setPositionAsync(val);
+    setVideoState(prev => ({ 
+      ...prev, 
+      localPosition: val, 
+      isSliding: false 
+    }));
+  }, []);
 
+  const controlsVisible = videoState.showControls && !videoState.isLoading && !urlLoading && !urlError;
+
+  const timeDisplay = useMemo(() => 
+    `${formatTime(videoState.isSliding ? videoState.localPosition : videoState.status?.positionMillis)} / ${formatTime(videoState.status?.durationMillis)}`,
+    [formatTime, videoState.isSliding, videoState.localPosition, videoState.status?.positionMillis, videoState.status?.durationMillis]
+  );
+
+  if (!courseId || !subjectName || typeof moduleNumber !== 'number') {
     return (
-      <>
-        <View style={styles.container}>
-          {/* This container holds the inline player */}
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={handleVideoPress}
-            style={styles.videoWrapper}
-          >
-            {(videoState.isLoading || urlLoading) && (
-              <View style={styles.skeleton}>
-                <ActivityIndicator size="large" color={BLUE} />
-                {urlLoading && <Text style={{ color: BLUE, marginTop: 8 }}>Loading video...</Text>}
-              </View>
-            )}
-            {urlError && !urlLoading && (
-              <View style={styles.skeleton}>
-                <Icon name="error-outline" size={48} color="#EF4444" />
-                <Text style={{ color: '#EF4444', marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
-                  {urlError}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setUrlError(null);
-                    setUrlLoading(true);
-                    // Re-fetch signed URL
-                    const fetchSignedUrl = async () => {
-                      // If we have a videoUrl that looks like a full URL, use it directly
-                      if (videoUrl && (videoUrl.startsWith('http://') || videoUrl.startsWith('https://'))) {
-                        setSignedUrl(videoUrl);
-                        setUrlLoading(false);
-                        return;
-                      }
-
-                      // If videoUrl is a storage path, construct Firebase URL
-                      if (videoUrl && !videoUrl.startsWith('http')) {
-                        if (videoUrl.startsWith('videos/') || videoUrl.startsWith('notes/')) {
-                          const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${videoUrl}`;
-                          setSignedUrl(firebaseUrl);
-                          console.log('Using Firebase Storage URL:', firebaseUrl);
-                        } else {
-                          throw new Error('Invalid storage path format');
-                        }
-                        setUrlLoading(false);
-                        return;
-                      }
-
-                      // Otherwise, try to fetch signed URL from backend
-                      try {
-                        const response = await api.get(`/courses/${courseId}/subject/${subjectName}/module/${moduleNumber}/video?videoIndex=${videoIndex}`);
-                        if (response.data.success && response.data.signedUrl) {
-                          setSignedUrl(response.data.signedUrl);
-                        } else {
-                          throw new Error('Failed to get signed URL');
-                        }
-                      } catch (err) {
-                        console.error('Error fetching video signed URL:', err);
-                        
-                        // Fallback: if we have a videoUrl, construct Firebase URL
-                        if (videoUrl) {
-                          // If videoUrl is already a full URL, use it directly
-                          if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
-                            setSignedUrl(videoUrl);
-                          } else if (videoUrl.startsWith('videos/') || videoUrl.startsWith('notes/')) {
-                            // If videoUrl is a Firebase storage path, construct Firebase Storage URL
-                            const firebaseUrl = `https://storage.googleapis.com/noteswift-uploads.firebasestorage.app/${videoUrl}`;
-                            setSignedUrl(firebaseUrl);
-                            console.log('Using Firebase Storage URL as fallback for video:', firebaseUrl);
-                          } else {
-                            // Invalid path format - don't try local URL
-                            setUrlError('Unable to load video. Please try again or contact support if the problem persists.');
-                          }
-                          console.log('Using fallback video URL:', videoUrl);
-                        } else {
-                          setUrlError('Video is not available for this lesson.');
-                        }
-                      } finally {
-                        setUrlLoading(false);
-                      }
-                    };
-                    fetchSignedUrl();
-                  }}
-                >
-                </TouchableOpacity>
-              </View>
-            )}
-            {signedUrl && !urlLoading && !urlError && (
-              <Video
-                ref={videoRef}
-                source={{ uri: signedUrl }}
-                style={StyleSheet.absoluteFill}
-                resizeMode={ResizeMode.COVER}
-                onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-                onFullscreenUpdate={(event) => {
-                  if (event.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
-                    // Entered fullscreen, lock to landscape
-                    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-                  } else if (event.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_DISMISS) {
-                    // Exited fullscreen, lock to portrait
-                    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-                  }
-                }}
-                onLoadStart={() => {
-                  console.log('🎬 Video load started for URL:', signedUrl);
-                }}
-                onLoad={(status) => {
-                  console.log('🎬 Video loaded successfully:', status);
-                }}
-                onError={(error) => {
-                  console.error('🎬 Video loading error:', error);
-                  console.error('🎬 Failed URL:', signedUrl);
-                  setUrlError('Video failed to load. Please check your internet connection and try again.');
-                  setSignedUrl(null);
-                }}
-                shouldPlay={false}
-                usePoster={!!thumbnailUri}
-                posterSource={thumbnailUri ? { uri: thumbnailUri } : undefined}
-                progressUpdateIntervalMillis={500}
-              />
-            )}
-          </TouchableOpacity>
-
-          {/* Inline Controls - Only show when video is loaded and no errors */}
-          {signedUrl && !videoState.isLoading && !urlLoading && !urlError && (
-            <>
-              {/* Center Play/Pause */}
-              <Animated.View
-                pointerEvents={controlsVisible ? "auto" : "none"}
-                style={[styles.centerControls, { opacity: controlsOpacity }]}
-              >
-                <TouchableOpacity
-                  onPress={togglePlayPause}
-                  style={styles.playPauseButton}
-                  activeOpacity={0.85}
-                >
-                  <Icon
-                    name={videoState.status?.isPlaying ? "pause" : "play-arrow"}
-                    size={40}
-                    color={BLUE}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-
-              {/* Always visible progress bar */}
-              <View style={styles.thinProgressBarContainer}>
-                <View style={styles.thinProgressBarBackground} />
-                <View style={[styles.thinProgressBarFill, { width: `${playedPercent * 100}%` }]} />
-              </View>
-
-              {/* Interactive Controls */}
-              <Animated.View
-                pointerEvents={controlsVisible ? "auto" : "none"}
-                style={[styles.bottomControlsContainer, { opacity: controlsOpacity }]}
-              >
-                <View style={styles.timestampContainer}>
-                  <Text style={styles.timestampText}>{timeDisplay}</Text>
-                </View>
-                <View style={styles.sliderContainer} onLayout={onSliderLayout}>
-                  <Slider
-                    style={styles.slider}
-                    minimumValue={0}
-                    maximumValue={videoState.status?.durationMillis || 1}
-                    value={videoState.isSliding ? videoState.localPosition : videoState.status?.positionMillis || 0}
-                    minimumTrackTintColor="transparent"
-                    maximumTrackTintColor="transparent"
-                    thumbTintColor="transparent"
-                    onValueChange={handleSliderValueChange}
-                    onSlidingStart={handleSlidingStart}
-                    onSlidingComplete={handleSlidingComplete}
-                  />
-                  {(controlsVisible || videoState.isSliding) && videoState.sliderWidth > 0 && (
-                    <View style={[styles.sliderThumb, { left: thumbLeft, bottom: -(thumbSize / 2 - thinLineHeight / 2) }]} pointerEvents="none" />
-                  )}
-                </View>
-                <View style={styles.fullscreenButtonContainer}>
-                  <TouchableOpacity onPress={handleFullscreen}>
-                    <Icon name="fullscreen" size={20} color="white" />
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            </>
-          )}
+      <View style={styles.container}>
+        <View style={styles.skeleton}>
+          <Icon name="error-outline" size={48} color="#EF4444" />
+          <Text style={{ color: '#EF4444', marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
+            Invalid video configuration.
+          </Text>
         </View>
-      </>
+      </View>
     );
+  }
+
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={handleVideoPress}
+        style={styles.videoWrapper}
+      >
+        {(videoState.isLoading || urlLoading) && (
+          <View style={styles.skeleton}>
+            <ActivityIndicator size="large" color={BLUE} />
+            {urlLoading && <Text style={{ color: BLUE, marginTop: 8 }}>Loading video...</Text>}
+          </View>
+        )}
+        {urlError && !urlLoading && (
+          <View style={styles.skeleton}>
+            <Icon name="error-outline" size={48} color="#EF4444" />
+            <Text style={{ color: '#EF4444', marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
+              {urlError}
+            </Text>
+          </View>
+        )}
+        {signedUrl && typeof signedUrl === 'string' && signedUrl.length > 0 && !urlLoading && !urlError && (
+          <Video
+            ref={videoRef}
+            source={{ uri: signedUrl }}
+            style={StyleSheet.absoluteFill}
+            resizeMode={ResizeMode.COVER}
+            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+            onFullscreenUpdate={(event) => {
+              if (event?.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
+                ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+              } else if (event?.fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_DISMISS) {
+                ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+              }
+            }}
+            onLoadStart={() => {
+              console.log('🎬 Video load started for URL:', signedUrl);
+            }}
+            onLoad={(status) => {
+              console.log('🎬 Video loaded successfully:', status || 'undefined status');
+            }}
+            onError={(error) => {
+              console.error('🎬 Video loading error:', error || 'undefined error');
+              console.error('🎬 Failed URL:', signedUrl);
+              setUrlError('Video failed to load. Please check your internet connection and try again.');
+              setSignedUrl(null);
+            }}
+            shouldPlay={false}
+            usePoster={!!thumbnailUri}
+            posterSource={thumbnailUri ? { uri: thumbnailUri } : undefined}
+            progressUpdateIntervalMillis={500}
+          />
+        )}
+      </TouchableOpacity>
+
+      {signedUrl && typeof signedUrl === 'string' && signedUrl.length > 0 && !videoState.isLoading && !urlLoading && !urlError && (
+        <>
+          <Animated.View
+            pointerEvents={controlsVisible ? "auto" : "none"}
+            style={[styles.centerControls, { opacity: controlsOpacity }]}
+          >
+            <TouchableOpacity
+              onPress={togglePlayPause}
+              style={styles.playPauseButton}
+              activeOpacity={0.85}
+            >
+              <Icon
+                name={videoState.status?.isPlaying ? "pause" : "play-arrow"}
+                size={40}
+                color={BLUE}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+
+          <View style={styles.thinProgressBarContainer}>
+            <View style={styles.thinProgressBarBackground} />
+            <View style={[styles.thinProgressBarFill, { width: `${playedPercent * 100}%` }]} />
+          </View>
+
+          <Animated.View
+            pointerEvents={controlsVisible ? "auto" : "none"}
+            style={[styles.bottomControlsContainer, { opacity: controlsOpacity }]}
+          >
+            <View style={styles.timestampContainer}>
+              <Text style={styles.timestampText}>{timeDisplay}</Text>
+            </View>
+            <View style={styles.sliderContainer} onLayout={onSliderLayout}>
+              <Slider
+                style={styles.slider}
+                minimumValue={0}
+                maximumValue={videoState.status?.durationMillis || 1}
+                value={videoState.isSliding ? videoState.localPosition : videoState.status?.positionMillis || 0}
+                minimumTrackTintColor="transparent"
+                maximumTrackTintColor="transparent"
+                thumbTintColor="transparent"
+                onValueChange={handleSliderValueChange}
+                onSlidingStart={handleSlidingStart}
+                onSlidingComplete={handleSlidingComplete}
+              />
+              {(controlsVisible || videoState.isSliding) && videoState.sliderWidth > 0 && (
+                <View style={[styles.sliderThumb, { left: thumbLeft, bottom: -(thumbSize / 2 - thinLineHeight / 2) }]} pointerEvents="none" />
+              )}
+            </View>
+            <View style={styles.fullscreenButtonContainer}>
+              <TouchableOpacity onPress={handleFullscreen}>
+                <Icon name="fullscreen" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </>
+      )}
+    </View>
+  );
 });
 
-// **NOTE**: I've converted your inline styles and Tailwind classes to a StyleSheet for better performance and readability.
 const styles = StyleSheet.create({
     container: {
         width: '100%',
@@ -619,6 +561,10 @@ const styles = StyleSheet.create({
     },
 });
 
-LiveVideo.displayName = 'LiveVideo';
+// Set displayName immediately after component definition
+RecordedVideoComponent.displayName = 'RecordedVideo';
 
-export default LiveVideo;
+// Export using a const declaration
+const RecordedVideo = RecordedVideoComponent;
+
+export default RecordedVideo;

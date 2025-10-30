@@ -11,7 +11,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { studentTestAPI, TestResult as TestResultType } from '../../api/student/test';
 import Skeleton from '../../components/Container/Skeleton';
 
-export default function TestResult() {
+function TestResult() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const testId = params.testId as string;
@@ -412,3 +412,6 @@ export default function TestResult() {
     </SafeAreaView>
   );
 }
+
+TestResult.displayName = 'TestResult';
+export default TestResult;

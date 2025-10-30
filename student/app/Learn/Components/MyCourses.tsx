@@ -6,6 +6,7 @@ import { useCourseStore } from '../../../stores/courseStore';
 import SubjectTabs from '../SubjectTabs';
 import axios from '../../../api/axios';
 import { getSubjectContent } from '../../../api/lessonProgress';
+import ongoingCoursesGif from '@assets/images/ongoing-courses.gif';
 
 const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
   const { user } = useAuthStore();
@@ -16,7 +17,7 @@ const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
 
   useEffect(() => {
     if (user?.id) {
-      console.log('🔄 MyCourses: Initializing for user:', user.id);
+      console.log('🔄 MyCourses: Initializing for user:', user?.id);
     }
   }, [user?.id]);
 
@@ -133,7 +134,7 @@ const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
             <Text className="text-xl font-bold text-gray-900 mb-6">My Subjects</Text>
             <View className="flex-1 justify-center items-center mb-4 mt-6">
               <Image
-                source={require('../../../assets/images/ongoing-courses.gif')}
+                source={ongoingCoursesGif}
                 style={{ width: 180, height: 180, marginBottom: 16 }}
               />
               <Text className="text-lg font-semibold text-gray-800">
@@ -225,7 +226,7 @@ const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
           ) : searchQuery.trim() ? (
             <View className="flex-1 justify-center items-center mb-4 mt-6">
               <Image
-                source={require('../../../assets/images/ongoing-courses.gif')}
+                source={ongoingCoursesGif}
                 style={{ width: 180, height: 180, marginBottom: 16 }}
               />
               <Text className="text-lg font-semibold text-gray-800">
@@ -238,7 +239,7 @@ const MyCourses = ({ searchQuery = '' }: { searchQuery?: string }) => {
           ) : (
               <View className="flex-1 justify-center items-center mb-4 mt-6">
                 <Image
-                  source={require('../../../assets/images/ongoing-courses.gif')}
+                  source={ongoingCoursesGif}
                   style={{ width: 180, height: 180, marginBottom: 16 }}
                 />
                 <Text className="text-lg font-semibold text-gray-800">

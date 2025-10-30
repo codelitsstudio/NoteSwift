@@ -7,10 +7,10 @@ import ChapterDetailCard from "./ChapterDetail/ChapterDetailCard";
 import FooterNav from "./ChapterDetail/FooterNav";
 import { useCourseStore } from "../../stores/courseStore";
 
-export default function ChapterDetailPage() {
+function ChapterDetailPage() {
   const router = useRouter();
-  const { chapterDetail, courseId, subjectId } = useLocalSearchParams(); // chapterDetail can be moduleId or subjectId
-  const lesson = chapterDetail; // For backward compatibility
+  const { chapterDetail, courseId, subjectId } = useLocalSearchParams();
+  const lesson = chapterDetail;
   const { currentSubjectContent, subjectContentLoading, subjectContentError, fetchSubjectContent } = useCourseStore();
 
   console.log('🔍 [chapterDetail].tsx DEBUG:', {
@@ -122,14 +122,14 @@ export default function ChapterDetailPage() {
     );
   }
 
-return (
-  <View className="flex-1 bg-gray-100"> 
-    <SafeAreaView className="flex-1">
-      <ChapterDetailCard
-        chapter={data}
-        courseId={courseId as string}
-        subjectName={subjectId as string}
-        moduleNumber={moduleNumber}
+  return (
+    <View className="flex-1 bg-gray-100"> 
+      <SafeAreaView className="flex-1">
+        <ChapterDetailCard
+          chapter={data}
+          courseId={courseId as string}
+          subjectName={subjectId as string}
+          moduleNumber={moduleNumber}
           onPrevious={() => router.back()}
           onBack={() => router.back()}
           onNext={() => {
@@ -146,3 +146,8 @@ return (
     </View>
   );
 }
+
+// CRITICAL: Set displayName for Expo Router
+ChapterDetailPage.displayName = 'ChapterDetailPage';
+
+export default ChapterDetailPage;

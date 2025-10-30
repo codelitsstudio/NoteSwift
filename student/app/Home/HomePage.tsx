@@ -98,7 +98,7 @@ const HomePageSkeleton: React.FC = () => {
   );
 };
 
-export default function HomePage() {
+function HomePage() {
   // Network status monitoring
   const isOnline = useNetworkStatus();
 
@@ -159,7 +159,7 @@ export default function HomePage() {
     if (!user || isInitialized) return;
 
     try {
-      const userId = user.id || (user as any)._id;
+      const userId = user?.id || (user as any)?._id;
       if (!userId) {
         throw new Error('User ID is missing');
       }
@@ -326,3 +326,6 @@ export default function HomePage() {
     </KeyboardAvoidingView>
   );
 }
+
+HomePage.displayName = 'HomePage';
+export default HomePage;

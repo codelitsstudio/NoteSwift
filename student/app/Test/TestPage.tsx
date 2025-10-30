@@ -10,8 +10,10 @@ import TestCard from './components/TestCard';
 import { studentTestAPI, Test } from '../../api/student/test';
 import { useCourseStore } from '../../stores/courseStore';
 import { getSubjectContent } from '../../api/lessonProgress';
+import questionsGif from '@assets/images/questions.gif';
+import illl1Png from '@assets/images/illl-1.png';
 
-export default function TestPage() {
+function TestPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [tests, setTests] = useState<Test[]>([]);
@@ -185,7 +187,7 @@ export default function TestPage() {
           <View className="mt-8">
             <View className="flex-1 justify-center items-center mb-4 mt-6">
               <Image
-                source={require('../../assets/images/questions.gif')}
+                source={questionsGif}
                 style={{ width: 180, height: 180, marginBottom: 16 }}
               />
               <Text className="text-lg font-semibold text-gray-800">
@@ -545,7 +547,7 @@ export default function TestPage() {
                         ? 'in-progress' 
                         : 'not-started',
                     score: test.attemptInfo?.percentage,
-                    thumbnail: require('../../assets/images/illl-1.png'), // Default thumbnail
+                    thumbnail: illl1Png, // Default thumbnail
                     duration: test.duration,
                     totalQuestions: test.totalQuestions,
                     totalMarks: test.totalMarks
@@ -576,3 +578,6 @@ export default function TestPage() {
     </SafeAreaView>
   );
 }
+
+TestPage.displayName = 'TestPage';
+export default TestPage;

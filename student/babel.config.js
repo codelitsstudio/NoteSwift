@@ -7,6 +7,7 @@ module.exports = function (api) {
     ],
     // Only include plugins you want. Remove any unwanted plugins like react-native-worklets/plugin
     plugins: [
+      // 'expo-router/babel',
       'react-native-worklets/plugin',
     ],
   };

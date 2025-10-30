@@ -84,7 +84,7 @@ const LearnPageSkeleton: React.FC = () => {
   );
 };
 
-export default function HomePage() {
+function LearnPage() {
   // Network status monitoring
   const isOnline = useNetworkStatus();
   
@@ -117,7 +117,7 @@ export default function HomePage() {
         try {
           await fetchFeed();
           if (user?.id) {
-            await fetchUserEnrollments(user.id);
+            await fetchUserEnrollments(user?.id);
             await fetchAllCourses();
             await fetchFeaturedCourse();
           }
@@ -159,7 +159,7 @@ export default function HomePage() {
     setRefreshing(true);
     fetchFeed();
     if (user?.id) {
-      await fetchUserEnrollments(user.id);
+      await fetchUserEnrollments(user?.id);
       await fetchAllCourses();
       await fetchFeaturedCourse();
     }
@@ -258,3 +258,6 @@ export default function HomePage() {
     </KeyboardAvoidingView>
   );
 }
+
+LearnPage.displayName = 'LearnPage';
+export default LearnPage;

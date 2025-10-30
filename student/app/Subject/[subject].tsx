@@ -7,7 +7,7 @@ import ChapterTabs from "../Chapter/ChapterTabs";
 import { useCourseStore } from "../../stores/courseStore";
 import api from "../../api/axios";
 
-export default function SubjectPage() {
+function SubjectPage() {
   const router = useRouter();
   const { subject, courseKey } = useLocalSearchParams(); // subject is subjectId
   const subjectId = decodeURIComponent(String(subject));
@@ -179,3 +179,6 @@ export default function SubjectPage() {
     </SafeAreaView>
   );
 }
+
+SubjectPage.displayName = 'SubjectPage';
+export default SubjectPage;

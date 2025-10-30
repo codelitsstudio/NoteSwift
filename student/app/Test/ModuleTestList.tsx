@@ -10,7 +10,7 @@ import Skeleton from '@/components/Container/Skeleton';
 type FilterType = 'all' | 'mcq' | 'pdf' | 'mixed';
 type TestStatus = 'not-started' | 'in-progress' | 'completed';
 
-export default function ModuleTestList() {
+function ModuleTestList() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const courseName = params.courseName as string;
@@ -186,3 +186,6 @@ export default function ModuleTestList() {
     </SafeAreaView>
   );
 }
+
+ModuleTestList.displayName = 'ModuleTestList';
+export default ModuleTestList;

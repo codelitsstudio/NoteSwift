@@ -183,7 +183,7 @@ const NotificationPage = () => {
 
   const renderNotification = ({ item }: { item: { id: string; title: string; message: string; type: string; timestamp: number; read: boolean } }) => (
     <TouchableOpacity
-      className="bg-white mx-4 mb-3 p-4 rounded-xl border border-gray-200 shadow-sm"
+      className="bg-white mx-4 mb-3 p-4 rounded-xl border border-gray-200"
       onPress={() => {
         // Mark as read logic can be added here
         console.log('Notification pressed:', item.id);

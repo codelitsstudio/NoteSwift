@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { View, Image, StyleSheet, Animated, Dimensions } from "react-native";
+import noteswiftLogo from '@assets/images/noteswift-logo.png';
+import clsLogo from '@assets/images/cls-logo.png';
 
 const { width, height } = Dimensions.get("window");
 
@@ -47,7 +49,7 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
         }}
       >
         <Image
-          source={require("../../assets/images/noteswift-logo.png")}
+          source={noteswiftLogo}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -56,7 +58,7 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
       {/* <View style={styles.poweredContainer}>
         <Text style={styles.powered}>Powered by</Text>
         <Image
-          source={require("../../assets/images/cls-logo.png")}
+          source={clsLogo}
           style={styles.poweredLogo}
         />
       </View> */}

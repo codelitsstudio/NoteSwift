@@ -12,7 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { studentTestAPI, TestDetail } from '../../api/student/test';
 
-export default function MCQTest() {
+function MCQTest() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const testId = params.testId as string;
@@ -640,3 +640,6 @@ export default function MCQTest() {
     </SafeAreaView>
   );
 }
+
+MCQTest.displayName = 'MCQTest';
+export default MCQTest;

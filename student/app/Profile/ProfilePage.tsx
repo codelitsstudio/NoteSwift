@@ -39,7 +39,7 @@ const ProfilePage = () => {
   // Fetch user enrollments for progress calculation (same as LearnPage)
   useEffect(() => {
     if (user?.id) {
-      fetchUserEnrollments(user.id);
+      fetchUserEnrollments(user?.id);
     }
   }, [user?.id, fetchUserEnrollments]);
 
@@ -499,7 +499,7 @@ const ProfilePage = () => {
               <ListItem 
                 icon="location-on" 
                 label="Province & District" 
-                value={user?.address ? `${user.address.province}, ${user.address.district}` : 'Not specified'} 
+                value={user?.address ? `${user?.address.province}, ${user?.address.district}` : 'Not specified'} 
                 onPress={() => handleIndividualEdit('location')}
                 showEdit={true}
                 isEditing={isEditable('location')}

@@ -41,7 +41,7 @@ interface TeacherChatPageProps {
   }[];
 }
 
-export default function TeacherChatPage({ courseTeachers: initialCourseTeachers }: TeacherChatPageProps = {}) {
+function TeacherChatPage({ courseTeachers: initialCourseTeachers }: TeacherChatPageProps = {}) {
   const router = useRouter();
   const { user } = useAuthStore();
   const { selectedCourse } = useCourseStore();
@@ -200,7 +200,7 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
       id: Date.now().toString(),
       text: newMessage.trim(),
       sender: 'user',
-      senderId: user.id || (user as any)._id,
+      senderId: user?.id || (user as any)?._id,
       receiverId: selectedSubject.teacher?.id,
       subjectName: selectedSubject.name,
       timestamp: new Date(),
@@ -613,3 +613,6 @@ export default function TeacherChatPage({ courseTeachers: initialCourseTeachers 
     </SafeAreaView>
   );
 }
+
+TeacherChatPage.displayName = 'TeacherChatPage';
+export default TeacherChatPage;

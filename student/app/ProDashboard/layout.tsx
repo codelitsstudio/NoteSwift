@@ -1,6 +1,9 @@
-// app/onboarding/Register/layout.tsx
-import { Slot } from 'expo-router';
+// // app/onboarding/Register/layout.tsx
+// import { Slot } from 'expo-router';
 
-export default function ProDashboardLayout() {
-  return <Slot />;
-}
+// function ProDashboardLayout() {
+//   return <Slot />;
+// }
+
+// ProDashboardLayout.displayName = 'ProDashboardLayout';
+// export default ProDashboardLayout;
